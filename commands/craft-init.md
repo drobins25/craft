@@ -95,27 +95,17 @@ options:
 
 **If "Yes":** Set `INTENT_CAPTURED=true` and ask the two intent prompts:
 
-Use **AskUserQuestion**:
-```
-question: "What's the one thing this app helps people do?"
-header: "What it does"
-options:
-  - label: "Type your answer"
-    description: "Free-text - one sentence is enough"
-```
+Ask the user directly:
 
-Capture the free-text response as `PROJECT_INTENT_Q1`. If the user types whitespace-only or empty text, treat as Skip — set `INTENT_CAPTURED=false` and continue.
+> "What's the one thing this app helps people do? (One sentence is enough.)"
 
-Use **AskUserQuestion**:
-```
-question: "What's the moment in the app you're most excited to build?"
-header: "Killer moment"
-options:
-  - label: "Type your answer"
-    description: "Free-text - the feature, screen, or interaction you can't stop thinking about"
-```
+Capture their next response as `PROJECT_INTENT_Q1`. If the response is whitespace-only or empty, treat as Skip — set `INTENT_CAPTURED=false` and continue to Phase 0a.
 
-Capture the free-text response as `PROJECT_INTENT_Q2`. Same whitespace-handling rule.
+Then ask:
+
+> "What's the moment in the app you're most excited to build? (The feature, screen, or interaction you can't stop thinking about.)"
+
+Capture their next response as `PROJECT_INTENT_Q2`. Same whitespace-handling rule.
 
 Both answers will be:
 1. Written verbatim into `project.md` as a `## Project Intent` section in Phase 5
