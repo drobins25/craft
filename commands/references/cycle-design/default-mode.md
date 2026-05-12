@@ -249,6 +249,10 @@ Go through Step 3 for each story. Each story is saved immediately with `status: 
 
 ### Step 5: Cycle Review
 
+**Print this status line before composing the review:**
+
+> *Compiling the cycle review — this can take 30-90 seconds on complex cycles...*
+
 All stories are now saved. Review the cycle as a whole:
 
 > "**Cycle: [Name]** — Story List

@@ -1,5 +1,9 @@
 # Alignment Check
 
+**Before reading further, print this status line so the user sees a progress signal during the upcoming reasoning pass:**
+
+> *Working through the alignment loop — this can take a minute on a fresh codebase...*
+
 You are running the codebase alignment check for a story. This is the engineer-to-product-manager handshake - you investigate the codebase where this work will land and surface every product question that only the user can answer.
 
 ## Definition: 95% Alignment

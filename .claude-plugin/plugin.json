@@ -1,6 +1,6 @@
 {
   "name": "craft",
-  "version": "1.56.0",
+  "version": "1.57.0",
   "description": "Creative-first, feedback-loop-driven development harness. Riff on ideas, lock decisions, execute with confidence.",
   "author": {
     "name": "Darin Drobinski"
