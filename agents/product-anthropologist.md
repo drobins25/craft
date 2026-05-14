@@ -10,6 +10,7 @@ description: >
   difference between a product people like and a product people need, and the
   specific ways AI products corrupt the signals that used to be reliable.
 model: sonnet
+color: green
 tools: Read, Glob, Grep
 disallowedTools: Write, Edit, Bash, NotebookEdit
 ---

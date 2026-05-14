@@ -9,7 +9,7 @@ description: >
   tell their friend about this" gut checks, translating user requests into emotional
   jobs, evaluating whether a mechanic carries feeling or just delivers function.
 model: sonnet
-color: gold
+color: blue
 tools: Read, Glob, Grep, Bash
 disallowedTools: Write, Edit, NotebookEdit
 crystallized_from: ".craft/research/product-intuition-become/"
