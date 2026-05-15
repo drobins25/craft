@@ -310,7 +310,8 @@ options:
 For each approved story:
 1. Create the story file in the backlog using the standard story template
 2. Add `source_concept: planning/[path-to-concept.md]` to the story's frontmatter
-3. Add the story path to the concept's `stories:` frontmatter field
+3. Read the concept file's frontmatter `last_updated:` value. If present, also write `source_concept_last_updated: [value]` to the story's frontmatter (snapshot of the planning concept's last_updated at story creation time - used for downstream staleness detection). If the concept has no `last_updated:` field, omit `source_concept_last_updated:` entirely (do not substitute another date).
+4. Add the story path to the concept's `stories:` frontmatter field
 
 **9e. Update concept status**
 

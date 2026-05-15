@@ -45,7 +45,13 @@ ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/create-cycle.sh "[cycle-slug]" "[Cycle Title
 
 2. **Before writing story files, apply planning-source routing.** Read cycle.yaml. If `source_concept` is populated, apply the **action-moment framing** per story:
 
-   - **Planning-extraction moment** (story is being sketched from the planning concept's content): Read `${CLAUDE_PLUGIN_ROOT}/commands/references/story-from-planning.md` and execute its phases against the cycle's source_concept for that story. The protocol writes the story file with planning-derived spark + `source_concept` + `source_concept_last_updated` frontmatter. Phase 1's auto-resolve uses cycle.yaml's value without re-asking.
+   - **Planning-extraction moment** (story is being sketched from the planning concept's content): Read `${CLAUDE_PLUGIN_ROOT}/commands/references/story-from-planning.md` and execute its phases against the cycle's source_concept for that story. The protocol writes the story file with planning-derived spark + `source_concept` + `source_concept_last_updated` frontmatter.
+
+     **CRITICAL: include the invocation marker** when executing the protocol. State explicitly in your context before running Phase 1:
+
+     > `INVOCATION: cycle-design - planning source already confirmed in cycle.yaml`
+
+     This marker is required for Phase 1's auto-resolve to fire. Without it, Phase 1 falls back to corpus-scan and asks the user to pick a concept.
 
    - **Add-a-separate-story moment** (story is freeform, not from the planning): Continue with the roadmap-mode flow below - title + spark from conversation, no source_concept fields.
 

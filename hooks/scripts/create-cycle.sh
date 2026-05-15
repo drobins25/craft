@@ -30,10 +30,25 @@ if [ -z "$CYCLE_NAME" ]; then
   exit 1
 fi
 
-# Build source_concept YAML value (flow list notation, sed-friendly single line)
-# Empty -> "[]"; comma-separated paths -> "[path1, path2]"
+# Build source_concept YAML value (flow list with single-quoted items)
+# Empty -> "[]"; comma-separated paths -> "['path1', 'path2']"
+# Single-quoted items tolerate commas, brackets, and spaces in paths.
 if [ -n "$SOURCE_CONCEPTS" ]; then
-  SOURCE_CONCEPT_YAML="[${SOURCE_CONCEPTS}]"
+  QUOTED=""
+  IFS=',' read -ra PATHS <<< "$SOURCE_CONCEPTS"
+  for path in "${PATHS[@]}"; do
+    # Trim leading/trailing whitespace
+    path=$(echo "$path" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    # Skip empty entries (e.g., trailing comma or "a,,b")
+    if [ -z "$path" ]; then continue; fi
+    if [ -n "$QUOTED" ]; then QUOTED="${QUOTED}, "; fi
+    QUOTED="${QUOTED}'${path}'"
+  done
+  if [ -n "$QUOTED" ]; then
+    SOURCE_CONCEPT_YAML="[${QUOTED}]"
+  else
+    SOURCE_CONCEPT_YAML="[]"
+  fi
 else
   SOURCE_CONCEPT_YAML="[]"
 fi

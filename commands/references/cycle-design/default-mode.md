@@ -97,7 +97,13 @@ If `source_concept` is populated (e.g., `[planning/04-company-onboarding.md]`): 
   - Writes the story with `source_concept` AND `source_concept_last_updated` frontmatter
   - Forward-links the story back to the planning doc
 
-  ⛔ **DO NOT invoke story-from-planning.md via the Skill tool** - Read it via the Read tool and execute its phases inline. The Phase 1 auto-resolve in story-from-planning.md picks up cycle.yaml's source_concept automatically.
+  **CRITICAL: include the invocation marker** when executing the protocol. State explicitly in your context before running Phase 1:
+
+  > `INVOCATION: cycle-design - planning source already confirmed in cycle.yaml`
+
+  This marker is required for Phase 1's auto-resolve to fire. Without it, Phase 1 falls back to corpus-scan and asks the user to pick a concept (defeating the purpose of capturing the source at cycle creation).
+
+  ⛔ **DO NOT invoke story-from-planning.md via the Skill tool** - Read it via the Read tool and execute its phases inline.
 
 - **Add-a-separate-story moment** ("user asked for an additional story not from the planning"):
   Run Step 3 / Step 3-Fast unchanged. The story gets no `source_concept` field - it's freeform within a planning-sourced cycle. Mixed cycles work natively because each story's moment is independently determined.

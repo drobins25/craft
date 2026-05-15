@@ -98,7 +98,13 @@ options:
 
 **Planning-source routing applies when cycle.yaml has `source_concept` set (captured in Pre-check).** For each story that needs a spark, apply the action-moment framing:
 
-- **Planning-extraction moment** (the spark for this story should be drawn from the cycle's planning concept): Read `${CLAUDE_PLUGIN_ROOT}/commands/references/story-from-planning.md` and execute its phases against the cycle's source_concept. The protocol writes the spark content from the planning doc and adds `source_concept` + `source_concept_last_updated` to the story's frontmatter. Phase 1's auto-resolve uses cycle.yaml's value.
+- **Planning-extraction moment** (the spark for this story should be drawn from the cycle's planning concept): Read `${CLAUDE_PLUGIN_ROOT}/commands/references/story-from-planning.md` and execute its phases against the cycle's source_concept. The protocol writes the spark content from the planning doc and adds `source_concept` + `source_concept_last_updated` to the story's frontmatter.
+
+  **CRITICAL: include the invocation marker** when executing the protocol. State explicitly in your context before running Phase 1:
+
+  > `INVOCATION: cycle-design - planning source already confirmed in cycle.yaml`
+
+  This marker is required for Phase 1's auto-resolve to fire. Without it, Phase 1 falls back to corpus-scan and asks the user to pick a concept.
 
 - **Add-a-separate-story moment / fleshing out a non-planning-sourced story**: Use the existing Step 3 flow below.
 

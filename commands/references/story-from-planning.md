@@ -23,17 +23,23 @@ In this case, **Phase 1's concept-picker auto-resolves** to the cycle's `source_
 
 ## Phase 1: Confirm Concept Source
 
-**Cycle-design invocation - auto-resolve from cycle.yaml:**
+**Invocation marker check (required for auto-resolve):**
 
-If this protocol was invoked from cycle-design (default-mode, roadmap-mode, or detailing-mode) AND the active cycle's `cycle.yaml` has `source_concept` populated:
+The auto-resolve branch below fires ONLY when the calling context explicitly includes the marker phrase:
+
+> `INVOCATION: cycle-design - planning source already confirmed in cycle.yaml`
+
+Cycle-design mode files (default-mode.md, roadmap-mode.md, detailing-mode.md) set this marker before Reading this protocol. The marker is a deterministic structural signal - if it's not present in the calling context (e.g., the user ran `/craft:story-new` directly while `ACTIVE_CYCLE` happens to point at a planning-sourced cycle), the auto-resolve does NOT fire. Fall through to the corpus-scan path below.
+
+**Cycle-design invocation - auto-resolve from cycle.yaml (marker present):**
+
+If the marker is present in your invocation context:
 
 1. Read `${CRAFT_PROJECT_ROOT}/.craft/cycles/${ACTIVE_CYCLE}/cycle.yaml` to get the `source_concept` value (list of planning doc paths).
 2. **If cycle.yaml has exactly one source_concept path:** auto-resolve. Skip the picker. Set that path as the selected concept. Proceed directly to Phase 2.
 3. **If cycle.yaml has multiple source_concept paths:** ask the user which specific concept THIS story is from, using the cycle's `source_concept` list as the option set (not the full planning corpus). Skip directly to Phase 3a after answer.
 
-This auto-resolve only applies when invoked from cycle-design. For `/craft:story-new` Step 2.5 invocation, follow the normal corpus-scan flow below.
-
-**Story-new invocation - corpus scan:**
+**Story-new invocation - corpus scan (no marker, or marker absent):**
 
 Glob the planning corpus:
 
