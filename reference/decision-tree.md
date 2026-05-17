@@ -79,8 +79,8 @@ flowchart TD
     CHOOSE_PATH -->|"Let's get creative"| CONTENT_CREATIVE["Step 3b: Execute content-spark-inline.md<br/>(inline, NOT Skill tool — chain break)"]
     CHOOSE_PATH -->|"I know what I want"| CONTENT_SMART["Step 3b: Execute content-spark-inline.md<br/>(inline, NOT Skill tool — chain break)"]
 
-    CONTENT_CREATIVE --> CREATIVE["PATH A: Creative Mode"]
-    CONTENT_SMART --> SMART["PATH B: Smart Mode"]
+    CONTENT_CREATIVE --> CREATIVE["PATH A: With Creative-Spark"]
+    CONTENT_SMART --> SMART["PATH B: Skip Creative-Spark"]
 
     CREATIVE --> SPARK["Step 4: Execute creative-spark-inline.md<br/>(inline, NOT Skill tool — chain break)<br/>Generate 2-3 options + visual direction"]
     SPARK --> USER_PICK["Step 5: User picks option<br/>Visual direction comes from option<br/>(no separate design-vibe per-story)"]
@@ -93,7 +93,7 @@ flowchart TD
     CONT_OR_SAVE_A -->|Save what we have| SAVE
     CONT_OR_SAVE_A -->|Keep designing| ALIGNMENT
 
-    SMART["PATH B: Smart Mode"] --> QUICK["Step 7: Quick decisions only<br/>(story-scoped, NOT lock-decision unless project-wide)"]
+    SMART["PATH B: Skip Creative-Spark"] --> QUICK["Step 7: Quick decisions only<br/>(story-scoped, NOT lock-decision unless project-wide)"]
     QUICK --> CONT_OR_SAVE_B{"Continue or save?"}
     CONT_OR_SAVE_B -->|Save what we have| SAVE
     CONT_OR_SAVE_B -->|Keep designing| ALIGNMENT
@@ -534,7 +534,7 @@ flowchart LR
 | `/craft:status` | Rich dashboard (cycles, stories, backlog) |
 | `/craft:story-new` | Create story → backlog (with alignment check) |
 | `/craft:story-implement` | Implement story with chunk loop |
-| `/craft:story-implement-auto` | Implement a story (autonomous, for implement mode) |
+| `/craft:story-implement-auto` | Implement a story (autonomous, for implement phase) |
 | `/craft:story-continue` | Resume interrupted story |
 | `/craft:story-archive` | Move story back to backlog |
 | `/craft:story-delete` | Delete a story |

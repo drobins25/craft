@@ -5,7 +5,7 @@ description: "PR review skill - invokes pr-reviewer-expert agent against branch 
 
 # Review
 
-Run a PR-style code review using the crystallized pr-reviewer-expert agent. Three modes based on what you want reviewed.
+Run a PR-style code review using the crystallized pr-reviewer-expert agent. Three approaches based on what you want reviewed.
 
 ## Modes
 
@@ -23,7 +23,7 @@ Optional review strategy: `--maze` enables perpendicular maze review (architect 
 
 ### Step 1: Determine Mode and Scope
 
-**Parse args to determine mode:**
+**Parse args to determine review scope:**
 
 - No args or `branch` → **Branch mode**
 - `story` or `story <name>` → **Story mode**

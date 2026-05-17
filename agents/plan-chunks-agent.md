@@ -91,7 +91,7 @@ Read the story file completely. Extract everything available:
 - **Scope** — Included / excluded
 - **Preserve list** — What must NOT break
 - **Hardest constraint** — Identified risk/challenge
-- **Decisions** — Locked decisions from creative mode
+- **Decisions** — Locked decisions from the Creative Phase
 - **Visual Direction** — Vibe, feel, inspiration, key tokens, motion (UI stories)
 - **Wireframe** — ASCII art layout (UI stories)
 - **Likely Files** — Scanned file list with create/modify/read-only action tags

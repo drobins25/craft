@@ -124,7 +124,7 @@ Locked decisions are enforced via:
 1. **Style hooks** — Grep for token violations on Write/Edit
 2. **Pattern hooks** — Check locked.md compliance
 3. **Code review** — Analyzer agents reference locked patterns
-4. **Validation** — Smart mode validates against locks
+4. **Validation** — Validation enforces locked decisions during implementation
 
 ## Unlocking (Rare)
 

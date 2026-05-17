@@ -28,7 +28,7 @@ When unsure whether a change is architectural: ask first.
 
 ## Conventions
 
-- **Commit messages** describe what changed for a public audience. Use conventional prefixes: `feat:` / `fix:` / `chore:` / `refactor:` / `docs:` / `test:`. Translate internal jargon to what the change DOES. Public craft terms (skills, agents, commands, hooks, cycles, stories, backlog, modes) are fine; internal mechanism names need explanation.
+- **Commit messages** describe what changed for a public audience. Use conventional prefixes: `feat:` / `fix:` / `chore:` / `refactor:` / `docs:` / `test:`. Translate internal jargon to what the change DOES. Public craft terms (skills, agents, commands, hooks, cycles, stories, backlog, phases) are fine; internal mechanism names need explanation.
   - Bad: `fix: chain break when content-spark invokes via Skill tool`
   - Good: `fix: prevent skill nesting from breaking control flow back to caller`
 - **Use regular dashes (-) only, never em dashes.** Em dashes are an AI-text tell.

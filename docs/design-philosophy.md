@@ -263,7 +263,7 @@ Quick, polished login with magic link as primary, email/pass as fallback.
 
 ## Inspiration System
 
-The difference between "AI-generated" and "this is actually good" is inspiration. Creative Mode pulls from your reference library.
+The difference between "AI-generated" and "this is actually good" is inspiration. The Creative Phase pulls from your reference library.
 
 ### Sites File (`.craft/inspiration/sites.md`)
 
@@ -317,7 +317,7 @@ updated: 2024-01-31
 - Never leave user wondering "did it work?"
 ```
 
-### How Creative Mode Uses Inspiration
+### How the Creative Phase Uses Inspiration
 
 ```
 User: "Build a settings page"
@@ -940,7 +940,7 @@ Story implementation done
 /cycle done     # Complete cycle (runs analysis prompt)
 
 # Creative
-/riff           # Enter Creative Mode for current story
+/riff           # Enter Creative Phase for current story
 /inspire        # Show relevant inspiration
 
 # Meta
@@ -1018,8 +1018,8 @@ Status indicators:
 **After assigning to cycle:**
 ```
 "How much detail do you have?"
-○ Just the idea — let's riff (Creative Mode)
-○ I know what I want — plan the chunks (Smart Mode)
+○ Just the idea — let's riff (With Creative-Spark)
+○ I know what I want — plan the chunks (Skip Creative-Spark)
 ```
 
 **After completing a story:**
@@ -1043,7 +1043,7 @@ Status indicators:
 - `/craft:story-new` → Create story (lands in backlog)
 - `/craft:story-implement` → Pick story and implement
 - `/craft:cycle-assign` → Move backlog story to cycle
-- `/craft:analyze` → Jump to Analysis Mode
+- `/craft:analyze` → Jump to Analysis Phase
 
 ---
 
@@ -1062,7 +1062,7 @@ Status indicators:
 - `inspect_element`, `accessibility_audit`, `lighthouse`
 - `get_network_requests`, `evaluate`
 
-### Analysis Mode Use Cases
+### Analysis Phase Use Cases
 
 | Analysis | MCP Tools Used |
 |----------|----------------|
@@ -1360,7 +1360,7 @@ AskUserQuestion: "What's the first thing we're tackling?"
 [Free text]
 
 → Creates .craft/1-{epic-name}/epic.md
-→ Enters Creative Mode
+→ Enters Creative Phase
 → Starts riffing on first stories
 ```
 
@@ -1698,7 +1698,7 @@ Generate interactive craft dashboard and open in browser.
 - [ ] `sites.md` for reference URLs
 - [ ] `patterns.md` for UI patterns
 - [ ] Screenshot capture via MCP
-- [ ] Creative Mode reads inspiration for context
+- [ ] Creative Phase reads inspiration for context
 - [ ] `/inspire` command
 
 ### Phase 4: Quality Gates & Approval Model

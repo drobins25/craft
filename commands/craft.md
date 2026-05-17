@@ -395,7 +395,7 @@ Present the assessment:
 >
 > [Full request body]
 >
-> **My assessment:** This looks like [a single story / a cycle-level change / something worth exploring creatively]. I'd recommend [routing to story-new / routing to cycle-design / routing to story-new in creative mode] because [brief reasoning]."
+> **My assessment:** This looks like [a single story / a cycle-level change / something worth exploring creatively]. I'd recommend [routing to story-new / routing to cycle-design / routing to story-new with creative-spark] because [brief reasoning]."
 
 Use **AskUserQuestion**:
 ```
@@ -409,7 +409,7 @@ options:
   - label: "Create cycle"
     description: "This is big enough for a full cycle"
   - label: "Explore creatively first"
-    description: "Route to story-new in creative mode"
+    description: "Route to story-new with creative-spark"
   - label: "Skip this request"
     description: "Leave it pending for later"
 ```
@@ -504,15 +504,15 @@ If `.global-state` is missing or corrupt, attempt reconstruction:
 5. If unrecoverable, offer fresh start:
    > "State is corrupted. Reset to clean state?"
 
-## Mode Summary
+## Phase Summary
 
-| Mode | When | What Happens |
-|------|------|--------------|
-| Creative Mode | During story creation | Explore options, lock decisions, plan chunks |
-| Smart Mode | During implementation | Execute chunks, validate, refine |
-| Analysis Mode | After implementation | QA, UX, Creative, Style audits |
+| Phase | When | What Happens |
+|-------|------|--------------|
+| Creative Phase | During story creation | Explore options, lock decisions, plan chunks |
+| Implement Phase | During implementation | Execute chunks, validate, refine |
+| Analysis Phase | After implementation | QA, UX, Creative, Style audits |
 
-**Key principle:** Creative Mode happens in `story-new`. By the time a story exists, it's fully designed and ready to implement.
+**Key principle:** The Creative Phase happens in `story-new`. By the time a story exists, it's fully designed and ready to implement.
 
 ## Key Principles
 

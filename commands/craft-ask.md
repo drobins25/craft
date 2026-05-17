@@ -165,5 +165,5 @@ options:
 - Never show the full agent list upfront. Recommend first, list on request.
 - Project context is gathered silently - the user just asks a question.
 - Agents answer from their beliefs, not generic best practices. That's the point.
-- "Both" mode runs agents in parallel and presents side-by-side.
+- The "Both" option runs agents in parallel and presents side-by-side.
 - Follow-ups continue the same agent conversation via SendMessage.

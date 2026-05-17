@@ -7,7 +7,7 @@ description: "Design a cycle — create new cycles with planned stories, detail 
 
 Create a new cycle or detail an existing one — this IS the planning phase. Stories come out fully fleshed with implementation details.
 
-## Mode Dispatch (runs before Step 1)
+## Phase Dispatch (runs before Step 1)
 
 **If args specify an existing planning cycle directory** (e.g., `/craft:cycle-design 5-auth-flow` AND `.craft/cycles/5-auth-flow/cycle.yaml` exists with `status: planning`):
 

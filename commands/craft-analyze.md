@@ -476,7 +476,7 @@ options:
   - label: "Start a new cycle"
     description: "Begin implementation planning"
   - label: "Done for now"
-    description: "Exit analysis mode"
+    description: "End the analysis run"
 ```
 
 **If user provides custom text:** Ask a clarifying AskUserQuestion to understand their intent.

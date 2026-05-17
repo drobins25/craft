@@ -2,7 +2,7 @@
 
 > How to use the muse/alchemist/driver pattern in creative-spark to get options that feel like something, not just options that work.
 
-This is a how-to guide. You're in the middle of creating a story or working in Creative Mode and you want to understand what the Creative Driver step offers and when it's worth using.
+This is a how-to guide. You're in the middle of creating a story or working in the Creative Phase and you want to understand what the Creative Driver step offers and when it's worth using.
 
 ---
 

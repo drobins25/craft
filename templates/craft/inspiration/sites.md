@@ -19,7 +19,7 @@ Reference sites that inform this project's design and UX.
 - **Best for:** [What to reference this site for]
 -->
 
-*Add inspiration sites here during Creative Mode.*
+*Add inspiration sites here during the Creative Phase.*
 
 ---
 

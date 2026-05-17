@@ -6,10 +6,10 @@ For developers using Claude Code who want a pairing partner instead of a code ge
 
 Craft is a Claude Code plugin that transforms how you build software. Instead of rigid spec-first processes, embrace the way great pairing actually works:
 
-- **Riff on ideas** together (Creative Mode)
+- **Riff on ideas** together (Creative Phase)
 - **Lock decisions** as you go
-- **Execute with confidence** (Implement Mode)
-- **Analyze and inspire** next iteration (Analysis Mode)
+- **Execute with confidence** (Implement Phase)
+- **Analyze and inspire** next iteration (Analysis Phase)
 
 ## Philosophy
 
@@ -86,9 +86,9 @@ Stories land in the backlog. Work on them when ready.
 ```
 
 Craft will guide you through:
-1. Creative Mode — flesh out the idea
+1. Creative Phase — flesh out the idea
 2. Chunk planning — break into implementable pieces
-3. Implement Mode — execute with quality gates
+3. Implement Phase — execute with quality gates
 4. Validation — ensure everything passes
 
 ## Commands
@@ -123,8 +123,8 @@ Craft will guide you through:
 
 ## Skills
 
-| Skill | Mode | Purpose |
-|-------|------|---------|
+| Skill | Phase | Purpose |
+|-------|-------|---------|
 | `content-spark` | Creative | Surface content assumptions, capture content direction |
 | `creative-spark` | Creative | Generate creative options and ideas. Supports Creative Driver step (Step 1.5) with muse/alchemist interrogators |
 | `design-vibe` | Creative | Visual cohesion review across stories |
@@ -189,18 +189,24 @@ Craft will guide you through:
 | `crystallizer` | Psychological synthesizer that distills research into agent personas (opus model) |
 | `become-researcher` | Psychological material collector for `/craft:become` — gathers beliefs, not facts |
 
-## Modes
+## How craft work flows
 
-### Chat Mode
-Use when you're shaping ideas before committing to implementation. Creative work — story creation, design, planning. Write access restricted to `.craft/` only. All creative skills available.
+> A kitchen has prep, line, and pass - three stations, same kitchen, different work as the dish comes together.
 
-### Implement Mode
-Use when a story is ready and you want autonomous execution. Autonomous story implementation. Full write access, gated by active story. Runs with `acceptEdits` permission.
+### Creative Phase
+*The prep station.*
 
-### Analysis Mode
-Use after a cycle ships to surface bugs, UX issues, and creative opportunities. Post-cycle analysis using MCP browser tools (QA, UX, Creative, Style passes).
+Story creation, design, planning, and locking decisions. Write access restricted to `.craft/` (no source-code edits). Active skills: content-spark, creative-spark, design-vibe, lock-decision, plan-chunks.
 
-_Note: Analysis Mode is triggered by `/craft:analyze` and runs in the active session context, rather than being configured via a `modes/*.yaml` file like Chat and Implement modes._
+### Implement Phase
+*The line.*
+
+Autonomous execution against a ready story. The implementer builds each chunk; chunk-validator checks it; failures route to refine-chunk or test-fix. Full write access, gated by the active story.
+
+### Analysis Phase
+*Tasting after service.*
+
+Post-cycle review triggered by `/craft:analyze`. Four analyzer agents (QA, UX, Creative, Style) scan what shipped to surface bugs, friction, missed opportunities, and design drift.
 
 ## Directory Structure
 
@@ -281,7 +287,7 @@ Plus polish requirements:
 
 ## MCP Integration
 
-Craft uses `chrome-devtools` MCP for analysis mode:
+Craft uses `chrome-devtools` MCP for the Analysis Phase:
 - Screenshot capture
 - Accessibility audits
 - Element inspection

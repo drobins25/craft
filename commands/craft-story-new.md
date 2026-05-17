@@ -122,7 +122,7 @@ options:
 
 **If "Just a spark"** → Skip to Step 10 (Save & Place) — asks priority, writes minimal file, offers placement
 
-**If "Let's get creative"** → Continue to Step 3b (Content Check), then Step 4 (Creative Mode)
+**If "Let's get creative"** → Continue to Step 3b (Content Check), then Step 4 (with creative-spark)
 
 **If "I know what I want"** → Continue to Step 3b (Content Check), then Step 7 (Quick Decisions)
 
@@ -146,14 +146,14 @@ Execute the phases described in that file against the current story.
 This surfaces content assumptions and writes `## Content Direction` and `## Risk Tags` to the story file.
 
 After `content-spark` completes:
-- **If "Let's get creative"** was chosen → Continue to Step 4 (Creative Mode)
+- **If "Let's get creative"** was chosen → Continue to Step 4 (with creative-spark)
 - **If "I know what I want"** was chosen → Continue to Step 7 (Quick Decisions)
 
 **If "Just a spark"** was chosen in Step 3: content-spark does NOT run. The story is saved with just the spark — content direction can be added later.
 
 ---
 
-## Path A: Creative Mode
+## Path A: With Creative-Spark
 
 ### Step 4: Explore Options
 
@@ -252,11 +252,11 @@ options:
 
 ---
 
-## Path B: Smart Mode (Skip Creative)
+## Path B: Skip Creative-Spark
 
 User has a formed idea — skip creative exploration, go straight to planning.
 
-### Step 7: Quick Decisions (Smart Mode)
+### Step 7: Quick Decisions (Skip Creative-Spark)
 
 > "Got it. A few quick decisions before we plan:"
 
@@ -293,7 +293,7 @@ options:
 
 **If "Save what we have"** → Skip to Step 10 (Save & Place) — writes story with decisions captured
 **If "Keep designing"** → Continue to Step 8 (Full Design)
-**If "Let's get creative"** → Go to Step 4 (Creative Mode — invoke creative-spark)
+**If "Let's get creative"** → Go to Step 4 (invoke creative-spark)
 
 ---
 
@@ -383,7 +383,7 @@ Use **AskUserQuestion** (from Priority Levels section below).
 
 If the user corrects the type, adjust before writing. The `type` field drives creative tool recommendations during planning - `ui` stories get creative-spark prompts, all stories get content-spark prompts.
 
-**CRITICAL for UI stories that went through creative-spark:** The Visual Direction block (Vibe, Feel, Inspiration, Key tokens, Motion) and Wireframe from the chosen option MUST be included in the story file. These details are the entire point of creative mode — without them, all creative work is lost and plan-chunks has no visual context to work from.
+**CRITICAL for UI stories that went through creative-spark:** The Visual Direction block (Vibe, Feel, Inspiration, Key tokens, Motion) and Wireframe from the chosen option MUST be included in the story file. These details are the entire point of creative-spark — without them, all creative work is lost and plan-chunks has no visual context to work from.
 
 **Likely Files scan (required for all stories except "Just a spark"):**
 
@@ -497,7 +497,7 @@ _Scanned: [YYYY-MM-DD]_
 
 - **Spark only** (from "Just a spark"): Frontmatter + Spark. That's it. No Likely Files scan (not enough context).
 - **Creative direction** (from Step 6 "Save what we have"): Frontmatter + Spark + Likely Files + Visual Direction + Wireframe + Decisions (if captured).
-- **Smart mode** (from Step 7b "Save what we have"): Frontmatter + Spark + Likely Files + Decisions.
+- **Skip Creative-Spark path** (from Step 7b "Save what we have"): Frontmatter + Spark + Likely Files + Decisions.
 - **Fully designed** (from Step 8 flow): All sections that have content, including Likely Files.
 
 ---
@@ -613,10 +613,10 @@ If user has multiple ideas:
 > "I'll create stories for each. Let's design them one at a time:
 >
 > **Story 1: [Name]**
-> [Go through Creative Mode flow]
+> [Go through the creative-spark flow]
 >
 > **Story 2: [Name]**
-> [Go through Creative Mode flow]
+> [Go through the creative-spark flow]
 >
 > All stories created and ready."
 

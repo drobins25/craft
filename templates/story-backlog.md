@@ -44,7 +44,7 @@ current_chunk: 0
 - {{BLOCKS_1}}
 
 ## Decisions
-<!-- Locked decisions from Creative Mode -->
+<!-- Locked decisions from the Creative Phase -->
 
 ## Visual Direction
 <!-- For UI stories only -->

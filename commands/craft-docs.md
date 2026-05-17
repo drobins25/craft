@@ -16,7 +16,7 @@ Set `PROJECT` to `${CRAFT_PROJECT_ROOT:-.}`.
 
 ## Flow
 
-### Step 0: Determine Mode
+### Step 0: Determine Run Context
 
 Parse args:
 

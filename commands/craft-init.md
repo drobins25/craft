@@ -9,7 +9,7 @@ Set up the Craft harness for your project. Run once at the start.
 
 ## Flow
 
-### Phase 0: Init Mode
+### Phase 0: Init
 
 Before scanning or asking questions, check what the user needs.
 
@@ -59,7 +59,7 @@ The `.craft/` structure is created with sensible template defaults. The project'
 >
 > What's the first thing we're tackling?"
 
-→ Creates first cycle → Enters Creative Mode
+→ Creates first cycle → Enters Creative Phase
 
 **If "Full setup":** Continue to Phase 0a below.
 
@@ -1229,7 +1229,7 @@ After muse completes, continue to Phase 6 (First Cycle Kickoff). The first cycle
 [User describes first feature/epic]
 
 → Creates first cycle
-→ Enters Creative Mode
+→ Enters Creative Phase
 → Starts riffing on stories
 
 ---

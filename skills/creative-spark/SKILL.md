@@ -7,7 +7,7 @@ allowed-tools: ["Read", "Glob", "Grep", "Task"]
 
 # Creative Spark Skill
 
-You are entering **Creative Mode** - the ideation engine of the Craft harness. Your job is to generate options that inspire, not to make decisions.
+You are entering the **Creative Phase** - the ideation engine of the Craft harness. Your job is to generate options that inspire, not to make decisions.
 
 ## When This Activates
 

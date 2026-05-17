@@ -84,9 +84,6 @@ plugins/craft/
 ├── hooks/
 │   ├── hooks.json             ← Hook event definitions
 │   └── scripts/               ← 35+ bash/python hook scripts
-├── modes/                     ← Mode definitions (write scoping, tool access)
-│   ├── chat.yaml              ← Creative mode: .craft/ writes only
-│   └── implement.yaml         ← Implementation mode: full access, gated
 ├── templates/                 ← File templates for craft init and scaffolding
 │   ├── craft/                 ← .craft/ directory templates
 │   │   ├── design/            ← tokens.yaml, components.md, locked.md
@@ -178,24 +175,31 @@ See `docs/workflow-reference.md` for the full format spec and examples.
 
 ---
 
-## Modes Detail
+## Phases Detail
 
-### Chat Mode (`modes/chat.yaml`)
+### Creative Phase
 
-Write access restricted to `.craft/` and `.claude/` only. All creative and planning skills available. Used by Craftsman web chat agent and CLI sessions between stories.
+Write access restricted to `.craft/` and `.claude/`. Used for story creation, design, planning, and locking decisions - no source-code edits.
 
 **Included skills:** content-spark, creative-spark, design-vibe, lock-decision, plan-chunks, fix, approve, browser
 **Included agents:** plan-chunks-agent, project-scanner, muse, alchemist, conductor, doc-writer, product-anthropologist, pr-reviewer-expert, maze-architect, researcher, verifier, practitioner-reviewer, playwright-browser, become-researcher, crystallizer
 **Included commands:** craft, craft:init, craft:cycle-design, craft:cycle-start, craft:cycle-complete, craft:cycle-assign, craft:story-new, craft:story-archive, craft:story-delete, craft:status, craft:update-docs, craft:docs, craft:project, craft:review, craft:become, craft:ask, craft:workflow, craft:research, craft:research-verify, craft:fix
 
-### Implement Mode (`modes/implement.yaml`)
+### Implement Phase
 
-Full write access, gated by `CRAFT_WRITE_ENABLED` in `.global-state`. Runs with `acceptEdits` permission mode. Max 100 turns. Auto-prompt: runs `/craft:story-implement-auto`.
+Full write access, gated by `CRAFT_WRITE_ENABLED` in `.global-state`. Runs with `acceptEdits` permission mode.
 
 **Allowed tools:** Read, Write, Edit, Glob, Grep, Bash, Task
 **Included skills:** validate-chunk, refine-chunk, test-fix
 **Included agents:** implementer, tester, chunk-validator
 **Included commands:** craft:story-implement, craft:story-implement-auto, craft:story-continue
+
+### Analysis Phase
+
+Triggered by `/craft:analyze` after a cycle ships. No restricted write scope - runs in the active session context.
+
+**Included agents:** qa-analyzer, ux-analyzer, creative-analyzer, style-analyzer, walkthrough-analyzer
+**Included commands:** craft:analyze, craft:review
 
 ---
 
@@ -208,7 +212,7 @@ All hooks defined in `hooks/hooks.json`. Scripts in `hooks/scripts/`.
 - **`post-compact-reinject.sh`** (on compact) — Re-injects craft context after context compaction
 
 ### PreToolUse (Write|Edit)
-- **`check-write-permission.py`** — Enforces write permission gating. Checks mode (chat vs implement), CRAFT_WRITE_ENABLED flag, and allowed paths.
+- **`check-write-permission.py`** — Enforces write permission gating. Checks for active story/cycle context, `CRAFT_WRITE_ENABLED` flag, active workflow session, and allowed paths. Uses hardcoded logic (no external config file).
 
 ### PreToolUse (Bash)
 - **`auto-approve-plugin-scripts.sh`** — Auto-approves bash invocations of plugin scripts to reduce permission prompts.
@@ -293,7 +297,7 @@ project-root/
 │   │   │   └── style.yaml
 │   │   ├── screenshots/
 │   │   └── reports/
-│   ├── inspiration/           ← Reference library for Creative Mode
+│   ├── inspiration/           ← Reference library for the Creative Phase
 │   │   ├── screenshots/
 │   │   ├── sites.md
 │   │   └── patterns.md
@@ -375,11 +379,11 @@ goals:
 │  → Creates story → Assign to cycle or backlog                   │
 └─────────────────────────────────────────────────────────────────┘
          │                                    │
-    BACKLOG ──assign──▶ CYCLE ──▶ CHAT MODE (creative)
+    BACKLOG ──assign──▶ CYCLE ──▶ CREATIVE PHASE
                                       │
-                               IMPLEMENT MODE (autonomous)
+                               IMPLEMENT PHASE (autonomous)
                                       │
-                               ANALYSIS MODE (post-cycle)
+                               ANALYSIS PHASE (post-cycle)
                                       │
                                Back to Backlog / Cycle
 ```

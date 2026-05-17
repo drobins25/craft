@@ -1,6 +1,6 @@
 ---
 name: craft:story-implement
-description: "Implement a story through Smart Mode. Stories must be fully designed with chunks before implementation."
+description: "Implement a story through the Implement Phase. Stories must be fully designed with chunks before implementation."
 argument-hint: "[story-name]"
 ---
 
@@ -41,7 +41,7 @@ Background test runs cause orphaned failure notifications that appear after stor
 
 ---
 
-Implement a story that's already been designed. This is pure Smart Mode — chunks exist, decisions are locked, just execute.
+Implement a story that's already been designed. This is pure Implement Phase — chunks exist, decisions are locked, just execute.
 
 ## Project Root
 
@@ -124,9 +124,9 @@ Use **AskUserQuestion**:
 question: "This story doesn't have chunks planned. How do you want to proceed?"
 header: "Plan"
 options:
-  - label: "Design it now (Creative Mode)"
+  - label: "Design it now (Creative Phase)"
     description: "Explore options, then plan chunks"
-  - label: "Plan chunks directly (Smart Mode)"
+  - label: "Plan chunks directly (skip creative-spark)"
     description: "I know what I want, just break it down"
   - label: "Pick a different story"
     description: "Choose another story to implement"
@@ -134,11 +134,11 @@ options:
 
 **If user provides custom text:** Ask a clarifying AskUserQuestion to understand their preferred approach.
 
-**If user selects "Design it now (Creative Mode)":**
+**If user selects "Design it now (Creative Phase)":**
 → invoke `craft:craft-story-new` with args "[story path] — Existing story needs creative exploration. SKIP_STEP_1: true USER_PREFERS: creative"
 After story-new completes (story will have chunks), return to story-implement for the same story.
 
-**If user selects "Plan chunks directly (Smart Mode)":**
+**If user selects "Plan chunks directly (skip creative-spark)":**
 → invoke `craft:plan-chunks` with args "[story path]"
 After plan-chunks completes (story will have chunks, status: ready), return to story-implement for the same story.
 
