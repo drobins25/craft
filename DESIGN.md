@@ -61,14 +61,11 @@ plugins/craft/
 │   ├── craft-analyze.md
 │   ├── craft-reflect.md
 │   ├── craft-update-docs.md
-│   ├── craft-workflow.md      ← Workflow router (lean 191 lines, delegates to references/)
-│   └── references/            ← Workflow sub-command reference files
-│       ├── workflow-create.md
-│       ├── workflow-execute.md
-│       ├── workflow-formats.md
-│       ├── workflow-manage.md
-│       ├── workflow-sessions.md
-│       └── workflow-validate.md
+│   ├── craft-workflow.md          ← Workflow router (state read, fast paths, dashboard, dispatch)
+│   ├── craft-workflow-run.md      ← Session lifecycle (run/continue/next/run-all/batch/ready)
+│   ├── craft-workflow-design.md   ← Definition lifecycle (create/edit/archive)
+│   └── references/
+│       └── workflow-formats.md    ← Shared schema reference (frontmatter, stage-file format)
 ├── skills/                    ← Orchestrator-context skills (11 skills)
 │   ├── approve/               ← Scoped write permission gate (AskUserQuestion + TaskCreate)
 │   ├── browser/               ← playwright-cli browser automation launcher
@@ -183,7 +180,7 @@ Write access restricted to `.craft/` and `.claude/`. Used for story creation, de
 
 **Included skills:** content-spark, creative-spark, design-vibe, lock-decision, plan-chunks, fix, approve, browser
 **Included agents:** plan-chunks-agent, project-scanner, muse, alchemist, conductor, doc-writer, product-anthropologist, pr-reviewer-expert, maze-architect, researcher, verifier, practitioner-reviewer, playwright-browser, become-researcher, crystallizer
-**Included commands:** craft, craft:init, craft:cycle-design, craft:cycle-start, craft:cycle-complete, craft:cycle-assign, craft:story-new, craft:story-archive, craft:story-delete, craft:status, craft:update-docs, craft:docs, craft:project, craft:review, craft:become, craft:ask, craft:workflow, craft:research, craft:research-verify, craft:fix
+**Included commands:** craft, craft:init, craft:cycle-design, craft:cycle-start, craft:cycle-complete, craft:cycle-assign, craft:story-new, craft:story-archive, craft:story-delete, craft:status, craft:update-docs, craft:docs, craft:project, craft:review, craft:become, craft:ask, craft:workflow, craft:workflow-run, craft:workflow-design, craft:research, craft:research-verify, craft:fix
 
 ### Implement Phase
 

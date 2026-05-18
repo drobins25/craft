@@ -114,7 +114,9 @@ Craft will guide you through:
 | `/craft:docs` | Generate or update docs using the crystallized doc-writer agent (two-pass: brief then generate) |
 | `/craft:become` | Crystallize a tool, role, or person into a portable 9-section agent with beliefs and scar tissue |
 | `/craft:ask` | Consult a workshop agent — routes your question to the best available mind |
-| `/craft:workflow` | Reusable multi-step workflows with agent/inline/manual/command execution modes |
+| `/craft:workflow` | Workflow router — dashboard, status, and dispatch to workflow-run or workflow-design |
+| `/craft:workflow-run` | Run a workflow session — start, continue, next, run-all, batch-create, mark ready |
+| `/craft:workflow-design` | Author workflow definitions — create new, edit existing, archive unused |
 | `/craft:research` | Ad-hoc research — discover, elaborate, synthesize with ranked branches |
 | `/craft:research-verify` | Verify existing research findings against independent primary sources |
 | `/craft:fix` | Adhoc fix for small bugs without story ceremony. Creates permanent record in `.craft/fixes/` |

@@ -240,9 +240,9 @@ archive workflow  → moved to .craft/workflows/.archived/ (data preserved)
 
 ### Batch Mode
 
-`/craft:workflow batch {name}` creates multiple sessions at once from a list of variable sets. Useful for running the same workflow against multiple subjects (research on 5 topics, documentation for 8 commands).
+`/craft:workflow-run batch {name}` creates multiple sessions at once from a list of variable sets. Useful for running the same workflow against multiple subjects (research on 5 topics, documentation for 8 commands).
 
-Sessions created in batch mode start as `ready` and run sequentially when `/craft:workflow run-all {name}` is invoked.
+Sessions created in batch mode start as `draft` and can be marked `ready` via `/craft:workflow-run ready {name}`, or run sequentially with `/craft:workflow-run run-all {name}`.
 
 ---
 
@@ -253,9 +253,9 @@ When a `command`-type stage invokes a craft skill via the Skill tool, the orches
 ```bash
 cat > "${CRAFT_PROJECT_ROOT:-.}/.craft/.continuation" << CRUMB
 ACTION: Continue workflow session "{session-name}" from stage {N+1}
-SKILL: craft:craft-workflow
+SKILL: craft:craft-workflow-run
 ARGS: continue
-WRITTEN_BY: craft-workflow
+WRITTEN_BY: craft-workflow-run
 TIMESTAMP: $(date -u +%Y-%m-%dT%H:%M:%S)
 CRUMB
 ```
@@ -269,14 +269,14 @@ The Stop hook reads this file, injects a "DO NOT STOP" continuation instruction,
 ```
 .craft/workflows/
   {workflow-slug}/
-    definition.md              # Routing table (stages-v1) or full definition (monolithic)
-    stages/                    # Per-stage briefs (stages-v1 only)
+    definition.md              # Routing table for stages
+    stages/                    # Per-stage briefs (self-contained)
       01-{slug}.md             # Stage 1 - self-contained brief
       02-{slug}.md             # Stage 2
     sessions/
       {YYYY-MM-DD}-{slug}/
         session.md             # Progress tracking, variable values, stage status
-        artifacts/             # Stage outputs for cross-stage handoff (stages-v1)
+        artifacts/             # Stage outputs for cross-stage handoff
           01-{slug}-output.md
           02-{slug}-output.md
   .archived/                   # Archived workflows (still readable, not shown in dashboard)
@@ -287,19 +287,23 @@ The Stop hook reads this file, injects a "DO NOT STOP" continuation instruction,
 ## Quick Commands
 
 ```bash
+# Router - status and dispatch
 /craft:workflow                        # Dashboard - see all workflows and sessions
-/craft:workflow create                 # Create a new workflow
-/craft:workflow run {name}             # Start a new session for a workflow
-/craft:workflow batch {name}           # Create multiple sessions at once
-/craft:workflow run-all {name}         # Run all ready sessions sequentially
-/craft:workflow continue               # Resume active session at current stage
-/craft:workflow next {name}            # Advance to the next ready session
-/craft:workflow list                   # List all workflows
-/craft:workflow {name}                 # Browse a specific workflow
-/craft:workflow archive {name}         # Archive a workflow
-/craft:workflow ready {name}           # Mark a paused session as ready
+
+# Session lifecycle (workflow-run)
+/craft:workflow-run run {name}         # Start a new session for a workflow
+/craft:workflow-run continue           # Resume the active session at current stage
+/craft:workflow-run next {name}        # Activate and run the next runnable session
+/craft:workflow-run run-all {name}     # Chain through all runnable sessions
+/craft:workflow-run batch {name}       # Create multiple draft sessions at once
+/craft:workflow-run ready {name}       # Mark draft sessions as ready
+
+# Definition lifecycle (workflow-design)
+/craft:workflow-design create          # Create a new workflow
+/craft:workflow-design edit {name}     # Edit an existing workflow's stages/prompts/checklists
+/craft:workflow-design archive {name}  # Archive a workflow (preserves sessions, hides from dashboard)
 ```
 
 ---
 
-*For the complete operational spec, see `commands/craft-workflow.md` and `commands/references/`. For stage execution details, see `commands/references/workflow-execute.md`.*
+*For the complete operational spec, see `commands/craft-workflow.md` (router), `commands/craft-workflow-run.md` (session execution), and `commands/craft-workflow-design.md` (definition authoring). For frontmatter and stage-file schema, see `commands/references/workflow-formats.md`.*
