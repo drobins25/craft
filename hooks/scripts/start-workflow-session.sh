@@ -50,7 +50,7 @@ done
 CURRENT_STATUS=$(awk '/^---$/{n++; next} n==1 && /^status:/{print $2; exit}' "$SESSION_FILE")
 if [ "$CURRENT_STATUS" = "active" ]; then
   echo "Error: session '$(basename "$SESSION_DIR")' is already active."
-  echo "Use /craft:workflow continue to resume it."
+  echo "Use /craft:workflow-run continue to resume it."
   exit 1
 fi
 
@@ -58,38 +58,22 @@ fi
 sed -i.bak "s/^status:.*/status: active/" "$SESSION_FILE"
 sed -i.bak "s/^current_stage:.*/current_stage: 1/" "$SESSION_FILE"
 
-# Detect format
-WORKFLOW_DIR="$(dirname "$(dirname "$SESSION_DIR")")"
-if [ -d "$WORKFLOW_DIR/stages" ] && [ -n "$(ls -A "$WORKFLOW_DIR/stages" 2>/dev/null)" ]; then
-  FORMAT="stages-v1"
-else
-  FORMAT="monolithic"
-fi
-
-# For stages-v1: inject session_dir into variables if missing
-if [ "$FORMAT" = "stages-v1" ]; then
-  if ! grep -q '^  session_dir:' "$SESSION_FILE" 2>/dev/null; then
-    # Insert session_dir after the variables: line
-    sed -i.bak "/^variables:/a\\
+# Inject session_dir into variables if missing
+if ! grep -q '^  session_dir:' "$SESSION_FILE" 2>/dev/null; then
+  # Insert session_dir after the variables: line
+  sed -i.bak "/^variables:/a\\
   session_dir: \"$SESSION_DIR\"" "$SESSION_FILE"
-    rm -f "$SESSION_FILE.bak"
-  fi
+  rm -f "$SESSION_FILE.bak"
 fi
 
-# Mark Stage 1 as active
-if [ "$FORMAT" = "stages-v1" ]; then
-  # stages-v1: mark in Progress table + checklist section
-  awk '
-    /^\| 1 / {
-      gsub(/pending/, "active")
-    }
-    { print }
-  ' "$SESSION_FILE" > "$SESSION_FILE.tmp" && mv "$SESSION_FILE.tmp" "$SESSION_FILE"
-  sed -i.bak -E "s/(## Stage 1:.*)\[pending\]/\1[active]/" "$SESSION_FILE"
-else
-  # monolithic: mark Stage 1 heading
-  sed -i.bak "s/## Stage 1:.*\[pending\]/& /; s/\[pending\]/[active]/" "$SESSION_FILE"
-fi
+# Mark Stage 1 as active in Progress table + checklist section
+awk '
+  /^\| 1 / {
+    gsub(/pending/, "active")
+  }
+  { print }
+' "$SESSION_FILE" > "$SESSION_FILE.tmp" && mv "$SESSION_FILE.tmp" "$SESSION_FILE"
+sed -i.bak -E "s/(## Stage 1:.*)\[pending\]/\1[active]/" "$SESSION_FILE"
 
 rm -f "$SESSION_FILE.bak"
 

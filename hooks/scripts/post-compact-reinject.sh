@@ -76,21 +76,15 @@ if [ -n "$CURRENT_WORKFLOW_SESSION" ]; then
     # Get the workflow definition path for stage details
     WF_DEF_DIR="$(dirname "$(dirname "$CURRENT_WORKFLOW_SESSION")")"
     [ -f "$WF_DEF_DIR/definition.md" ] && echo "Definition: $WF_DEF_DIR/definition.md"
-    # If stages-v1 format, output the current stage file for quick recovery
-    if [ -d "$WF_DEF_DIR/stages" ] && [ -n "$(ls -A "$WF_DEF_DIR/stages" 2>/dev/null)" ]; then
-      # Try zero-padded first, then non-padded
-      STAGE_FILE=$(ls "$WF_DEF_DIR/stages/$(printf "%02d" "$WF_STAGE")-"*.md 2>/dev/null | head -1)
-      [ -z "$STAGE_FILE" ] && STAGE_FILE=$(ls "$WF_DEF_DIR/stages/${WF_STAGE}-"*.md 2>/dev/null | head -1)
-      if [ -n "$STAGE_FILE" ]; then
-        echo "Current stage file: $STAGE_FILE"
-      fi
-      echo "Format: stages-v1 (read session.md + routing table + stage file to resume)"
-    else
-      echo "Format: monolithic (read session.md + definition.md to resume)"
+    # Output the current stage file for quick recovery
+    STAGE_FILE=$(ls "$WF_DEF_DIR/stages/$(printf "%02d" "$WF_STAGE")-"*.md 2>/dev/null | head -1)
+    [ -z "$STAGE_FILE" ] && STAGE_FILE=$(ls "$WF_DEF_DIR/stages/${WF_STAGE}-"*.md 2>/dev/null | head -1)
+    if [ -n "$STAGE_FILE" ]; then
+      echo "Current stage file: $STAGE_FILE"
     fi
   fi
   echo ""
-  echo "ACTION REQUIRED: You were running craft:workflow continue. Re-invoke it via the Skill tool to reload full instructions and resume."
+  echo "ACTION REQUIRED: You were running craft:workflow-run continue. Re-invoke it via the Skill tool to reload full instructions and resume."
   echo ""
 fi
 

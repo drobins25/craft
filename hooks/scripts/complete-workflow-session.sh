@@ -5,9 +5,7 @@
 # session-path: path to the session directory
 # definition-path: optional path to the workflow definition.md (for artifact verification)
 #
-# Supports both formats:
-# - monolithic: stage headings + checklists in session.md
-# - stages-v1 (hybrid): Progress table + per-stage checklist sections in session.md
+# Format: stages-v1 (hybrid) - Progress table + per-stage checklist sections in session.md
 #
 # Runs validation, writes ## Validation section, sets status: complete.
 
@@ -36,48 +34,21 @@ fi
 
 TODAY=$(date +%Y-%m-%d)
 
-# Detect format
 WORKFLOW_DIR="$(dirname "$(dirname "$SESSION_DIR")")"
-if [ -d "$WORKFLOW_DIR/stages" ] && [ -n "$(ls -A "$WORKFLOW_DIR/stages" 2>/dev/null)" ]; then
-  FORMAT="stages-v1"
-else
-  FORMAT="monolithic"
-fi
 
-if [ "$FORMAT" = "stages-v1" ]; then
-  ##############################################
-  # stages-v1: Count from Progress table + checklist sections
-  ##############################################
+# Count stages from Progress table
+TOTAL_STAGES=$(awk '/^\| [0-9]/' "$SESSION_FILE" | wc -l | tr -d ' ')
+COMPLETE_STAGES=$(awk '/^\| [0-9]/' "$SESSION_FILE" | grep -c 'complete' || echo "0")
+SKIPPED_STAGES=$(awk '/^\| [0-9]/' "$SESSION_FILE" | grep -c 'skipped' || echo "0")
+PENDING_STAGES=$(awk '/^\| [0-9]/' "$SESSION_FILE" | grep -c 'pending' || echo "0")
+ACTIVE_STAGES=$(awk '/^\| [0-9]/' "$SESSION_FILE" | grep -c 'active' || echo "0")
 
-  # Count stages from Progress table
-  TOTAL_STAGES=$(awk '/^\| [0-9]/' "$SESSION_FILE" | wc -l | tr -d ' ')
-  COMPLETE_STAGES=$(awk '/^\| [0-9]/' "$SESSION_FILE" | grep -c 'complete' || echo "0")
-  SKIPPED_STAGES=$(awk '/^\| [0-9]/' "$SESSION_FILE" | grep -c 'skipped' || echo "0")
-  PENDING_STAGES=$(awk '/^\| [0-9]/' "$SESSION_FILE" | grep -c 'pending' || echo "0")
-  ACTIVE_STAGES=$(awk '/^\| [0-9]/' "$SESSION_FILE" | grep -c 'active' || echo "0")
+# Checklist items are per-session in the hybrid format
+TOTAL_ITEMS=$(grep -c '^- \[' "$SESSION_FILE" || echo "0")
+CHECKED_ITEMS=$(grep -c '^- \[x\]' "$SESSION_FILE" || echo "0")
+UNCHECKED_ITEMS=$(grep -c '^- \[ \]' "$SESSION_FILE" || echo "0")
 
-  # Checklist items are per-session in the hybrid format (same grep as monolithic)
-  TOTAL_ITEMS=$(grep -c '^- \[' "$SESSION_FILE" || echo "0")
-  CHECKED_ITEMS=$(grep -c '^- \[x\]' "$SESSION_FILE" || echo "0")
-  UNCHECKED_ITEMS=$(grep -c '^- \[ \]' "$SESSION_FILE" || echo "0")
-
-else
-  ##############################################
-  # monolithic: Original counting (unchanged)
-  ##############################################
-
-  TOTAL_STAGES=$(grep -c '^## Stage' "$SESSION_FILE" || echo "0")
-  COMPLETE_STAGES=$(grep -c '^## Stage.*\[complete\]' "$SESSION_FILE" || echo "0")
-  SKIPPED_STAGES=$(grep -c '^## Stage.*\[skipped\]' "$SESSION_FILE" || echo "0")
-  PENDING_STAGES=$(grep -c '^## Stage.*\[pending\]' "$SESSION_FILE" || echo "0")
-  ACTIVE_STAGES=$(grep -c '^## Stage.*\[active\]' "$SESSION_FILE" || echo "0")
-
-  TOTAL_ITEMS=$(grep -c '^- \[' "$SESSION_FILE" || echo "0")
-  CHECKED_ITEMS=$(grep -c '^- \[x\]' "$SESSION_FILE" || echo "0")
-  UNCHECKED_ITEMS=$(grep -c '^- \[ \]' "$SESSION_FILE" || echo "0")
-fi
-
-# Collect issues (same logic for both formats - both have ## Stage headings with status tags)
+# Collect issues from ## Stage headings with status tags
 ISSUES=""
 ISSUE_COUNT=0
 
@@ -123,28 +94,26 @@ if [ "$SKIPPED_STAGES" -gt 0 ]; then
   done <<< "$STAGES_SKIPPED"
 fi
 
-# For stages-v1: verify artifacts/ directory has expected output files
-if [ "$FORMAT" = "stages-v1" ]; then
-  ARTIFACTS_DIR="$SESSION_DIR/artifacts"
-  if [ -d "$ARTIFACTS_DIR" ]; then
-    for stage_file in "$WORKFLOW_DIR/stages/"*.md; do
-      [ -f "$stage_file" ] || continue
-      stage_exec=$(awk '/^---$/{n++; next} n==1 && /^execution:/{print $2; exit}' "$stage_file")
-      stage_produces=$(awk '/^---$/{n++; next} n==1 && /^produces:/{gsub(/^produces: *"?/, ""); gsub(/"$/, ""); print; exit}' "$stage_file")
-      stage_num=$(awk '/^---$/{n++; next} n==1 && /^stage:/{print $2; exit}' "$stage_file")
+# Verify artifacts/ directory has expected output files
+ARTIFACTS_DIR="$SESSION_DIR/artifacts"
+if [ -d "$ARTIFACTS_DIR" ]; then
+  for stage_file in "$WORKFLOW_DIR/stages/"*.md; do
+    [ -f "$stage_file" ] || continue
+    stage_exec=$(awk '/^---$/{n++; next} n==1 && /^execution:/{print $2; exit}' "$stage_file")
+    stage_produces=$(awk '/^---$/{n++; next} n==1 && /^produces:/{gsub(/^produces: *"?/, ""); gsub(/"$/, ""); print; exit}' "$stage_file")
+    stage_num=$(awk '/^---$/{n++; next} n==1 && /^stage:/{print $2; exit}' "$stage_file")
 
-      # For non-manual stages with produces: set, check artifact exists
-      if [ "$stage_exec" != "manual" ] && [ -n "$stage_produces" ] && [ "$stage_produces" != '""' ] && [ "$stage_produces" != "''" ]; then
-        artifact_found=$(ls "$ARTIFACTS_DIR/$(printf "%02d" "$stage_num")-"*.md 2>/dev/null | head -1)
-        [ -z "$artifact_found" ] && artifact_found=$(ls "$ARTIFACTS_DIR/${stage_num}-"*.md 2>/dev/null | head -1)
-        if [ -z "$artifact_found" ]; then
-          stage_name=$(awk '/^---$/{n++; next} n==1 && /^name:/{gsub(/^name: */, ""); print; exit}' "$stage_file")
-          ISSUES="${ISSUES}\n- [ ] Missing artifact for Stage $stage_num: $stage_name (expected in artifacts/)"
-          ISSUE_COUNT=$((ISSUE_COUNT + 1))
-        fi
+    # For non-manual stages with produces: set, check artifact exists
+    if [ "$stage_exec" != "manual" ] && [ -n "$stage_produces" ] && [ "$stage_produces" != '""' ] && [ "$stage_produces" != "''" ]; then
+      artifact_found=$(ls "$ARTIFACTS_DIR/$(printf "%02d" "$stage_num")-"*.md 2>/dev/null | head -1)
+      [ -z "$artifact_found" ] && artifact_found=$(ls "$ARTIFACTS_DIR/${stage_num}-"*.md 2>/dev/null | head -1)
+      if [ -z "$artifact_found" ]; then
+        stage_name=$(awk '/^---$/{n++; next} n==1 && /^name:/{gsub(/^name: */, ""); print; exit}' "$stage_file")
+        ISSUES="${ISSUES}\n- [ ] Missing artifact for Stage $stage_num: $stage_name (expected in artifacts/)"
+        ISSUE_COUNT=$((ISSUE_COUNT + 1))
       fi
-    done
-  fi
+    fi
+  done
 fi
 
 # Determine validation status
