@@ -1,12 +1,18 @@
 ---
 name: craft:workflow
-description: "Define reusable multi-step workflows with mixed execution modes (agent/inline/manual/command). Create definitions, run sessions, track progress."
-argument-hint: "[create | batch <name> | list | run <name> | next <name> | run-all <name> | continue | ready <name> | archive <name> | <workflow-name>]"
+description: "Workflow status and routing - shows active sessions, draft sessions, and available workflow definitions. Routes to workflow-run or workflow-design."
+when_to_use: "Use when the user asks about workflows generically ('what workflows do I have?', 'show me workflows', 'workflow status'), or hasn't yet specified whether they want to run a session or author a definition. NOT for running sessions directly (use craft:workflow-run) or authoring (use craft:workflow-design)."
 ---
 
 # Workflow
 
-Reusable multi-step process engine. Define a workflow once, run it many times with different variables. Each step can be agent-driven, inline (orchestrator executes with full context), manual, or a craft command.
+You are the **Workflow router** - the entry point that shows current workflow state and routes you to the right specialized command.
+
+## Your Role
+
+**This is a router. It does not execute workflow work.** All session execution lives in `craft:workflow-run`. All definition authoring lives in `craft:workflow-design`. This file reads state, surfaces obvious resume actions, presents a dashboard when nothing is obvious, and routes you to the specialized command via `→ invoke craft:<command>`.
+
+If you find yourself about to run a transition script, create tasks for stages, dispatch a stage, or write a definition file - **stop**. You're in the wrong file. Route to `/craft:workflow-run` or `/craft:workflow-design` instead.
 
 ## Project Root
 
@@ -14,94 +20,171 @@ Use `$CRAFT_PROJECT_ROOT` (set at session start) as the base path for all `.craf
 
 Set `PROJECT` to `${CRAFT_PROJECT_ROOT:-.}`.
 
-## Format Detection
+---
 
-To determine which format a workflow uses, check for a `stages/` directory with at least one file:
+## Step 1: Read State (Minimal)
 
-```
-WORKFLOW_DIR="$PROJECT/.craft/workflows/{workflow-slug}"
-if [ -d "$WORKFLOW_DIR/stages" ] && [ -n "$(ls -A "$WORKFLOW_DIR/stages" 2>/dev/null)" ]; then
-  # New format: stage-file dispatch
-  FORMAT="stages-v1"
-else
-  # Old format: monolithic definition
-  FORMAT="monolithic"
-fi
-```
+Use **Read** to read `$PROJECT/.craft/.global-state`. Parse key=value pairs to extract `CURRENT_WORKFLOW_SESSION`.
 
-All dispatch, session creation, and stage loading steps MUST check format before acting. When `FORMAT="stages-v1"`, read stage details from individual files in `stages/`. When `FORMAT="monolithic"`, read from `definition.md` sections as before.
+Use **Glob** with pattern `$PROJECT/.craft/workflows/*/definition.md` to find all workflow definitions (excludes `.archived/`).
 
-## File Structure
-
-```
-.craft/workflows/
-  {workflow-name}/
-    definition.md              # Routing table (stages-v1) or full definition (monolithic)
-    stages/                    # Per-stage self-contained briefs (stages-v1 only)
-      01-name.md
-      02-name.md
-    sessions/
-      {YYYY-MM-DD}-{slug}/
-        session.md             # Progress + checklists (hybrid) or full content (monolithic)
-        artifacts/             # Stage outputs for cross-stage handoff (stages-v1 only)
-  .archived/                   # Archived workflows (still readable)
-```
-
-## Flow
-
-### Step 0: Determine Invocation Mode
-
-Parse args to determine routing:
-
-**Mode A - "create":** Args start with `create`.
--> Read [references/workflow-create.md](references/workflow-create.md) for the full create flow.
-
-**Mode A2 - Inline workflow in user message:** The user's message contains a numbered list of steps (e.g., "1. Read the blueprint... 2. Write content...") alongside or instead of `create`. Treat this as "from scratch" input - skip the source selection AskUserQuestion and parse the steps directly from the user's message.
--> Read [references/workflow-create.md](references/workflow-create.md), jump to Step 1.3 with the parsed stages.
-
-**Mode B - "list":** Args are `list`.
--> Jump to **Step 2** (Dashboard) below.
-
-**Mode C - "run {name}":** Args start with `run`.
--> Read [references/workflow-sessions.md](references/workflow-sessions.md) for session creation (Step 3).
-
-**Mode C2 - "batch {name}":** Args start with `batch`.
--> Read [references/workflow-sessions.md](references/workflow-sessions.md) for batch creation (Step 3b).
-
-**Mode D - "continue":** Args are `continue`.
--> Read [references/workflow-execute.md](references/workflow-execute.md) for execution (Step 4).
-
-**Mode I - "next {name}":** Args start with `next`.
--> Read [references/workflow-sessions.md](references/workflow-sessions.md) for next session (Step 3d).
-
-**Mode J - "run-all {name}":** Args start with `run-all`.
--> Read [references/workflow-sessions.md](references/workflow-sessions.md) for run-all (Step 3e).
-
-**Mode E - "archive {name}":** Args start with `archive`.
--> Read [references/workflow-manage.md](references/workflow-manage.md) for archive (Step 7).
-
-**Mode F - "ready {name}":** Args start with `ready`.
--> Read [references/workflow-manage.md](references/workflow-manage.md) for ready (Step 8).
-
-**Mode G - "{workflow-name}":** Args match an existing workflow folder name in `$PROJECT/.craft/workflows/`.
--> Jump to **Step 2b** below.
-
-**Mode H - No args:** Jump to **Step 2** (Dashboard).
+If the glob returns zero matches → jump to **Step 4** (Empty state).
 
 ---
 
-### Step 2: Dashboard / List Workflows
+## Step 2: Fast Path 1 - Active Session with Status Verify
 
-Use **Glob** with pattern `$PROJECT/.craft/workflows/*/definition.md` to find all workflows (excludes `.archived/`).
+If `CURRENT_WORKFLOW_SESSION` is set, walk through the verification ladder.
 
-For each workflow:
-- Read frontmatter with `limit: 10` (name, description, stages count)
-- Use **Glob** to find sessions: `$PROJECT/.craft/workflows/{slug}/sessions/*/session.md`
-- Read each session's frontmatter with `limit: 10` for status and current_stage
+### 2.1: File existence check
 
-Also check each session's Validation section for issue counts: count `- [ ]` items under `### Issues`.
+Use **Glob** to check if `$CURRENT_WORKFLOW_SESSION/session.md` exists.
 
-Display:
+- **File missing:** The sentinel points at a session that no longer exists. Clear it silently and continue:
+
+  ```bash
+  bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/update-global-state.sh CURRENT_WORKFLOW_SESSION ""
+  ```
+
+  Show one-line note: "Cleared stale active-session pointer - session file no longer exists." Fall through to **Step 3** (Fast Path 2).
+
+- **File exists:** Continue to 2.2.
+
+### 2.2: stages/ directory check
+
+The session belongs to a workflow at `$(dirname $(dirname $CURRENT_WORKFLOW_SESSION))`. Use **Glob** to check if the workflow's `stages/` directory exists and contains files.
+
+- **stages/ missing or empty:** The workflow is partially deleted - resuming would crash inside workflow-run. Surface explicitly via **AskUserQuestion**:
+
+  ```
+  question: "Active session '{name}' references a stages/ directory that is missing or empty at '{path}'. The workflow appears partially deleted. How would you like to proceed?"
+  header: "Broken session"
+  options:
+    - label: "Reset session to draft"
+      description: "Update session status to draft, clear sentinel, fall through to dashboard"
+    - label: "Archive the workflow"
+      description: "Move the broken workflow to .archived/, clear sentinel"
+    - label: "Abort - I'll inspect manually"
+      description: "Stop here, leave state untouched"
+  ```
+
+  Do NOT silently proceed to resume. Whatever the user picks, take the action and stop.
+
+- **stages/ present:** Continue to 2.3.
+
+### 2.3: Status field read
+
+Read `session.md` and extract the `status:` field from frontmatter (use awk on lines between the first two `---` markers).
+
+- **`status: complete`:** Sentinel is stale - session was already done but the cleanup script didn't run (or was interrupted). Clear sentinel silently:
+
+  ```bash
+  bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/update-global-state.sh CURRENT_WORKFLOW_SESSION ""
+  ```
+
+  Show: "Cleared stale active-session pointer - session was already complete." Fall through to **Step 3**.
+
+- **`status: active`:** This is the happy path. Use **AskUserQuestion**:
+
+  ```
+  question: "Resume '{session name}'?"
+  header: "Resume"
+  options:
+    - label: "Continue (Recommended)"
+      description: "Resume {session name} from current_stage"
+    - label: "Do something else"
+      description: "Show me the dashboard"
+  ```
+
+  If "Continue" → invoke `craft:craft-workflow-run` with `continue`. **Done. Stop here.**
+
+  If "Do something else" → fall through to **Step 3**.
+
+- **`status: draft` or `status: ready` or anything else:** Sentinel says active but the session is in a different state - inconsistent. Use **AskUserQuestion**:
+
+  ```
+  question: "Sentinel says active but session '{name}' has status: {status}. Clear sentinel and continue to dashboard?"
+  header: "Sentinel mismatch"
+  options:
+    - label: "Clear sentinel and continue"
+      description: "Reset CURRENT_WORKFLOW_SESSION, show dashboard"
+    - label: "Abort - I'll inspect manually"
+      description: "Leave state untouched, stop here"
+  ```
+
+- **`status:` field missing, empty, or unreadable** (frontmatter corruption): Do NOT silently fall through. Surface explicitly:
+
+  ```
+  question: "Sentinel points at '{path}' but the session frontmatter is unreadable (status field missing or garbled). Manual cleanup needed. How to proceed?"
+  header: "Corrupt session"
+  options:
+    - label: "Clear sentinel and continue"
+      description: "Treat as orphaned, reset CURRENT_WORKFLOW_SESSION, show dashboard"
+    - label: "Abort - I'll inspect manually"
+      description: "Leave state untouched, stop here"
+  ```
+
+If `CURRENT_WORKFLOW_SESSION` is not set, skip Step 2 entirely and continue to Step 3.
+
+---
+
+## Step 3: Fast Path 2 - Unambiguous Runnable Session
+
+Use **Glob** to find all `session.md` files: `$PROJECT/.craft/workflows/*/sessions/*/session.md`.
+
+For each file, read frontmatter (with `limit: 10`) and filter for `status: draft` or `status: ready` (both are runnable).
+
+Group by parent workflow. Then:
+
+- **Exactly one runnable across all workflows:** Use **AskUserQuestion**:
+
+  ```
+  question: "Next up: '{session name}' [{draft|ready}] in {workflow name}. Run it?"
+  header: "Run next"
+  options:
+    - label: "Run (Recommended)"
+      description: "Activate and execute this session"
+    - label: "Do something else"
+      description: "Show me the dashboard"
+  ```
+
+  If "Run" → invoke `craft:craft-workflow-run` with `next {workflow-name}`. **Done. Stop here.**
+
+  If "Do something else" → continue to **Step 5** (Dashboard).
+
+- **Multiple runnables but all in the same workflow:** Same as above - the workflow is unambiguous, even if which session is up next within it isn't. Offer to run, fall through if declined.
+
+- **Multiple runnables across multiple workflows:** Skip the fast path. Continue to **Step 5** but show a one-line diagnostic before the dashboard tree:
+
+  > "Multiple workflows have runnable sessions - showing full dashboard so you can pick."
+
+  This explains why the obvious-resume path didn't fire so you aren't confused.
+
+- **Zero runnables:** Continue to **Step 5**.
+
+---
+
+## Step 4: Empty State
+
+If Step 1's workflow-definitions glob returned zero matches, there are no workflows on disk.
+
+Show one-line note: "No workflows yet - opening the design flow to create your first one."
+
+Immediately invoke `craft:craft-workflow-design` (no AskUserQuestion confirmation - invoking `/craft:workflow` IS consent to engage with workflows).
+
+**Done. Stop here.**
+
+---
+
+## Step 5: Dashboard
+
+Show the tree of workflows with sessions nested underneath. For each workflow definition found in Step 1:
+
+- Read frontmatter (with `limit: 10`) to get the name, description, and stage count.
+- Use **Glob** to find sessions: `$PROJECT/.craft/workflows/{slug}/sessions/*/session.md`.
+- For each session, read frontmatter for status and current_stage. If status: complete, also check the `## Validation` section for `### Issues` items (count `- [ ]` lines).
+
+Display in this format:
 
 ```
 WORKFLOWS
@@ -119,73 +202,23 @@ WORKFLOWS
   '- No sessions yet
 ```
 
-Use **AskUserQuestion**:
+Use `|-` for non-last sessions, `'-` for the last. Show `[active]`, `[ready]`, `[draft]`, `[complete]` status indicators. For active sessions, show `stage N/total`. For complete sessions, show `clean` or `N issues` from the Validation section.
+
+(If you arrived here via the Step 3 multi-workflow-runnable diagnostic, that line appears above the WORKFLOWS heading.)
+
+After showing the tree, present action options via **AskUserQuestion**:
+
 ```
 question: "What would you like to do?"
-header: "Action"
+header: "Workflow action"
 options:
-  - label: "Continue active session"
-    description: "Resume {session name} at stage {N}"
-    -> only show if there's an active session
-  - label: "Start new session"
-    description: "Run an existing workflow with new variables"
-  - label: "Create new workflow"
-    description: "Define a new workflow from scratch or import"
-  - label: "Browse a workflow"
-    description: "View details, sessions, or edit"
+  - label: "Run or prep a session"
+    description: "Start, continue, or chain through workflow sessions"
+  - label: "Design or archive a workflow"
+    description: "Create new definitions, edit existing ones, or archive"
 ```
 
-Route based on selection.
+- **"Run or prep a session"** → invoke `craft:craft-workflow-run` (with no args - that command's own Step 0 handles picking the verb).
+- **"Design or archive a workflow"** → invoke `craft:craft-workflow-design` (with no args - same pattern).
 
-### Step 2b: Browse Workflow
-
-Read the workflow's `definition.md`. Display stage overview with execution modes. For stages-v1 format, the `## Stages` routing table in definition.md directly provides the stage overview. For monolithic format, extract stage info from `## Stage` headings.
-
-List sessions with status.
-
-Use **AskUserQuestion**:
-```
-question: "What would you like to do with {workflow name}?"
-header: "Action"
-options:
-  - label: "Run new session"
-    description: "Create a new session with this workflow"
-  - label: "Continue a session"
-    description: "Resume an in-progress session"
-  - label: "View definition"
-    description: "Show the full workflow definition"
-  - label: "Archive workflow"
-    description: "Move to .archived/ (keeps all data)"
-```
-
----
-
-## Breadcrumb Pattern
-
-For `command`-type stages that invoke skills via the Skill tool, write a breadcrumb before invocation to prevent the orchestrator from stopping after the skill returns.
-
-**Write before invoking the skill:**
-```bash
-cat > "${CRAFT_PROJECT_ROOT:-.}/.craft/.continuation" << CRUMB
-ACTION: Continue workflow session "{session-name}" from stage {N+1}
-SKILL: craft:craft-workflow
-ARGS: continue
-WRITTEN_BY: craft-workflow
-TIMESTAMP: $(date -u +%Y-%m-%dT%H:%M:%S)
-CRUMB
-```
-
-**Clean up on ALL exit paths** (session complete, user cancels, error):
-```bash
-rm -f "${CRAFT_PROJECT_ROOT:-.}/.craft/.continuation"
-```
-
-**Not needed for:** `agent`-type stages (Agent tool returns inline), `inline`-type stages (orchestrator executes directly), or `manual` stages (AskUserQuestion pauses naturally).
-
-**Safety:** Same guarantees as all craft breadcrumbs - 30-minute TTL, one-shot, session-start cleanup.
-
----
-
-## Format References
-
-For all definition and session format specifications, see [references/workflow-formats.md](references/workflow-formats.md).
+**Done. The router has handed off; the specialized command takes it from here.**
