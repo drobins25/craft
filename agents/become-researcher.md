@@ -23,7 +23,7 @@ description: |
   Phase 2 trigger - become-researcher gets existing branch file and fills psychological gaps.
   </commentary>
   </example>
-model: sonnet
+model: claude-haiku-4-5-20251001
 color: magenta
 tools: Read, Glob, Grep, Bash, Write, WebSearch, WebFetch
 disallowedTools: Edit, NotebookEdit
@@ -45,6 +45,7 @@ Your output feeds the crystallizer agent, which reconstructs a mind from what yo
 3. **Stay within your scope boundaries.** Do not research topics assigned to other agents.
 4. **Preserve raw language.** If a source says "this drives me insane," write "this drives me insane" - NOT "the author expresses frustration." Emotional intensity IS data.
 5. **Do not resolve contradictions.** Contradictions between sources are trade-off signals. Contradictions within a single source reveal espoused-vs-actual beliefs. Present them raw, side by side. If you catch yourself writing "however" or "but" in the Contradictions section, delete it. The sentence ends at the contradiction.
+6. **You MUST find at least one high-signal source for this branch before writing your branch file.** A high-signal source is one of: an argument or debate (Source Selection Priority #1), a postmortem or decision narrative (Source Selection Priority #2), or a self-critique piece ("what I got wrong," "I was wrong about," "the hard way"). If every source you consulted for this branch is medium- or low-signal - teaching material (#4), conference Q&A (#5), interviews without "why" probes - **do NOT write the branch file**. Instead, return a brief summary stating "no high-signal source found for this branch" so the orchestrator can decide whether to re-spawn or proceed without this branch. Source priority is not a soft preference; it's a binding rule because thin-signal branches produce thin agents.
 
 ## Search Strategy
 

@@ -1,7 +1,7 @@
 ---
 name: craft:become
 description: "Agent crystallization command. Studies a tool, role, or person and produces a portable 9-section agent that inhabits the domain - with beliefs, scar tissue, and instincts."
-argument-hint: "[tool name | role | person name | description]"
+argument-hint: "[tool name | role | person name | description] [--deep]"
 ---
 
 # Become
@@ -19,6 +19,15 @@ Set `PROJECT` to `${CRAFT_PROJECT_ROOT:-.}`.
 ## Flow
 
 ### Phase 0: Intent
+
+**Mode flags:** Before classifying the input, scan args for flags.
+
+- If args contain `--deep`, set `DEPTH=7` and strip the flag from the remaining args. The stripped args are then classified by source type as below.
+- If `--deep` is absent, set `DEPTH=5`.
+
+`DEPTH` is referenced in Phase 1 to size the sub-question generation. The default of 5 is role-optimized: most become runs synthesize across practitioners with genuine disagreement, and 5 branches cover the six psychological-material categories (beliefs, trade-offs, refusals, mistake taxonomy, user needs, scar tissue) with one branch absorbing two adjacent categories. Source-based research (one tool) naturally saturates at 3-4 branches and can run lighter. Person-based with a sparse-but-prolific subject benefits from `--deep` (7 branches) to give the crystallizer enough signal.
+
+If the user passes `--deep` with no other input (e.g., `/craft:become --deep`), treat the remaining args as empty and fall through to the "If no args" branch below.
 
 Parse args to determine what we're crystallizing.
 
@@ -60,7 +69,7 @@ options:
 
 ### Phase 1: Psychological Research
 
-Generate 5-7 sub-questions shaped for **mind-replication**, not fact-gathering. The six categories to cover:
+Generate `{DEPTH}` sub-questions shaped for **mind-replication**, not fact-gathering. `{DEPTH}` is 5 by default (role-optimized) and 7 when `--deep` was passed in Phase 0. The six categories to cover:
 
 1. **Beliefs** - What do the best practitioners in this domain believe that outsiders think is wrong? What do they treat as obvious that newcomers keep getting wrong?
 2. **Trade-offs** - Where do practitioners genuinely disagree with each other, and what does each side think the other is missing?
@@ -123,9 +132,72 @@ Task tool:
 
 Wait for all researchers to complete.
 
+**Verify branch files were written.** Rule 6 of the become-researcher prompt requires each researcher to find at least one high-signal source before writing its branch file. If a researcher fails to find one, it returns "no high-signal source found for this branch" and does NOT write the file. Detect this before Phase 2.
+
+Using the **Bash tool**, count the branch files on disk in the research path. Files match the pattern `NN-*.md` (two-digit numeric prefix, any slug) but exclude underscore-prefixed orchestrator files like `_plan.md`. Compare the count against `DEPTH` (set in Phase 0 - 5 by default, 7 with `--deep`).
+
+Illustrative shell pattern (substitute the actual research path):
+
+```bash
+find <research_path> -maxdepth 1 -name '[0-9][0-9]-*.md' ! -name '_*' | wc -l
+```
+
+**If the count equals `DEPTH`:** silent pass - proceed to Phase 2 with no user-facing message.
+
+**If the count is less than `DEPTH`:** identify the missing branches by comparing the on-disk file names against the planned branch slugs in `_plan.md`. Surface via AskUserQuestion (first surfacing - 3 options):
+
+```
+question: "[N] of [DEPTH] researchers couldn't find high-signal sources for their branches: [list missing branch slugs]. How to proceed?"
+header: "Missing branches"
+options:
+  - label: "Re-spawn missing branches (Recommended)"
+    description: "Relaunch researchers for the missing branch slugs only - same prompt, fresh attempt"
+  - label: "Proceed with what we have"
+    description: "Continue to Phase 2 with [count] branches; the crystallizer will note thin coverage in the agent's Boundaries section"
+  - label: "Stop and inspect"
+    description: "End the command so you can read the researcher output files manually"
+```
+
+**If "Re-spawn missing branches":** Relaunch become-researchers via Task tool **for the missing branch slugs only**. Use the same researcher prompt the original branch would have received. **Do NOT pass summaries of existing branches into the retry prompts** - that collapses the context isolation that makes parallel research work. After the retry researchers complete, wait for them all, then re-run the branch-file count check **exactly once**.
+
+**If the post-retry count still shows missing branches:** surface a follow-up AskUserQuestion with only **2 options** (no "Re-spawn again"):
+
+```
+question: "Retry didn't recover all branches. [N] still missing: [list]. How to proceed?"
+header: "Retry failed"
+options:
+  - label: "Proceed with what we have (Recommended)"
+    description: "Continue to Phase 2 with [count] branches; the crystallizer will note thin coverage in Boundaries"
+  - label: "Stop and inspect"
+    description: "End the command so you can read the researcher output files manually"
+```
+
+This cap exists to prevent context exhaustion before the crystallizer (the most expensive judgment call in the flow). Infinite retry loops would silently degrade the orchestrator's context budget by Phase 3 - producing a worse final agent. The user retains full control of every retry decision via AskUserQuestion; the cap only removes "Re-spawn" as an offered option on the second surfacing.
+
+**Thin-coverage annotation (when user picks "Proceed with what we have" from either AUQ):** record the missing branch slugs (e.g., `["02-trade-offs", "04-mistake-taxonomy"]`). Later in Phase 3, when invoking the crystallizer, append a note to the prompt payload:
+
+> `missing_branches: [list of missing branch slugs]`
+>
+> Note in the agent's Boundaries section that source coverage of [comma-separated branch topics] was thin during research.
+
+The crystallizer already writes a Boundaries section as part of its 9-section output format - it absorbs this annotation without any change to `agents/crystallizer.md` and without inventing a new orchestrator-subagent protocol. The result: the final agent file transparently records what the research did and didn't fully cover.
+
+**If "Stop and inspect":** End the command. Print the research path so the user can inspect the partial results manually.
+
 ### Phase 2: Synthesis Checkpoint
 
-Read each branch file's **frontmatter only** (first 10-15 lines - branch name, question, confidence, sources, status). Do NOT read full branch files here - that's the crystallizer's job in Phase 3. The orchestrator's synthesis should be lightweight and direction-setting, not exhaustive. Reading full branches at this point overloads the orchestrator's context right before the highest-stakes handoff.
+Read each branch file's **frontmatter plus the psychological-summary blockquote** (use the Read tool with `limit: 25` per branch - that covers frontmatter, the `# {Branch Name}` heading, the `> Part of` line, and the `> **Psychological summary:**` 2-3 sentence opener). Do NOT read full branch files here - that's the crystallizer's job in Phase 3. The orchestrator's synthesis should be lightweight and direction-setting, not exhaustive. Reading full branches at this point overloads the orchestrator's context right before the highest-stakes handoff.
+
+The psychological summary is the branch's own 2-3 sentence answer to "what does this branch reveal about how the subject THINKS." Frontmatter alone (source counts, search types used, status) is too thin to spot convergence across branches - especially with haiku-4.5 researchers whose frontmatter signals may understate findings. The blockquote carries the actual signal.
+
+<!-- Phase 2 design note (2026-05-23, become efficiency pass): we considered
+     skipping Phase 2 entirely since the crystallizer reads full files in
+     Phase 3 anyway. We kept Phase 2 because it carries the synthesis-
+     steering AskUserQuestion (the user's chance to say "lean into X"
+     before crystallization) and the "Research more" escape hatch. The
+     adjust-read path is a single `limit:` bump plus a parsing tweak;
+     skipping would have been a much larger removal that loses real
+     workflow value. -->
 
 Present to the user:
 
@@ -286,7 +358,7 @@ Then re-present Phase 4 with the updated agent.
 
 ## Agent Configuration
 
-- **Researchers** use the `craft:become-researcher` agent type (sonnet) - a specialized psychological material collector, NOT the generic fact-finding researcher used by `/craft:research`
+- **Researchers** use the `craft:become-researcher` agent type (haiku 4.5 - psychological extraction is structured, not synthetic; the crystallizer carries the synthesis weight) - a specialized psychological material collector, NOT the generic fact-finding researcher used by `/craft:research`
 - **Crystallizer** uses the `craft:crystallizer` agent type (opus - highest-judgment task)
 - Researchers write branch files to disk using the psychological material format (axioms, scar tissue, threat model, domain inventory, etc.)
 - Crystallizer writes the agent file to disk

@@ -36,6 +36,47 @@ stale_signals:
   - "A demonstrated method for capturing tacit knowledge through direct verbalization that actually works at scale"
 ---
 
+<!--
+Model Rationale (last reviewed: 2026-05-23)
+
+The crystallizer runs on opus. This is a deliberate, locked choice. Before
+downgrading the model field above, read this block in full and complete the
+re-validation listed at the end.
+
+WHY OPUS:
+
+(a) Highest-judgment task in the agent system. The crystallizer reads raw
+    psychological material from N parallel researchers and synthesizes a
+    9-section agent file that inhabits a domain rather than knows about it.
+    Every other agent in craft has a narrower job (gather, extract, validate,
+    transform). This one constructs a mind.
+
+(b) Permanent, reusable artifact. The output of one crystallizer run is an
+    agent file consulted forever after. A weaker crystallization doesn't just
+    degrade today's output - it degrades every future /craft:ask, every PR
+    review that consults this expert, every workflow that loads this persona.
+
+(c) Cost amortizes. One opus invocation per become run sounds expensive in
+    isolation, but it's spread across the entire useful life of the resulting
+    agent (months to years of consultations). Total cost per consultation
+    after amortization is below the per-call rate of haiku.
+
+(d) Downgrade requires re-validation. To change this model field, run three
+    control becomes on the candidate model - one source-based (e.g., a
+    specific tool), one role-based (e.g., a discipline), one person-based
+    (e.g., a named practitioner) - and compare each 9-section output against
+    a baseline opus-crystallized agent on the same subject. The candidate
+    must match the baseline on Beliefs density, Refusals specificity, and
+    Scar Tissue concreteness for all three subjects. If any subject fails,
+    the downgrade is not safe.
+
+Future maintainers: this rationale was added during the OSS Readiness cycle
+to prevent silent quality regression. The cost optimization that motivated
+the rest of that story (routing become-researcher to haiku 4.5) does not
+apply here. Researchers do structured extraction; the crystallizer does
+synthesis. Different work, different model.
+-->
+
 # Crystallizer
 
 ## Direct-Write Protocol
