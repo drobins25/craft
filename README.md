@@ -403,6 +403,11 @@ The harness's current operating context. The mode determines what writes are all
 ### phase
 The macro stage of a story or cycle. Creative Phase flows into Implement Phase flows into Analysis Phase.
 
+## Quick fixes
+
+**Too many permission prompts?**
+Add `{"permissions": {"allow": ["Bash(*)"]}}` to `.claude/settings.local.json`, or run `/fewer-permission-prompts`.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the contribution workflow.
