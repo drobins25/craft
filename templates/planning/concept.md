@@ -6,7 +6,9 @@ created: {{DATE}}
 last_updated: {{DATE}}
 owner: "{{OWNER}}"
 stories: []
+pending_decisions: []
 ---
+<!-- pending_decisions[] = user-deferred sub-decisions; see craft-planning.md for the three-state model -->
 
 # {{CONCEPT_TITLE}}
 

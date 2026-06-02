@@ -66,11 +66,12 @@ Use **Read** to read `$PLANNING/README.md`. Parse the Roadmap table to get conce
 
 **Assess what's most useful:**
 
-1. **Stale active.md** (last_updated >7 days) -> Suggest reviewing and updating
-2. **Open questions exist** -> Mention count, offer to review
-3. **Concepts with status `open` and no blockers** -> Suggest fleshing out or creating stories
-4. **Concepts with status `planned` and all stories complete** -> Prompt completion confirmation
-5. **Nothing urgent** -> Show full roadmap and offer menu
+1. **Concepts with non-empty `pending_decisions[]`** -> Suggest resuming alignment ("Concept X has N deferred decisions to resume"). This is the top recommendation because the user explicitly asked to be brought back to those items.
+2. **Stale active.md** (last_updated >7 days) -> Suggest reviewing and updating
+3. **Open questions exist** -> Mention count, offer to review
+4. **Concepts with status `open` and no blockers** -> Suggest fleshing out or creating stories
+5. **Concepts with status `planned` and all stories complete** -> Prompt completion confirmation
+6. **Nothing urgent** -> Show full roadmap and offer menu
 
 Present the assessment and menu:
 
@@ -94,6 +95,8 @@ options:
 ```
 
 Route based on selection -> the flows below.
+
+**If the selected action is "Resume deferred decisions on [concept]":** Invoke the [Alignment Walkthrough](#alignment-walkthrough) for the named concept. The walkthrough's resume behavior regenerates `pending_decisions[]` items as TaskTool tasks first, then derives any new candidates from current concept state.
 
 ### Step 4: Update active.md
 
@@ -159,6 +162,8 @@ multiSelect: true
 ```
 
 **Only confirmed concepts get written.** Unselected candidates are discarded.
+
+**After confirmation, before Step 5d:** Run the [Alignment Walkthrough](#alignment-walkthrough) for each newly confirmed concept to resolve its strategic sub-decisions (Locked / Deferred / Blocked) before the concept file is written. Step 6 (Conversational Setup) routes through this same path and inherits the behavior automatically.
 
 **5d. Determine structure**
 
@@ -227,6 +232,13 @@ Present as candidates (Step 5c flow). The user selects which become planning con
 
 Scan all concept files for unresolved questions.
 
+**Boundary: `pending_decisions[]` vs `## Open questions`.**
+
+- **`pending_decisions[]`** (frontmatter, list) = sub-decisions the user explicitly deferred via the Alignment Walkthrough's "Skip - ask me next session" path. These regenerate as TaskTool tasks on the next session's alignment resume. They are the user's own pending work, not blocked on anyone else. Step 3 (Active Flow) surfaces these as "Concept X has N deferred decisions to resume."
+- **`## Open questions`** (markdown checkboxes with owner annotation) = items awaiting external input. Format: `- [ ] {decision} (Pending: {owner})`. These do NOT regenerate as tasks. The user resolves them manually here, in Step 8, when the named owner gets back to them.
+
+The two destinations never contain the same item. Step 8's grep below operates only on `## Open questions` body markdown (`- [ ]` checkboxes), so `pending_decisions[]` frontmatter entries are outside its scope by structure.
+
 Use **Bash**:
 ```bash
 grep -rn "^- \[ \]" "$PLANNING/" --include="*.md" 2>/dev/null
@@ -284,6 +296,18 @@ options:
   - label: "[Concept 2]"
     description: "[status] - [N] open questions"
 ```
+
+**9a.1. Run alignment walkthrough**
+
+Before analyzing the concept for story breakdown, run the [Alignment Walkthrough](#alignment-walkthrough) to confirm every strategic sub-decision has landed in one of the three destinations: `## Locked decisions`, `pending_decisions[]`, or `## Open questions` with an owner annotation.
+
+After the walkthrough completes, the **destination-coverage gate** runs:
+
+- Scan the orchestrator's TaskTool task history from the current session. For every closed task, verify a corresponding entry exists in `## Locked decisions`, `pending_decisions[]`, or `## Open questions`.
+- If any task closed without filing: **refuse story creation, surface the unfiled item by name, route back to alignment** so the user can resolve the unaccounted decision.
+- The gate is **intra-session only** — TaskTool state lives with the session. Cross-session integrity is handled by the immediate-write rule (decisions hit disk the moment they resolve), not by the gate.
+
+If the concept already has every strategic decision resolved (Locked, or Deferred via `pending_decisions[]`, or Blocked in Open Questions with an owner), the walkthrough is a fast pass-through — no new tasks are created and the gate trivially passes.
 
 **9b. Read and analyze the concept**
 
@@ -365,6 +389,73 @@ When adding a sub-concept to a standalone concept file, automatically promote it
 
 ---
 
+## Alignment Walkthrough
+
+A reusable sub-procedure invoked from Step 5 (after candidate concepts are confirmed at Step 5c, before Step 5d's structure determination) and from Step 9a (before Step 9b's analysis). The walkthrough resolves a concept's strategic sub-decisions one at a time, with conversation as the primary surface and `AskUserQuestion` firing only when the user needs to park a decision they can't resolve right now.
+
+**Depth ceiling.** Planning is for strategic decisions — the ones that shape which stories come out of the concept. Implementation detail is explicitly deferred to story-new / plan-chunks. If candidate extraction returns more than ~10 items, reframe some as implementation detail rather than queuing them as tasks. The orchestrator should be biased toward fewer strategic items, not toward exhaustive coverage.
+
+### Enumerate candidates
+
+For the concept being aligned, extract candidate strategic sub-decisions (the ones that would change story count or chunk count if reversed later). Present the rough shape to the user:
+
+> "This concept has N candidate sub-decisions. Roughly: [grouped overview]. Anything to add or strike?"
+
+After confirmation, `TaskCreate` one task per confirmed candidate. These are the orchestrator's speculative working queue.
+
+### Walk tasks one at a time
+
+For each task, open a conversation about that ONE decision. Each task terminates via exactly one of three paths:
+
+**Path A — Conversational resolution.** The user and orchestrator talk through the decision. When the user lands a position, write it to the concept's `## Locked decisions` section **immediately** (NOT batched at concept end), then mark the task complete.
+
+Example entry:
+```
+- **Deploy target:** Vercel (locked YYYY-MM-DD; user confirmed Edge runtime over Node for cold-start latency)
+```
+
+**Path B — User defers ("Skip - ask me next session").** Fires when the user signals they need more time. Use **AskUserQuestion**:
+
+```
+question: "Can't resolve this right now?"
+header: "Defer"
+options:
+  - label: "Skip - ask me next session"
+    description: "Park this; bring it back next time we open this concept"
+  - label: "Blocked - waiting on someone"
+    description: "Someone else needs to weigh in; you'll capture the owner next"
+```
+
+If "Skip": write the decision to `pending_decisions[]` frontmatter, mark the task complete. The item will regenerate as a task on the next session's alignment resume.
+
+**Path C — User flags blocked ("Blocked - waiting on someone").** If the user picks "Blocked" in the AUQ above, follow up conversationally to capture the owner: "Who's blocking?" Then write the item to `## Open questions` in the form:
+
+```
+- [ ] {decision} (Pending: {owner})
+```
+
+Step 8's existing grep already handles this format. Mark the task complete. **Blocked items do NOT regenerate as tasks on resume** — only Step 8's user-initiated review surfaces them when the named owner gets back.
+
+### Opt-in drill-down
+
+If the user explicitly signals depth intent during conversation about a strategic decision ("let's drill in", "go deeper on this one", "I want to think through this carefully"), the orchestrator can offer to break the current decision into sub-questions and walk them via the same TaskTool queue + conversation pattern. After the drill-down completes, return to the main queue. **The orchestrator never proposes sub-sub-decisions on its own — only on explicit user request.**
+
+### Resume behavior
+
+When entering alignment on a concept with non-empty `pending_decisions[]`:
+
+1. Regenerate those items as TaskTool tasks first (the user explicitly said "ask me again").
+2. Then derive any new candidates from current concept state.
+3. `## Open questions` items with owners do **not** regenerate as tasks; they surface only via Step 8's user-initiated review.
+
+### Why this shape
+
+- **TaskTool is working memory.** Speculative, session-scoped, allowed to die. Re-derivation on resume is correct behavior, not loss.
+- **The concept file is canonical state.** What was Locked / Deferred / Blocked survives sessions because it was written to disk the moment it resolved.
+- **AskUserQuestion is the parking mechanism, not the asking mechanism.** Firing AUQ for a question the user can answer right now is a bug.
+
+---
+
 ## Concept File Frontmatter
 
 | Field | Type | Description |
@@ -376,6 +467,7 @@ When adding a sub-concept to a standalone concept file, automatically promote it
 | `last_updated` | date | Last modification date |
 | `owner` | string | Who owns this concept |
 | `stories` | list | Paths to stories created from this concept |
+| `pending_decisions` | list | Sub-decisions the user deferred during alignment via "skip - ask me next session". Regenerated as TaskTool tasks on resume. See three-state model docs below. |
 
 ## Initiative README Frontmatter
 
@@ -391,8 +483,22 @@ When adding a sub-concept to a standalone concept file, automatically promote it
 
 ## Key Principles
 
-1. **Nothing without confirmation.** Craft proposes, user approves. Every concept, every story, every status change.
-2. **Source everything.** Every locked decision cites a person, date, and quote or code reference.
-3. **Planning is forward-looking.** History lives in the vault or git. Planning is what we're going to do.
-4. **Concepts are not stories.** Concepts live in planning until they mature into stories. The two artifacts serve different purposes at different stages.
-5. **File content IS the state.** If a concept file exists, it's tracked. If `status: complete`, it's done. No external state files needed.
+1. **Nothing without confirmation — and the unit is the sub-decision.** Craft proposes, user approves. Confirmation happens at every concept, every story, every status change, and — critically — every sub-decision within a concept's alignment walkthrough. Atomicity is structural, not stylistic: the TaskTool queue enforces that the orchestrator sees one task at a time, so multi-decision AUQs become structurally impossible.
+
+2. **Sub-decisions are the unit of atomicity.** Within a concept's alignment walkthrough, each strategic sub-decision becomes its own TaskTool task. The orchestrator walks tasks one at a time via conversation. AskUserQuestion fires only when the user wants to park a decision (skip-for-now or blocked-on-owner), never as the primary asking mechanism. Bundling multiple sub-decisions into one AUQ is the failure mode this design exists to prevent.
+
+3. **Firing AskUserQuestion for a question the user can answer right now is a bug.** AUQ exists as the parking mechanism for decisions the user cannot resolve in the moment. Conversation is the primary resolution surface. If you find yourself reaching for AUQ when the user is engaged and could answer in conversation, you've misread the moment.
+
+4. **Source everything.** Every locked decision cites a person, date, and quote or code reference.
+
+5. **Planning is forward-looking.** History lives in the vault or git. Planning is what we're going to do.
+
+6. **Concepts are not stories.** Concepts live in planning until they mature into stories. The two artifacts serve different purposes at different stages.
+
+7. **File content IS the state.** If a concept file exists, it's tracked. If `status: complete`, it's done. No external state files needed.
+
+## TaskTool Dependency
+
+This skill requires `TaskCreate` to be available to the orchestrator. The Alignment Walkthrough uses TaskTool as its working queue — the orchestrator's speculative list of sub-decisions to walk through. If a future harness mode restricts `TaskCreate`, the alignment walkthrough cannot function and the skill must **fail loudly** rather than silently fall back to AUQ-blast or bundled questioning.
+
+Working memory lives in TaskTool (session-scoped, allowed to die, re-derives correctly on resume). Canonical state lives on disk in the concept file (`## Locked decisions`, `pending_decisions[]` frontmatter, `## Open questions`). Both are necessary — the queue prevents bundling; the disk persistence ensures resolutions survive session boundaries.
