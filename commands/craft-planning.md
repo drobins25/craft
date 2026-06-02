@@ -407,7 +407,7 @@ After confirmation, `TaskCreate` one task per confirmed candidate. These are the
 
 For each task, open a conversation about that ONE decision. Each task terminates via exactly one of three paths:
 
-**Path A — Conversational resolution.** The user and orchestrator talk through the decision. When the user lands a position, write it to the concept's `## Locked decisions` section **immediately** (NOT batched at concept end), then mark the task complete.
+**Path A — Conversational resolution.** The user and orchestrator talk through the decision. **Never assume the user has locked a position.** Even if the user seems to be landing on a choice, the orchestrator MUST ASK explicitly before writing — phrase it as a direct confirmation, e.g. *"Want me to lock this as: [your read]?"* Only on an explicit affirmative answer to that ask ("yes," "lock it," "do it," or unambiguous equivalent) write the entry to `## Locked decisions` **immediately** (NOT batched at concept end), then mark the task complete. Hedged agreement, agreement accompanied by an open question, exploratory questions suggesting an option, and implied confirmation do **not** qualify as a lock signal — keep the task open and keep talking.
 
 Example entry:
 ```
@@ -483,7 +483,7 @@ When entering alignment on a concept with non-empty `pending_decisions[]`:
 
 ## Key Principles
 
-1. **Nothing without confirmation — and the unit is the sub-decision.** Craft proposes, user approves. Confirmation happens at every concept, every story, every status change, and — critically — every sub-decision within a concept's alignment walkthrough. Atomicity is structural, not stylistic: the TaskTool queue enforces that the orchestrator sees one task at a time, so multi-decision AUQs become structurally impossible.
+1. **Nothing without confirmation — and the unit is the sub-decision.** Craft proposes, user approves. Confirmation happens at every concept, every story, every status change, and — critically — every sub-decision within a concept's alignment walkthrough. Atomicity is structural, not stylistic: the TaskTool queue enforces that the orchestrator sees one task at a time, so multi-decision AUQs become structurally impossible. **Lock writes specifically require an explicit lock-confirmation ask, never an interpretive read of conversation.** Even if the user seems to be landing a position, the orchestrator must ask *"Want me to lock this as X?"* before writing. The ask is mechanical; the answer is verifiable.
 
 2. **Sub-decisions are the unit of atomicity.** Within a concept's alignment walkthrough, each strategic sub-decision becomes its own TaskTool task. The orchestrator walks tasks one at a time via conversation. AskUserQuestion fires only when the user wants to park a decision (skip-for-now or blocked-on-owner), never as the primary asking mechanism. Bundling multiple sub-decisions into one AUQ is the failure mode this design exists to prevent.
 
