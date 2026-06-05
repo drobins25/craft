@@ -104,7 +104,7 @@ update-global-state.sh KEY VALUE      | Update .global-state safely
 Story frontmatter: status    | planning → ready → active → complete
 Story frontmatter: alignment | pending → complete (set by alignment check before plan-chunks)
 .craft/.continuation         | Breadcrumb for nested skill chains (30-min TTL, one-shot)
-.craft/settings.yaml         | run_mode_default, parallel planning prefs
+.craft/settings.yaml         | default_mode, parallel planning prefs
 .craft/design/locked.md      | Locked decisions (enforced by validation)
 .craft/design/tokens.yaml    | Design tokens (enforced by style-analyzer)
 ```

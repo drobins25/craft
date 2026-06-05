@@ -103,12 +103,12 @@ begin_test "Multiple keys — each independent"
 TEST_DIR=$(create_minimal_craft)
 bash "$UPDATE_GLOBAL_STATE_SCRIPT" ACTIVE_CYCLE "1-auth" "$TEST_DIR"
 bash "$UPDATE_GLOBAL_STATE_SCRIPT" CURRENT_STORY "login-form" "$TEST_DIR"
-bash "$UPDATE_GLOBAL_STATE_SCRIPT" RUN_MODE "cruise" "$TEST_DIR"
+bash "$UPDATE_GLOBAL_STATE_SCRIPT" RUN_MODE "autonomous" "$TEST_DIR"
 
 source "$TEST_DIR/.craft/.global-state"
 assert_eq "ACTIVE_CYCLE is 1-auth" "1-auth" "$ACTIVE_CYCLE"
 assert_eq "CURRENT_STORY is login-form" "login-form" "$CURRENT_STORY"
-assert_eq "RUN_MODE is cruise" "cruise" "$RUN_MODE"
+assert_eq "RUN_MODE is autonomous" "autonomous" "$RUN_MODE"
 
 cleanup_test_dir
 echo ""

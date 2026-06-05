@@ -113,7 +113,7 @@ Parse the output:
 
 Before each new fix attempt, check REFINE_COUNT:
 
-- `REFINE_COUNT >= 2`: Flag for mandatory learnings capture. In guided mode, present to user. In autonomous mode, try a different approach. **Continue the loop.**
+- `REFINE_COUNT >= 2`: Flag for mandatory learnings capture. In an interactive (default) run, present to the user. In an autonomous run (RUN_MODE=autonomous), try a different approach. **Continue the loop.**
 - `REFINE_COUNT >= 4`: **Exit the loop.** Clean up breadcrumb and chunk state: `rm -f "${CRAFT_PROJECT_ROOT:-.}/.craft/.continuation" "${CRAFT_PROJECT_ROOT:-.}/.craft/.chunk-state"`. Offer rollback or stop.
 
 **Before any rollback, salvage partial work:**

@@ -230,7 +230,7 @@ After test-fix returns:
 
 Check REFINE_COUNT before routing to the next fix:
 
-- `REFINE_COUNT >= 2`: Flag for mandatory learnings capture. In guided mode, ask user. In autonomous mode, try a different approach. **Continue the loop.**
+- `REFINE_COUNT >= 2`: Flag for mandatory learnings capture. In an interactive (default) run, ask the user. In an autonomous run (RUN_MODE=autonomous), try a different approach. **Continue the loop.**
 - `REFINE_COUNT >= 4`: **Exit the loop.** Clean up any breadcrumb: `rm -f "${CRAFT_PROJECT_ROOT:-.}/.craft/.continuation"`. Stop. Offer rollback.
 
 **Before any rollback, salvage partial work:**

@@ -55,14 +55,9 @@ if [ -f "${PROJECT_ROOT}.craft/.global-state" ]; then
     fi
     cycle_display="${cycle_title:-$ACTIVE_CYCLE}"
 
-    # Show run mode
     pm_tag=""
     [ -n "$PM" ] && pm_tag=" ($PM)"
-    if [ "$RUN_MODE" = "cruise" ]; then
-      context="[Craft:${project_tag}Cycle '$cycle_display'${pm_tag}"
-    else
-      context="[Craft:${project_tag}Cycle '$cycle_display'${pm_tag}"
-    fi
+    context="[Craft:${project_tag}Cycle '$cycle_display'${pm_tag}"
 
     if [ -n "$CURRENT_STORY" ]; then
       context="$context, Story '$CURRENT_STORY'"

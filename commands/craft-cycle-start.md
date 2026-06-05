@@ -208,50 +208,7 @@ This hands off to `plan-chunks` which produces detailed implementation plans. Do
 **If ALL stories are `ready`:**
 - Proceed directly to Step 3
 
-### Step 3: Choose Run Mode
-
-**First, check for saved preference:**
-Use **Read** to read `.craft/settings.yaml`. Parse the `run_mode:` value.
-
-**If setting exists:**
-> "Your default run mode is **[cruise/guided]**.
->
-> Use this for the cycle?"
-
-Use **AskUserQuestion**:
-```
-question: "Use your default run mode ([mode])?"
-header: "Mode"
-options:
-  - label: "Yes, use [mode]"
-    description: "Continue with saved preference"
-  - label: "Switch to [other mode]"
-    description: "Use different mode for this cycle only"
-  - label: "Change my default"
-    description: "Pick new mode and save it"
-```
-
-**If user provides custom text:** Ask a clarifying AskUserQuestion to understand their preference.
-
-**If no setting or user wants to choose:**
-
-Use **AskUserQuestion**:
-```
-question: "How do you want to run this cycle?"
-options:
-  - label: "🚀 Cruise Mode (Recommended)"
-    description: "Run autonomously. Only stop if something breaks."
-  - label: "🎯 Guided Mode"
-    description: "Check in after each chunk. Good for learning."
-  - label: "Save as default"
-    description: "Pick mode and remember for future cycles"
-```
-
-**If "Save as default" chosen:**
-Update `.craft/settings.yaml`:
-Use the **Edit** tool to update `run_mode:` in `.craft/settings.yaml` to the selected value.
-
-### Step 4: Activate
+### Step 3: Activate
 
 **Run the transition script:**
 ```bash
@@ -262,11 +219,6 @@ This updates:
 - Global: `ACTIVE_CYCLE` set, `PLANNING_CYCLE` cleared
 - Cycle: `CYCLE_STATUS = active`
 - cycle.yaml: `status: active`
-
-**Also update run mode:**
-```bash
-${CLAUDE_PLUGIN_ROOT}/hooks/scripts/update-global-state.sh RUN_MODE "[cruise|guided]"
-```
 
 **Confirm activation:**
 
@@ -287,15 +239,13 @@ header: "Go"
 options:
   - label: "Go — review first story"
     description: "Review before implementing"
-  - label: "Wait, switch to Guided mode"
-    description: "Change to check-in after each chunk"
   - label: "Let me pick which story"
     description: "Choose a different starting story"
 ```
 
 **If user provides custom text:** Ask a clarifying AskUserQuestion to understand their intent.
 
-### Step 5: Start First Story (Optional)
+### Step 4: Start First Story (Optional)
 
 **If user chose "start with Story 1":**
 
@@ -328,11 +278,10 @@ Skill tool:
   args: "[story file path] — Cycle '[cycle name]', starting implementation.
   STORY: [story-name]
   CYCLE: [cycle-dir-name]
-  RUN_MODE: [cruise/guided]
   STORY_POSITION: [M] of [total]"
 ```
 
-Include the story path, run mode preference, chunk count, and cycle position. This gives story-implement full context for how to run.
+Include the story path, chunk count, and cycle position. This gives story-implement full context for how to run.
 
 This hands off to `story-implement` which orchestrates the full implementation workflow with checkpoints, validation, and agent invocations. Do NOT replicate implementation inline.
 

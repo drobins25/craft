@@ -354,7 +354,7 @@ RUN_MODE=""
 Key fields:
 - `CRAFT_WRITE_ENABLED` - gates writes outside `.craft/`. Set to `"true"` by active stories, the `fix` skill, and the `approve` skill. Empty string means closed.
 - `CURRENT_WORKFLOW_SESSION` - active workflow session path (set when a workflow session is running).
-- `RUN_MODE` - `cruise` (chains stories automatically) or empty (interactive).
+- `RUN_MODE` - `autonomous` when an unattended run is active (set by `story-implement-auto`), empty otherwise. Normal cruise runs leave it empty; cruise is craft's single default behavior (chains chunks and stories, stops only at decision points or on failure), not a stored mode.
 - `CYCLE_STATUS` - current state of the active cycle.
 
 ### cycle.yaml Schema

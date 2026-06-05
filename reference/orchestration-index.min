@@ -58,7 +58,7 @@ update-global-state.sh KEY VAL|safe .global-state update
 .craft/cycles/{c}/cycle.yaml|title,goal,status(planning|ready|active|complete)
 Story frontmatter:status|planning→ready→active→complete
 .craft/.continuation|breadcrumb for nested skills(30min TTL,one-shot)
-.craft/settings.yaml|run_mode_default,parallel planning
+.craft/settings.yaml|default_mode,parallel planning
 .craft/design/locked.md|locked decisions(enforced by validation)
 .craft/design/tokens.yaml|design tokens(enforced by style-analyzer)
 .craft/fixes/*.md|adhoc fix records(category,root cause,validation)

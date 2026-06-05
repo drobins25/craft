@@ -539,9 +539,8 @@ Update the status line with current state:
 [cycle] mode status story | chunk X/Y | $cost
 ```
 
-**Mode indicators:**
-- `🚀` = Cruise mode (autonomous)
-- `🎯` = Guided mode (check-ins)
+**Run indicator:**
+- `🚀` = craft running autonomously through the cycle (cruise)
 
 **Status indicators:**
 - `●` = In progress
@@ -556,9 +555,7 @@ Example:
 
 ## Transition Prompts
 
-Transitions depend on run mode:
-
-### Cruise Mode 🚀
+craft runs autonomously through a cycle (cruise 🚀) - it chains chunks and stories without stopping, and only surfaces a prompt at genuine decision points or when something breaks.
 
 **After chunk complete:**
 - Log to status line, continue immediately
@@ -589,7 +586,7 @@ Transitions depend on run mode:
 
 Use **AskUserQuestion**:
 ```
-question: "What's next after cruise mode?"  # If has_planning: prepend "> Roadmap: '[next_concept_name]' is next.\n\n"
+question: "Cycle complete. What's next?"  # If has_planning: prepend "> Roadmap: '[next_concept_name]' is next.\n\n"
 header: "Next"
 options:
   # If has_planning and next_concept_name:
@@ -605,73 +602,6 @@ options:
     description: "Begin planning next work"
   - label: "Take a break"
     description: "Pause for now"
-```
-
-**If user provides custom text:** Ask a clarifying AskUserQuestion to understand their intent.
-
-### Guided Mode 🎯
-
-**After chunk complete:**
-> "Chunk [N] complete.
->
-> Continue to Chunk [N+1]?"
-
-Use **AskUserQuestion**:
-```
-question: "Continue to Chunk [N+1]?"
-header: "Continue"
-options:
-  - label: "Yes, continue"
-    description: "Move to next chunk"
-  - label: "Review changes first"
-    description: "Show me what was implemented"
-  - label: "Take a break"
-    description: "Pause for now"
-```
-
-**If user provides custom text:** Ask a clarifying AskUserQuestion to understand their intent.
-
-**After story complete:**
-> "Story done! What's next?"
-
-Use **AskUserQuestion**:
-```
-question: "Story done! What's next?"
-header: "Next"
-options:
-  - label: "Next story in cycle"
-    description: "Continue with remaining stories"
-  - label: "Pull something from backlog"
-    description: "Add more work to this cycle"
-  - label: "Analyze what we built"
-    description: "Run QA/UX/Creative/Style checks"
-  - label: "Take a break"
-    description: "Pause for now"
-```
-
-**If user provides custom text:** Ask a clarifying AskUserQuestion to understand their intent.
-
-**After cycle complete:**
-> "Cycle complete! What's next?"
-
-**Roadmap-next suggestion:** Same pattern as Cruise Mode - if `has_planning` and `next_concept_name`, add roadmap suggestion and recommended option.
-
-Use **AskUserQuestion**:
-```
-question: "Cycle complete! What's next?"  # If has_planning: prepend "> Roadmap: '[next_concept_name]' is next.\n\n"
-header: "Next"
-options:
-  # If has_planning and next_concept_name:
-  - label: "Start [next_concept_name] (Recommended)"
-    description: "Next concept from your roadmap"
-    → routes to: craft:craft-planning with args "create-stories [next_concept_file]"
-  # Always:
-  - label: "Start a new cycle"
-    description: "Plan the next batch of work"
-  - label: "Run analysis"
-    description: "QA, UX, Creative, or Style checks"
-  - label: "Review backlog"
-    description: "Check pending stories"
 ```
 
 **If user provides custom text:** Ask a clarifying AskUserQuestion to understand their intent.

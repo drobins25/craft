@@ -166,7 +166,7 @@ flowchart TD
     VALIDATE --> LOG_ERRORS["Log errors to in-memory learnings"]
     LOG_ERRORS --> PASS{"Validation passed?"}
 
-    PASS -->|Yes| MODE_CHECK{"Run mode?"}
+    PASS -->|Yes| AUTO_NEXT["Auto-continue to next chunk"]
     PASS -->|No| REFINE["Invoke refine-chunk skill"]
 
     REFINE --> RETRY{"Attempt count?"}
@@ -174,11 +174,7 @@ flowchart TD
     RETRY -->|">= 2"| ESCALATE["Stop and ask user<br/>Offer rollback"]
     ESCALATE --> LOOP
 
-    MODE_CHECK -->|Cruise| AUTO_NEXT["Auto-continue to next chunk"]
-    MODE_CHECK -->|Guided| ASK_NEXT["Ask: Continue to next chunk?"]
-
     AUTO_NEXT --> MORE_CHUNKS{"More chunks?"}
-    ASK_NEXT --> MORE_CHUNKS
 
     MORE_CHUNKS -->|Yes| RECHECK_PARALLEL["Re-check file conflicts"]
     RECHECK_PARALLEL --> LOOP
@@ -267,16 +263,7 @@ flowchart TD
     ASK_CYCLE --> SHOW_OVERVIEW
     SELECT -->|Yes| SHOW_OVERVIEW["Show cycle overview<br/>Goal, stories, chunks"]
 
-    SHOW_OVERVIEW --> CHECK_SETTING{"Run mode setting exists?"}
-    CHECK_SETTING -->|Yes| CONFIRM_MODE["Use saved mode?<br/>[cruise/guided]"]
-    CHECK_SETTING -->|No| CHOOSE_MODE["AskUserQuestion:<br/>• Cruise Mode (autonomous)<br/>• Guided Mode (check-ins)<br/>• Save as default"]
-
-    CONFIRM_MODE --> ACTIVATE
-    CHOOSE_MODE -->|Save default| SAVE_SETTING["Update settings.yaml<br/>run_mode: [choice]"]
-    SAVE_SETTING --> ACTIVATE
-    CHOOSE_MODE --> ACTIVATE
-
-    ACTIVATE["Update .global-state:<br/>ACTIVE_CYCLE, RUN_MODE"]
+    SHOW_OVERVIEW --> ACTIVATE["Update .global-state:<br/>ACTIVE_CYCLE"]
 
     ACTIVATE --> INIT_LEARNINGS["Initialize .learnings.yaml"]
     INIT_LEARNINGS --> PICK_STORY{"Start with Story 1?"}
@@ -539,7 +526,7 @@ flowchart LR
 | `/craft:story-archive` | Move story back to backlog |
 | `/craft:story-delete` | Delete a story |
 | `/craft:cycle-design` | Create cycle with planned stories (95% alignment) |
-| `/craft:cycle-start` | Activate cycle, choose run mode |
+| `/craft:cycle-start` | Activate cycle and start implementation |
 | `/craft:cycle-assign` | Move story from backlog to cycle |
 | `/craft:cycle-complete` | Process learnings into harness updates |
 | `/craft:reflect` | Capture learnings anytime |
@@ -630,7 +617,7 @@ See `docs/agent-catalog.md` for full descriptions, model assignments, and usage 
 | File | Purpose | Key Fields |
 |------|---------|------------|
 | `.craft/.global-state` | Global state | ACTIVE_CYCLE, PLANNING_CYCLE, CURRENT_STORY, RUN_MODE, HARNESS_CHECKED |
-| `.craft/settings.yaml` | User preferences | run_mode, default_mode, certainty_threshold |
+| `.craft/settings.yaml` | User preferences | default_mode, certainty_threshold |
 | `.craft/cycles/[N]-[name]/.state` | Cycle runtime state | CURRENT_STORY, CURRENT_CHUNK, TOTAL_CHUNKS |
 | `.craft/cycles/[N]-[name]/.learnings.yaml` | Accumulated learnings | errors, corrections, patterns, conventions, automations |
 | `.craft/cycles/[N]-[name]/cycle.yaml` | Cycle metadata | status, goals, target, focus (no stories array) |
@@ -644,7 +631,7 @@ See `docs/agent-catalog.md` for full descriptions, model assignments, and usage 
 ```
 .craft/                          ← EXISTS? → If no, route to /craft:init
 ├── .global-state                ← READ for ACTIVE_CYCLE, PLANNING_CYCLE, CURRENT_STORY, HARNESS_CHECKED
-├── settings.yaml                ← READ for run_mode, default_mode, certainty_threshold
+├── settings.yaml                ← READ for default_mode, certainty_threshold
 ├── backlog/                     ← COUNT stories here
 │   └── *.md                     ← Each is a ready story
 ├── cycles/                      ← LIST available cycles
@@ -678,7 +665,6 @@ See `docs/agent-catalog.md` for full descriptions, model assignments, and usage 
 | Parallel stories | **Bulletproof file conflict detection** — extract files from chunks, block overlaps |
 | Reflect vs cycle-complete | **Reflect captures, cycle-complete processes** — separation of concerns |
 | Learnings ownership | **validate-chunk logs errors, AskUserQuestion for corrections** |
-| Run mode persistence | **settings.yaml with run_mode** — read at cycle-start |
 | 95% alignment check | **Codebase investigation loop before plan-chunks.** Orchestrator spawns Explore agent, surfaces product questions (conflicts, adjacencies, assumptions), loops via SendMessage until zero unasked questions remain. Gate measures user intent capture, not solution confidence. `alignment` frontmatter field (`pending`/`complete`) ensures no story skips the check. See `commands/references/alignment-check.md`. |
 | Design decisions | **Typed keys (layout/component/density/visibility)** — structured for Tokens Studio |
 | Harness freshness | **Check at cycle-complete if > 14 days** — optional WebSearch for updates |
