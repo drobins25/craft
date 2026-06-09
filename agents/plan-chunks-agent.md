@@ -202,6 +202,14 @@ CONCERNs are surfaced to the orchestrator through plan-chunks SKILL's existing c
 
 **Missing anchor on large file.** If a Reference Materials entry cites a file >500 lines without any anchor pinned, flag a CONCERN using the same context-block format. Do NOT read the whole file blindly. The orchestrator will gap-fill the missing anchor with the user.
 
+**Missing Reference Materials on a planning-sourced story.** If the story's frontmatter carries a non-empty `source_concept` (it was extracted from a planning concept) but the story has NO `## Reference Materials` section, the planning hand-off (cycle-design Step 2.7 / story-from-planning) did not complete - the concept doc and mockups are NOT reaching you and you would plan blind to them. The `source_concept` frontmatter is provenance metadata; you do NOT open or follow it as a path, and prose paths elsewhere in the story are invisible to you. Do NOT auto-discover or guess paths. Flag a CONCERN using the same context-block format. The CONCERN message MUST include:
+
+- The story's `source_concept` value(s) (from frontmatter)
+- The story's `created:` date (from story frontmatter)
+- Suggested action: "Re-run /craft:story-new (From planning branch) against the concept to regenerate the `## Reference Materials` citations, OR paste the concept/mockup absolute paths so the section can be added before planning proceeds."
+
+A story with no `source_concept` frontmatter is freeform - this guard does NOT apply to it (no false-positive on intentionally freeform stories, including freeform stories inside a planning-sourced cycle).
+
 ### 1.4 Research Principles
 
 **Documentation-first.** project.md and locked.md exist so you don't re-discover everything. If locked.md says "Form Pattern: see `src/components/auth/LoginForm.tsx`" — read that file directly. Don't scan for more examples.
