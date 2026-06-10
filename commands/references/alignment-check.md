@@ -257,11 +257,16 @@ The loop exits when:
 
 After the loop completes:
 
-1. Update the story's frontmatter: `alignment: complete`
-2. Update `## Scope` section if the user's answers changed what's included/excluded
-3. Update `## Decisions` if new decisions were made during the dialogue
-4. Update `## Likely Files` if the investigation revealed additional files
-5. If a story split occurred, create the new story file
+1. Add a `## Alignment` section to the story - the receipt that the check ran:
+   - `_Checked: YYYY-MM-DD_`
+   - One line per finding: type, what it was, how the user resolved it
+   - If the investigation found nothing: `No findings - investigation returned clean.`
+   Keep it a receipt, not a transcript - detailed outcomes belong in the sections below.
+2. Update the story's frontmatter: `alignment: complete`
+3. Update `## Scope` section if the user's answers changed what's included/excluded
+4. Update `## Decisions` if new decisions were made during the dialogue
+5. Update `## Likely Files` if the investigation revealed additional files
+6. If a story split occurred, create the new story file
 
 ## Batch Planning (plan-chunks MODE=batch)
 
@@ -286,4 +291,4 @@ Use **AskUserQuestion** with options:
 - Not a checklist to rubber-stamp (it's an investigation that may find nothing)
 - Not a blocker if the codebase is empty/new (no existing code = no conflicts to surface)
 
-If the investigation reveals zero product questions, that's a valid outcome. Set `alignment: complete` and move on. The check is fast when there's nothing to find.
+If the investigation reveals zero product questions, that's a valid outcome. Write the `## Alignment` receipt (`No findings - investigation returned clean.`), set `alignment: complete`, and move on. The check is fast when there's nothing to find.

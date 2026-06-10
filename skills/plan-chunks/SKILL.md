@@ -144,7 +144,7 @@ After it completes, continue to Phase 0.45.
 
 ## Phase 0.45: Alignment Gate
 
-**Skip if:** Story frontmatter has `alignment: complete`.
+**Skip if:** Story frontmatter has `alignment: complete` AND the story contains an `## Alignment` section (the receipt the check writes). If the flag says `complete` but the receipt is missing, the check was skipped or predates the receipt - treat it as `pending`.
 **Skip if:** Autonomous mode (invoked from `craft:story-implement-auto`).
 
 Read the story file's `alignment` frontmatter field.
@@ -156,7 +156,7 @@ Read `commands/references/alignment-check.md` and follow the alignment loop:
 2. Surface genuine product questions via AskUserQuestion
 3. If answers expand scope, use SendMessage to the same agent for follow-up
 4. Loop until zero unasked product questions remain
-5. Set `alignment: complete` in the story frontmatter
+5. Record the `## Alignment` receipt in the story and set `alignment: complete` in the frontmatter
 
 **Batch mode (`MODE: batch`):** Flag stories with `alignment: pending` during triage. Ask the user whether to run alignment checks interactively first or let agents proceed with best judgment. See `commands/references/alignment-check.md` "Batch Planning" section.
 
