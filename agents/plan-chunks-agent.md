@@ -232,6 +232,10 @@ A story with no `source_concept` frontmatter is freeform - this guard does NOT a
 
 **Absence is evidence.** Before planning to build something that's missing (an endpoint, a column, a config), state a theory of WHY it's missing. "Nobody needed it yet" is acceptable. "It's a fence" — deliberately absent because the operation is unsafe or owned elsewhere — changes the plan. A read-only surface around mutable data is a fence until proven otherwise.
 
+**Readers are the ceiling.** Ownership asks who writes the data; this asks who *reads* it. For any data the story mutates, enumerate every read site (grep the field, the endpoint, the derived state) and verify each one still tells the truth after your write. A write that satisfies its planned path and silently lies in another reader's view is the bug class this exists to catch.
+
+**Name the unit.** Any write that marks, completes, toggles, or assigns state must declare its key: once per WHAT? If the same entity can legitimately occur multiple times in the context being marked (a schedule, a list, a week), entity-keyed state is wrong until the data model proves otherwise. The unit goes into the chunk as a contract — never stays an assumption.
+
 ```
 Documented → Read directly
 Not documented but scoped → Targeted scan (Grep/Glob then read)

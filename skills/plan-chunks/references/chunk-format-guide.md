@@ -131,6 +131,8 @@ patterns in jobs/ - out of scope, the ILS client tests are the pattern to mirror
 
 A contract about *pre-existing reality* that can earn no receipt goes in the Pitch's conditions table as unverifiable - it does not ship as a bare assertion.
 
+**Mutation contracts carry their unit and their readers.** A contract for any state-changing write declares the key it writes under ("completion is per schedule-occurrence `(workout_id, scheduled_date)`, not per workout") and receipts its read sites ("[verified: read by CalendarView.tsx:31 and AccountPage.tsx:84 - both rebuild from the refreshed payload]"). An undeclared unit is an invisible assumption - and invisible assumptions are the one thing receipts can't attack.
+
 **Approach** - advisory prose. Pattern pointers by `file:line`, ordering, gotchas. **No code blocks** - with one exception: when the code IS the decision (an exact regex, a migration statement, a non-obvious one-liner where ambiguity is dangerous). Decision-code carries a receipt like any contract.
 
 **Test cases** - names plus what they assert. No bodies. The implementer writes bodies during TDD, where they get verified by running - not authored as fiction in a markdown file.
