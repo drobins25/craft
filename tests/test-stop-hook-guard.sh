@@ -51,6 +51,10 @@ ACTIVE_CYCLE="1-test-cycle"
 CURRENT_STORY="test-story"
 EOF
 
+# Zero CURRENT_CHUNK so the guard reaches the Layer 2 persistence path this test asserts
+# (the fixture's CURRENT_CHUNK="1" triggers the Layer 1 mid-implementation block instead)
+sed -i '' 's/^CURRENT_CHUNK=.*/CURRENT_CHUNK="0"/' "$TEST_DIR/.craft/cycles/1-test-cycle/.state"
+
 # Clean marker to ensure this is "first time"
 SESSION_ID=$(echo "$TEST_DIR" | md5 2>/dev/null | cut -c1-8 || echo "$TEST_DIR" | md5sum 2>/dev/null | cut -c1-8)
 rm -f "/tmp/craft-stop-suggested-${SESSION_ID}"
@@ -100,6 +104,9 @@ cat > "$TEST_DIR/.craft/.global-state" << 'EOF'
 ACTIVE_CYCLE="1-test-cycle"
 CURRENT_STORY="test-story"
 EOF
+
+# Zero CURRENT_CHUNK so the guard reaches the Layer 2 marker-suppression path this test asserts
+sed -i '' 's/^CURRENT_CHUNK=.*/CURRENT_CHUNK="0"/' "$TEST_DIR/.craft/cycles/1-test-cycle/.state"
 
 # Create a recent marker
 SESSION_ID=$(echo "$TEST_DIR" | md5 2>/dev/null | cut -c1-8 || echo "$TEST_DIR" | md5sum 2>/dev/null | cut -c1-8)

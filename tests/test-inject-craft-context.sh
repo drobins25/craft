@@ -201,18 +201,23 @@ assert_not_contains "no rules section" "=RULES" "$RESULT"
 rm -rf "$TEST_DIR"
 echo ""
 
-# Test 9: Orchestration index file — under 3.5KB
-begin_test "Orchestration index file — under 3.5KB"
+# Test 9: Orchestration index file — under 5KB
+# Ceiling history: 3584 was set at the initial commit when the index was 3373 bytes.
+# Shipped routing (notebook, riff-as-skill, claims-audit) grew it to 4470 bytes of
+# load-bearing content; the ceiling was re-evaluated and raised to 5120 (current +
+# ~14% headroom). The budget still bounds per-prompt injection cost — the inject
+# hook cats the whole file into UserPromptSubmit output on every prompt.
+begin_test "Orchestration index file — under 5KB"
 
 INDEX_FILE="$PLUGIN_ROOT/reference/orchestration-index.min"
 assert_file_exists "index file exists" "$INDEX_FILE"
 
 FILE_SIZE=$(wc -c < "$INDEX_FILE" | tr -d ' ')
-if [ "$FILE_SIZE" -lt 3584 ]; then
-  echo "  PASS: file is ${FILE_SIZE} bytes (< 3584)"
+if [ "$FILE_SIZE" -lt 5120 ]; then
+  echo "  PASS: file is ${FILE_SIZE} bytes (< 5120)"
   PASS=$((PASS + 1))
 else
-  echo "  FAIL: file is ${FILE_SIZE} bytes (>= 3584 limit)"
+  echo "  FAIL: file is ${FILE_SIZE} bytes (>= 5120 limit)"
   FAIL=$((FAIL + 1))
 fi
 

@@ -66,10 +66,11 @@ echo ""
 begin_test "Basic creation — modified file produces checkpoint YAML"
 TEST_DIR=$(setup_test_project)
 trap cleanup_test_dir EXIT
+cd "$TEST_DIR"
 
 echo "new content" > src_file.txt
 RESULT=$("$SCRIPTS_DIR/create-checkpoint.sh" "login-form" 2 ".craft/cycles/10-test-cycle" "$TEST_DIR")
-CHECKPOINT_FILE="$TEST_DIR/.craft/checkpoints/login-form-chunk-2.yaml"
+CHECKPOINT_FILE="$RESULT"
 
 assert_file_exists "checkpoint YAML exists" "$CHECKPOINT_FILE"
 
@@ -80,7 +81,7 @@ assert_eq "git_ref matches HEAD" "$EXPECTED_REF" "$ACTUAL_REF"
 
 # Check story and chunk values
 ACTUAL_STORY=$(grep "^story:" "$CHECKPOINT_FILE" | sed 's/story: *//' | tr -d '"')
-assert_eq "story name correct" "login-form" "$ACTUAL_STORY"
+assert_eq "story name correct" "1-login-form" "$ACTUAL_STORY"
 
 ACTUAL_CHUNK=$(grep "^chunk:" "$CHECKPOINT_FILE" | sed 's/chunk: *//' | tr -d '"')
 assert_eq "chunk number correct" "2" "$ACTUAL_CHUNK"
@@ -99,7 +100,7 @@ RESULT=$("$SCRIPTS_DIR/create-checkpoint.sh" "login-form" 1 ".craft/cycles/10-te
 EXIT_CODE=$?
 
 assert_eq "exits 0" "0" "$EXIT_CODE"
-CHECKPOINT_FILE="$TEST_DIR/.craft/checkpoints/login-form-chunk-1.yaml"
+CHECKPOINT_FILE="$RESULT"
 assert_file_exists "YAML still created" "$CHECKPOINT_FILE"
 
 ACTUAL_REF=$(grep "^git_ref:" "$CHECKPOINT_FILE" | sed 's/git_ref: *//' | tr -d '"')
@@ -120,15 +121,14 @@ FIRST_REF=$(cd "$TEST_DIR" && git rev-parse --short HEAD)
 # Make a change and run again
 cd "$TEST_DIR"
 echo "more changes" > another_file.txt
-"$SCRIPTS_DIR/create-checkpoint.sh" "login-form" 2 ".craft/cycles/10-test-cycle" "$TEST_DIR" > /dev/null
+CHECKPOINT_FILE=$("$SCRIPTS_DIR/create-checkpoint.sh" "login-form" 2 ".craft/cycles/10-test-cycle" "$TEST_DIR")
 SECOND_REF=$(cd "$TEST_DIR" && git rev-parse --short HEAD)
 
-CHECKPOINT_FILE="$TEST_DIR/.craft/checkpoints/login-form-chunk-2.yaml"
 ACTUAL_REF=$(grep "^git_ref:" "$CHECKPOINT_FILE" | sed 's/git_ref: *//' | tr -d '"')
 assert_eq "latest ref wins" "$SECOND_REF" "$ACTUAL_REF"
 
 # Only one YAML file for this story+chunk
-FILE_COUNT=$(ls "$TEST_DIR/.craft/checkpoints/login-form-chunk-2"* 2>/dev/null | wc -l | tr -d ' ')
+FILE_COUNT=$(ls "$TEST_DIR/.craft/checkpoints/"*"login-form-chunk-2"* 2>/dev/null | wc -l | tr -d ' ')
 assert_eq "only one YAML file" "1" "$FILE_COUNT"
 
 cleanup_test_dir
@@ -140,8 +140,7 @@ TEST_DIR=$(setup_test_project)
 cd "$TEST_DIR"
 
 echo "trigger commit" > trigger.txt
-"$SCRIPTS_DIR/create-checkpoint.sh" "login-form" 2 ".craft/cycles/10-test-cycle" "$TEST_DIR" > /dev/null
-CHECKPOINT_FILE="$TEST_DIR/.craft/checkpoints/login-form-chunk-2.yaml"
+CHECKPOINT_FILE=$("$SCRIPTS_DIR/create-checkpoint.sh" "login-form" 2 ".craft/cycles/10-test-cycle" "$TEST_DIR")
 
 ACTUAL_CYCLE_STATUS=$(grep "^state_CYCLE_STATUS:" "$CHECKPOINT_FILE" | sed 's/state_CYCLE_STATUS: *//' | tr -d '"')
 assert_eq "state_CYCLE_STATUS captured" "active" "$ACTUAL_CYCLE_STATUS"
