@@ -120,23 +120,12 @@ For convenience, these shortcuts should also work:
 
 ## Output
 
-After showing the dashboard, offer next actions:
+The dashboard IS the answer. Render it, then close with 2-3 SHORT next-move suggestions in plain prose - and stop. No question widget: nothing here blocks on a choice, and a dialog would cover the very table the user just asked to see.
 
-> "What would you like to do?"
+Derive the suggestions from the state you just rendered - name the specific story or cycle and the command that advances it. Never offer canned moves the data contradicts (no "continue current story" when no story is active). Examples of the shape:
 
-Use **AskUserQuestion**:
-```
-question: "What would you like to do?"
-header: "Action"
-options:
-  - label: "Continue current story"
-    description: "Resume where you left off"
-  - label: "Pick a different story"
-    description: "Choose another story to work on"
-  - label: "Create new story"
-    description: "Add a new story to backlog"
-  - label: "Start analysis"
-    description: "Run QA/UX/Creative/Style checks"
-```
+> Story 14 (agent-finding-handoff) is still unplanned - `/craft:plan-chunks` gets it ready.
+> The active story is mid-chunk (3/5) - `/craft:story-continue` picks it back up.
+> All stories in this cycle are complete - `/craft:cycle-complete` archives it.
 
-**If user provides custom text:** Ask a clarifying AskUserQuestion to understand their intent.
+Then end the turn. The user replies conversationally and normal routing takes it from there.
