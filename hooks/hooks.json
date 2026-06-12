@@ -68,6 +68,16 @@
             "timeout": 3000
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/push-gate.sh",
+            "timeout": 5000
+          }
+        ]
       }
     ],
     "PreCompact": [

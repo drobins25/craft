@@ -79,11 +79,13 @@ The canonical flow with all result branches is `commands/craft-story-implement.m
 bash hooks/scripts/complete-story.sh <story-file-path>
 ```
 
-This sets the story status to `complete`, clears `CURRENT_STORY`, and creates the story commit - so the audit step above must come first.
+This sets the story status to `complete` and clears `CURRENT_STORY`. The story commit is staged from `.craft/.commit-manifest` (a validated file list with a `story:` identity header) - never from a working-tree sweep, so leftover untracked files stay out of the commit.
+
+**Self-hosting note:** the manifest-write sub-step lives in `commands/craft-story-implement.md` (7b), which is never run in this repo (see the safety rule above). `/implement` has no manifest-write step, so `complete-story.sh` here takes the absent-manifest path by design: it logs "no manifest found, no commit made" and makes NO commit. Commit your story changes manually per the conventions below (or write a manifest yourself before running the script if you want it to create the commit).
 
 ### 7. Commit
 
-`complete-story.sh` creates one commit per story. Additional manual commits (fixes, docs) follow the commit conventions below.
+`complete-story.sh` commits only what the manifest lists - in this repo, with no manifest, you commit manually. Manual commits (stories, fixes, docs) follow the commit conventions below; stage the files your change touched explicitly rather than `git add -A`.
 
 ## Commit conventions
 

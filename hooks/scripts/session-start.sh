@@ -17,6 +17,7 @@ fi
 # Clean up stale breadcrumbs and orphaned fix markers from crashed sessions
 rm -f "${PROJECT_ROOT}.craft/.continuation"
 rm -f "${PROJECT_ROOT}.craft/.active-fix"
+rm -f "${PROJECT_ROOT}.craft/.commit-manifest"
 
 # Clear stale CURRENT_WORKFLOW_SESSION if the session is no longer active
 if [ -f "${PROJECT_ROOT}.craft/.global-state" ]; then

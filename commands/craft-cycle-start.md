@@ -226,7 +226,7 @@ This updates:
 >
 > 🚀 **Cruise mode ON** — I'll run autonomously
 > ├── Implement all [N] stories ([M] chunks)
-> ├── State snapshot before each chunk, commit at story completion
+> ├── State snapshot before each chunk, manifest-staged commit at story completion
 > ├── Validate after each chunk
 > └── Only stop if something breaks
 >

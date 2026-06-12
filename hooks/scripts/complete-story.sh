@@ -51,37 +51,94 @@ fi
 # Aggregate knowledge-gap failures for reflect pipeline
 python3 "$SCRIPT_DIR/aggregate-failures.py" "$PROJECT_ROOT" 2>/dev/null || true
 
-# --- Git commit: one commit per story ---
+# --- Git commit: one commit per story, staged from the validated manifest ---
+#
+# The commit is a receipt of validated work, not a working-tree snapshot.
+# Staging is driven entirely by .craft/.commit-manifest (written by the
+# orchestrator after validation): first line is a "story: <name>" identity
+# header, then one project-relative path per line. No manifest means no
+# commit - there is deliberately no fallback that sweeps the tree.
+
+COMMIT_ABORTED=0
 
 if [ -n "$PROJECT_ROOT" ]; then
   cd "${PROJECT_ROOT}"
 
-  # Parse story title from frontmatter
-  STORY_TITLE=$(grep "^title:" "$STORY_FILE" 2>/dev/null | sed 's/title: *//' | tr -d '"' | tr -d '\r')
+  MANIFEST="${PROJECT_ROOT}.craft/.commit-manifest"
+  STORY_NAME=$(basename "$STORY_FILE" .md)
 
-  # Parse chunk descriptions from chunk headings
-  CHUNK_BODY=""
-  while IFS= read -r line; do
-    # Strip "### Chunk N: " prefix, keep just the description
-    desc=$(echo "$line" | sed 's/### Chunk [0-9]*: //')
-    CHUNK_BODY="${CHUNK_BODY}
-- ${desc}"
-  done < <(grep "^### Chunk [0-9]" "$STORY_FILE" 2>/dev/null)
-
-  # Build commit message
-  COMMIT_MSG="feat: ${STORY_TITLE:-$(basename "$STORY_FILE" .md)}"
-  if [ -n "$CHUNK_BODY" ]; then
-    COMMIT_MSG="${COMMIT_MSG}
-${CHUNK_BODY}"
-  fi
-
-  # Stage and commit
-  git add -A 2>/dev/null || true
-  if git diff --cached --quiet 2>/dev/null; then
-    # Nothing to commit
-    true
+  if [ ! -f "$MANIFEST" ]; then
+    echo "no manifest found, no commit made"
   else
-    git commit -m "$COMMIT_MSG" --no-verify 2>/dev/null || true
+    MANIFEST_HEADER=$(head -1 "$MANIFEST")
+    MANIFEST_STORY="${MANIFEST_HEADER#story: }"
+    MANIFEST_BODY=$(tail -n +2 "$MANIFEST")
+
+    # Delete after read - a consumed (or bad) manifest must never re-fire
+    rm -f "$MANIFEST"
+
+    # A comma in a body line means an unsplit comma-joined file list leaked
+    # in: the manifest is malformed. Treated exactly like an absent manifest.
+    MALFORMED=0
+    while IFS= read -r entry; do
+      case "$entry" in
+        *,*) MALFORMED=1; break ;;
+      esac
+    done <<< "$MANIFEST_BODY"
+
+    if [ "$MALFORMED" = "1" ]; then
+      echo "malformed manifest, no commit made"
+    elif [ "$MANIFEST_STORY" != "$STORY_NAME" ]; then
+      # Wrong story's manifest. Abort the commit loudly, but defer the
+      # non-zero exit to the end of the script: status is already set to
+      # complete above, so bailing here would strand cycle/global state.
+      echo "Error: commit manifest is for story '$MANIFEST_STORY', not '$STORY_NAME' - no commit made" >&2
+      COMMIT_ABORTED=1
+    else
+      # Parse story title from frontmatter
+      STORY_TITLE=$(grep "^title:" "$STORY_FILE" 2>/dev/null | sed 's/title: *//' | tr -d '"' | tr -d '\r')
+
+      # Parse chunk descriptions from chunk headings
+      CHUNK_BODY=""
+      while IFS= read -r line; do
+        # Strip "### Chunk N: " prefix, keep just the description
+        desc=$(echo "$line" | sed 's/### Chunk [0-9]*: //')
+        CHUNK_BODY="${CHUNK_BODY}
+- ${desc}"
+      done < <(grep "^### Chunk [0-9]" "$STORY_FILE" 2>/dev/null)
+
+      # Build commit message
+      COMMIT_MSG="feat: ${STORY_TITLE:-$STORY_NAME}"
+      if [ -n "$CHUNK_BODY" ]; then
+        COMMIT_MSG="${COMMIT_MSG}
+${CHUNK_BODY}"
+      fi
+
+      # Stage each manifest entry individually. A gitignored path is an
+      # intentional exclusion: warn and continue. Any other staging failure
+      # poisons the receipt: commit nothing and exit non-zero at script end.
+      while IFS= read -r entry; do
+        [ -z "$entry" ] && continue
+        if git check-ignore -q "$entry" 2>/dev/null; then
+          echo "Warning: skipping gitignored manifest entry: $entry" >&2
+          continue
+        fi
+        if ! git add -- "$entry" 2>/dev/null; then
+          echo "Error: failed to stage manifest entry '$entry' - no commit made" >&2
+          COMMIT_ABORTED=1
+          break
+        fi
+      done <<< "$MANIFEST_BODY"
+
+      if [ "$COMMIT_ABORTED" = "0" ]; then
+        if git diff --cached --quiet 2>/dev/null; then
+          # Nothing to commit
+          true
+        else
+          git commit -m "$COMMIT_MSG" --no-verify 2>/dev/null || true
+        fi
+      fi
+    fi
   fi
 fi
 
@@ -117,5 +174,12 @@ rm -f "${PROJECT_ROOT}.craft/checkpoints/"*.yaml 2>/dev/null
 
 # Clean up chunk validation state
 rm -f "${PROJECT_ROOT}.craft/.chunk-state" 2>/dev/null
+
+# Deferred abort exit: state transitions above must complete even when the
+# commit was aborted, so the non-zero exit is the very last thing that happens.
+if [ "${COMMIT_ABORTED:-0}" = "1" ]; then
+  echo "Error: story state transitions completed, but the commit was aborted - see messages above" >&2
+  exit 1
+fi
 
 echo "Story completed: $STORY_FILE"

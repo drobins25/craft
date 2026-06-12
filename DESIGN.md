@@ -183,7 +183,7 @@ See `docs/workflow-reference.md` for the full format spec and examples.
 ## Human Checkpoints
 
 - If ANYTHING weird → NO assumptions, ask human
-- State snapshot before every chunk, one git commit at story completion
+- State snapshot before every chunk; at story completion, one commit staged from the validated file manifest (leftover files are surfaced for triage, never swept in)
 - Trust by default, verify when uncertain
 
 ---

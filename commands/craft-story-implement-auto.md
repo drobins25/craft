@@ -43,7 +43,7 @@ Then read `.global-state` and handle stale state from a crashed previous run:
 |-----------|--------|
 | No `ACTIVE_CYCLE` | "No active cycle." EXIT. |
 | `CURRENT_STORY` set, story is `complete` | Stale state — clear CURRENT_STORY, CRAFT_WRITE_ENABLED, cycle state. Proceed to story selection. |
-| `CURRENT_STORY` set, story is `active`, all chunks done | Crashed before `complete-story.sh`. Skip to story completion flow. |
+| `CURRENT_STORY` set, story is `active`, all chunks done | Crashed before `complete-story.sh`. Skip to story completion flow. NOTE: the dead session's `.craft/.commit-manifest` is gone (session-start clears it), so if you resume past the manifest-write sub-step (story-implement 7b) without re-writing it, `complete-story.sh` makes NO commit by design ("no manifest found"). Re-run sub-step 7b before Mark Complete, or surface "completion commit skipped (no manifest)" in the final report. |
 | `CURRENT_STORY` set, story is `active`, chunks incomplete | Resume from current chunk. Trust story frontmatter (`chunks_complete + 1`) as ground truth. |
 | `CRAFT_WRITE_ENABLED` set but no `CURRENT_STORY` | Orphaned flag — clear it. Proceed to story selection. |
 | Clean state | Normal start. Proceed to story selection. |
@@ -78,6 +78,7 @@ AUTONOMOUS IMPLEMENTATION SUMMARY
 Cycle: [name]
 Stories completed this run: [N]
 Stories completed total: [complete] of [total]
+Completion commits skipped (no manifest): [story names, or "none"]
 Cycle status: [complete | paused | stopped — blocked on [story], chunk [N]: [reason]]
 Total tokens: [sum]
 ```

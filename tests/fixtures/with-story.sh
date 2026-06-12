@@ -80,6 +80,20 @@ EOF
   echo "$dir"
 }
 
+# Turn a fixture dir into a real git repo with an initial commit, so tests
+# can exercise staging, HEAD diffs, and upstream ranges.
+git_init_repo() {
+  local dir="$1"
+  (
+    cd "$dir"
+    git init -q
+    git config user.name "craft-test"
+    git config user.email "craft-test@example.com"
+    git add -A
+    git commit -q -m "init" --no-verify --allow-empty
+  )
+}
+
 # Create a story in the backlog (no cycle assignment)
 create_backlog_story() {
   local dir="${1}"

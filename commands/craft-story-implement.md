@@ -823,6 +823,25 @@ After all chunks:
 
    **If a Spark intention genuinely has no implementation** (should not happen if planning was correct): Stop. Flag the gap. Plan an additional chunk. Do not mark complete.
 
+7b. **Write the Commit Manifest - REQUIRED**
+
+   `complete-story.sh` stages ONLY what this manifest lists. If the manifest is absent it makes NO commit - there is no fallback. Write it now, after Spark Verification, immediately before Mark Complete.
+
+   Build the manifest from the story-final FILES_CHANGED value (computed in sub-step 1) plus the standing include set:
+
+   ```bash
+   cat > .craft/.commit-manifest << 'MANIFEST'
+   story: [story file basename without .md, e.g. 3-user-auth]
+   [one project-relative path per line]
+   MANIFEST
+   ```
+
+   - The `story:` header MUST be the story file's basename without `.md` - complete-story.sh compares it against the file it was invoked with and aborts the commit on mismatch.
+   - **One path per line.** FILES_CHANGED is a comma-separated string - split it. complete-story.sh treats any comma in a body line as a malformed manifest and makes no commit.
+   - **Standing include set:** append `.craft/.learnings.yaml` and `.craft/.validation-receipt.md` to the manifest if the files exist. They are story output and ride the receipt. In projects that gitignore `.craft/`, complete-story.sh skips them with a warning - expected, not an error.
+   - Gitignored manifest entries are skipped with a warning; any OTHER staging failure aborts the commit entirely (a receipt with failures is no receipt).
+   - The manifest is consumed (deleted) by complete-story.sh on every path, including aborts.
+
 8. **Mark Complete - REQUIRED**
 
    **YOU MUST RUN THIS.** Story is not complete until this runs:
@@ -837,6 +856,63 @@ After all chunks:
    - Cycle.yaml stories table
 
    **Do not skip this step.** Without it, the story stays `active` forever.
+
+8b. **Surface and Triage Leftovers**
+
+   The completion commit staged only the manifest. Anything else still sitting in the tree is a leftover - it is NEVER swept into a commit, and it gets exactly one triage decision, recorded in the ledger.
+
+   **Compute the leftover set:**
+
+   ```bash
+   cd ${CRAFT_PROJECT_ROOT:-.} && git ls-files --others --exclude-standard
+   ```
+
+   From that list, drop paths that were in the manifest (the FILES_CHANGED set from sub-step 1) and paths the ledger has already decided:
+
+   ```bash
+   ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/triage-ledger.sh lookup [path]
+   ```
+
+   A non-empty lookup result other than `pending` means the path was decided in a previous story - do NOT re-ask, ever. The never-re-ask check is this script lookup, not your memory of the session.
+
+   **Queue new leftovers as pending**, then surface them in the completion report:
+
+   ```bash
+   ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/triage-ledger.sh append [path] pending [story-name]
+   ```
+
+   > "Leftover files not included in the story commit:
+   > - [path] (pending triage)
+   > ..."
+
+   **Interactive mode - one AskUserQuestion per pending leftover** (never batch them into one question):
+
+   ```
+   question: "Leftover file `[path]` was not part of the validated story commit. What should happen to it?"
+   header: "Leftover"
+   options:
+     - label: "Ignore"
+       description: "Append it to .gitignore with a provenance comment - never asked again"
+     - label: "Claim"
+       description: "Stage and commit it explicitly - secret-shaped files are refused"
+     - label: "Leave"
+       description: "Keep it untracked, recorded in the ledger - never asked again"
+   ```
+
+   - **Ignore:** append the path to `.gitignore` with a provenance comment, then record it:
+     ```bash
+     printf '%s  # craft: ignored during [story-name]\n' "[path]" >> .gitignore
+     ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/triage-ledger.sh append [path] ignore [story-name]
+     ```
+   - **Claim:** check the shared deny-pattern list FIRST - this is a hard stop, not a warning:
+     ```bash
+     source ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/secret-deny-patterns.sh
+     matches_secret_pattern "[path]" && echo "REFUSED: secret-shaped path"
+     ```
+     If it matches: refuse the claim, tell the user which pattern matched, and leave the entry pending (they can `leave` or `ignore` it instead). If it does not match: `git add -- [path]`, commit it separately with a clear message, and record `claim` in the ledger.
+   - **Leave:** record `leave` in the ledger. The file stays untracked and is never asked about again.
+
+   **Autonomous mode (RUN_MODE=autonomous): leave-and-report.** Record `leave` for every new leftover, include the list in the final report, and continue. Never ask, never block, never sweep.
 
 9. **Check for Cycle Completion**
 
@@ -1024,7 +1100,7 @@ If `.state` file is corrupted or missing:
 ## Remember
 
 - Stories must have chunks before implementing
-- State snapshot before every chunk, one git commit at story completion
+- State snapshot before every chunk; at story completion, one commit staged from the validated manifest (write it in sub-step 7b - no manifest means no commit), leftovers surfaced for triage
 - Validate after every chunk
 - Nothing ships without approval
 - Quality is pristine by default

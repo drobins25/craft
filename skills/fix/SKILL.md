@@ -137,13 +137,21 @@ If validation passes: update `status: validated`. Continue to Step 5b.
 
 ### Step 5b: Commit the Fix
 
-Stage and commit with a clean `fix:` prefix. The description should be a short summary of what was fixed - the same language you'd use in the fix file's Symptom section.
+Stage ONLY the files the fix touched - never the whole tree. A fix commit is a receipt of the fix, not a snapshot of whatever else is sitting in the working directory. The staged set comes from the fix file's `files_changed` (updated in Step 4); if that list is empty or stale, fall back to `git diff --name-only HEAD` so the fix's real changes are never silently dropped.
 
 ```bash
 cd "${CRAFT_PROJECT_ROOT:-.}"
-git add -A
+
+# Stage each file from the fix file's files_changed list
+git add -- [path from files_changed] [path from files_changed] ...
+
+# Fallback ONLY if files_changed is empty or 0: stage the tracked changes
+# git diff --name-only HEAD | while IFS= read -r f; do git add -- "$f"; done
+
 git diff --cached --quiet || git commit -m "fix: [short description of what was fixed]" --no-verify
 ```
+
+Do NOT use `git add -A` or `git add .` - either would sweep unrelated untracked files (scratch files, local configs, secrets) into the fix commit.
 
 For example: `fix: cycle card hover delay not respecting transition timing`
 

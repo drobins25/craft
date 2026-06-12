@@ -166,5 +166,37 @@ rm -f "$ENV_FILE"
 cleanup_test_dir
 echo ""
 
+# Test 5: Stale commit-manifest from a crashed session is removed
+begin_test "Stale .commit-manifest removed at session start"
+
+TEST_DIR=$(create_minimal_craft)
+ENV_FILE=$(mktemp)
+
+cat > "$TEST_DIR/.craft/.global-state" << 'EOF'
+ACTIVE_CYCLE=""
+CURRENT_STORY=""
+PLANNING_CYCLE=""
+LAST_ACTIVITY=""
+EOF
+printf 'story: dead-session-story\nsome/file.txt\n' > "$TEST_DIR/.craft/.commit-manifest"
+
+set +e
+(cd "$TEST_DIR" && unset PROJECT_ROOT && unset CRAFT_PROJECT_ROOT && unset CRAFT_MULTI_PROJECT && export CLAUDE_ENV_FILE="$ENV_FILE" && bash "$SESSION_SCRIPT" >/dev/null 2>&1)
+SESSION_EXIT=$?
+set -e
+
+assert_eq "exits 0" "0" "$SESSION_EXIT"
+if [ -f "$TEST_DIR/.craft/.commit-manifest" ]; then
+  echo "  FAIL: stale .commit-manifest survived session start"
+  FAIL=$((FAIL + 1))
+else
+  echo "  PASS: stale .commit-manifest removed"
+  PASS=$((PASS + 1))
+fi
+
+rm -f "$ENV_FILE"
+cleanup_test_dir
+echo ""
+
 # --- Summary ---
 finish_tests
