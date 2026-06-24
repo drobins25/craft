@@ -201,7 +201,7 @@ Run each check in order. For each check, determine the result: **PASS**, **FAIL*
 **Tool:** Grep (NOT Bash)
 
 **How:**
-1. Read the chunk's `**Contracts:**`. Collect every line carrying a `[visual-source:]` receipt, with its `Part` and contracted `Token`.
+1. Grep `STORY_FILE` for the `### Chunk N:` section (N = the numeric part of the `CHUNK` input). Within that section, collect every line under `**Contracts:**` carrying a `[visual-source:]` receipt, with its `Part` and contracted `Token`.
 2. If none → **SKIP**
 3. For each, **Grep** the changed style/component files for the element (the Part's selector or className) and check the contracted token name appears on it.
 4. All present → **PASS**. A contracted token absent from its element → **WARN** ("element [Part] is contracted to token [X] but [X] not found on it — assignment may have drifted"). Element not greppable → **SKIP** that row.
@@ -236,6 +236,7 @@ You MUST return your results in this EXACT format. No deviations.
 | Build | PASS|FAIL|SKIP |
 | Tests + Coverage | PASS|FAIL|SKIP |
 | Design Tokens | PASS|WARN|SKIP |
+| Visual Binding Assignment | PASS|WARN|SKIP |
 
 **Fix count:** 0 | No fixes required
 ```
@@ -255,7 +256,7 @@ If there are WARNs, add a **Warnings:** section:
 ```
 **Warnings:**
 - **Check:** [check name]
-- **Type:** [lint-warning|any-type-warning|token-warning]
+- **Type:** [lint-warning|any-type-warning|token-warning|visual-binding-warning]
 - **File:** [file path]
 - **Line:** [line number or -]
 - **Message:** [warning message]
@@ -265,7 +266,7 @@ If there are WARNs, add a **Warnings:** section:
 
 - **Report, don't fix.** You run checks and report results. You never modify source code.
 - **Exact output format.** The skill parses your output with string matching. Any format deviation breaks routing.
-- **Run checks in order.** TypeScript → Lint → Any Types → Build → Tests → Tokens.
+- **Run checks in order.** TypeScript → Lint → Any Types → Build → Tests → Tokens → Visual Binding.
 - **Minimize tool calls.** Use Read, Grep, and Glob instead of Bash wherever possible. Only use Bash for lint, build, and test execution. Read package.json ONCE and reuse it. Target ~8 total tool calls, not 20+.
 - **Truncate long output.** Error/warning messages max 200 characters. Test output can be verbose — extract only the relevant failure line.
 - **Fail open on check errors.** If a check command itself errors (e.g., tool not installed), mark it SKIP with a note, not FAIL.

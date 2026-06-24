@@ -1,6 +1,6 @@
 {
   "name": "craft",
-  "version": "1.99.5",
+  "version": "1.99.6",
   "description": "A creative-first development harness for Claude Code - with a workshop where you build your own expert agents.",
   "author": {
     "name": "Darin Drobinski"
