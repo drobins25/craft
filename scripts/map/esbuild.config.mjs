@@ -31,7 +31,7 @@ for (const [src, dest] of WASM) {
 //    (default for platform node); web-tree-sitter is inlined and loads its wasm
 //    at runtime via the locateFile override in the source.
 await esbuild.build({
-  entryPoints: [path.join(DIR, 'src/index.js')],
+  entryPoints: [path.join(DIR, 'src/cli.js')],
   outfile: path.join(DIR, 'runner.js'),
   bundle: true,
   platform: 'node',

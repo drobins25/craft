@@ -6,6 +6,7 @@
   "type": "commonjs",
   "scripts": {
     "build": "node esbuild.config.mjs",
+    "grammar-check": "node grammar-currency/currency-check.js",
     "test": "node --test \"__tests__/**/*.test.js\""
   },
   "dependencies": {

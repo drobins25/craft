@@ -1,0 +1,155 @@
+{
+  "__fixtures__/Sample.cs": {
+    "file": "__fixtures__/Sample.cs",
+    "language": "c_sharp",
+    "tier": "grammar",
+    "floored": false,
+    "anchors": [
+      {
+        "anchor": "__fixtures__/Sample.cs#LoadOrders",
+        "kind": "class",
+        "line": 6
+      },
+      {
+        "anchor": "__fixtures__/Sample.cs#LoadOrders.GenerateIds(int,string)",
+        "kind": "method",
+        "line": 8
+      },
+      {
+        "anchor": "__fixtures__/Sample.cs#LoadOrders.GenerateIds(int)",
+        "kind": "method",
+        "line": 13
+      },
+      {
+        "anchor": "__fixtures__/Sample.cs#LoadOrders.LoadAsync(int)",
+        "kind": "method",
+        "line": 18
+      },
+      {
+        "anchor": "__fixtures__/Sample.cs#Order",
+        "kind": "class",
+        "line": 25
+      }
+    ]
+  },
+  "__fixtures__/Sample.java": {
+    "file": "__fixtures__/Sample.java",
+    "language": "java",
+    "tier": "grammar",
+    "floored": false,
+    "anchors": [
+      {
+        "anchor": "__fixtures__/Sample.java#OrderService",
+        "kind": "class",
+        "line": 3
+      },
+      {
+        "anchor": "__fixtures__/Sample.java#OrderService.load(int)",
+        "kind": "method",
+        "line": 4
+      },
+      {
+        "anchor": "__fixtures__/Sample.java#OrderService.load(int,String)",
+        "kind": "method",
+        "line": 8
+      },
+      {
+        "anchor": "__fixtures__/Sample.java#OrderService.save(Order)",
+        "kind": "method",
+        "line": 12
+      }
+    ]
+  },
+  "__fixtures__/sample.js": {
+    "file": "__fixtures__/sample.js",
+    "language": "javascript",
+    "tier": "grammar",
+    "floored": false,
+    "anchors": [
+      {
+        "anchor": "__fixtures__/sample.js#OrderService",
+        "kind": "class",
+        "line": 1
+      },
+      {
+        "anchor": "__fixtures__/sample.js#OrderService.load",
+        "kind": "method",
+        "line": 2
+      },
+      {
+        "anchor": "__fixtures__/sample.js#makeId",
+        "kind": "function",
+        "line": 7
+      }
+    ]
+  },
+  "__fixtures__/sample.py": {
+    "file": "__fixtures__/sample.py",
+    "language": "python",
+    "tier": "grammar",
+    "floored": false,
+    "anchors": [
+      {
+        "anchor": "__fixtures__/sample.py#OrderRepo",
+        "kind": "class",
+        "line": 1
+      },
+      {
+        "anchor": "__fixtures__/sample.py#OrderRepo.load",
+        "kind": "function",
+        "line": 2
+      },
+      {
+        "anchor": "__fixtures__/sample.py#OrderRepo.save",
+        "kind": "function",
+        "line": 5
+      },
+      {
+        "anchor": "__fixtures__/sample.py#make_id",
+        "kind": "function",
+        "line": 9
+      }
+    ]
+  },
+  "__fixtures__/sample.ts": {
+    "file": "__fixtures__/sample.ts",
+    "language": "typescript",
+    "tier": "grammar",
+    "floored": false,
+    "anchors": [
+      {
+        "anchor": "__fixtures__/sample.ts#OrderLike",
+        "kind": "interface",
+        "line": 1
+      },
+      {
+        "anchor": "__fixtures__/sample.ts#OrderService",
+        "kind": "class",
+        "line": 5
+      },
+      {
+        "anchor": "__fixtures__/sample.ts#OrderService.load",
+        "kind": "method",
+        "line": 6
+      },
+      {
+        "anchor": "__fixtures__/sample.ts#OrderService.save",
+        "kind": "method",
+        "line": 10
+      },
+      {
+        "anchor": "__fixtures__/sample.ts#makeId",
+        "kind": "function",
+        "line": 15
+      }
+    ]
+  },
+  "grammar-currency/PrimaryCtor.cs": {
+    "file": "grammar-currency/PrimaryCtor.cs",
+    "language": "c_sharp",
+    "tier": "floor",
+    "floored": true,
+    "reason": "untrusted-name",
+    "anchors": []
+  }
+}

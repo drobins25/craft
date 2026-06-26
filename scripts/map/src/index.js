@@ -1,9 +1,9 @@
 'use strict';
 
-// Living Map structural runner. Loads a bundled web-tree-sitter grammar, parses a
-// file, and returns the raw parse tree. Extraction of anchors builds on parseFile;
-// this entry only proves and exposes the parse seam plus file enumeration and
-// extension-based language detection.
+// Living Map parser library. Loads bundled web-tree-sitter grammars, parses files,
+// enumerates the tree with ripgrep, and detects language by extension. The CLI entry
+// (cli.js) and the extraction tiers build on these primitives; this file holds no
+// command dispatch so it can be required without running anything.
 
 const fs = require('fs');
 const path = require('path');
@@ -69,18 +69,6 @@ async function parseFile(absFilePath, languageId) {
   return { tree, language: languageId, source };
 }
 
-function countNodes(node) {
-  let n = 1;
-  let errors = 0;
-  if (node.type === 'ERROR' || node.isMissing) errors++;
-  for (let i = 0; i < node.namedChildCount; i++) {
-    const r = countNodes(node.namedChild(i));
-    n += r.n;
-    errors += r.errors;
-  }
-  return { n, errors };
-}
-
 // True if the first slice of the file contains a NUL byte (the standard binary
 // heuristic). The ripgrep walker honors ignore files and skips hidden entries;
 // it does not skip binary by content, so the walk filters those out here.
@@ -116,82 +104,12 @@ function enumerate(dir) {
     .filter((rel) => !isBinary(path.join(dir, rel)));
 }
 
-async function cmdParse(argv) {
-  const file = argv[0];
-  const languageId = argv[1] || detectLanguage(file);
-  if (!GRAMMAR_WASM[languageId]) {
-    return {
-      tier: 'floor',
-      reason: languageId === 'floor' ? 'no-grammar-for-extension' : `no-grammar:${languageId}`,
-      language: languageId,
-      file,
-    };
-  }
-  const { tree } = await parseFile(path.resolve(file), languageId);
-  const counts = countNodes(tree.rootNode);
-  return {
-    ok: true,
-    tier: 'grammar',
-    language: languageId,
-    file,
-    rootType: tree.rootNode.type,
-    hasError: tree.rootNode.hasError,
-    nodeCount: counts.n,
-    errorCount: counts.errors,
-    span: { startIndex: tree.rootNode.startIndex, endIndex: tree.rootNode.endIndex },
-  };
-}
-
-function cmdDetect(argv) {
-  const file = argv[0];
-  return { file, language: detectLanguage(file) };
-}
-
-function cmdEnumerate(argv) {
-  const dir = path.resolve(argv[0] || '.');
-  return { dir, files: enumerate(dir) };
-}
-
-// Capability probe: node runs, the runtime wasm loads, a grammar loads.
-async function cmdProbe() {
-  try {
-    await initParser();
-    await loadLanguage('c_sharp');
-    return { node: true, runtime: 'loaded', testGrammar: 'loaded' };
-  } catch (e) {
-    return { node: true, runtime: 'failed', error: String((e && e.message) || e) };
-  }
-}
-
-async function main() {
-  const [cmd, ...rest] = process.argv.slice(2);
-  let result;
-  switch (cmd) {
-    case 'parse':
-      result = await cmdParse(rest);
-      break;
-    case 'detect':
-      result = cmdDetect(rest);
-      break;
-    case 'enumerate':
-      result = cmdEnumerate(rest);
-      break;
-    case 'probe':
-      result = await cmdProbe();
-      break;
-    default:
-      process.stderr.write(`unknown command: ${cmd}\n`);
-      process.exit(2);
-  }
-  process.stdout.write(JSON.stringify(result) + '\n');
-}
-
-// Run as a CLI only when invoked directly (not when imported by tests).
-if (require.main === module) {
-  main().catch((e) => {
-    process.stderr.write(`runner error: ${String((e && e.message) || e)}\n`);
-    process.exit(1);
-  });
-}
-
-module.exports = { parseFile, detectLanguage, enumerate, GRAMMAR_WASM };
+module.exports = {
+  initParser,
+  loadLanguage,
+  parseFile,
+  detectLanguage,
+  enumerate,
+  GRAMMAR_WASM,
+  GRAMMAR_DIR,
+};

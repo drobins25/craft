@@ -36,11 +36,11 @@ var require_tree_sitter = __commonJS({
               throw toThrow;
             };
             var scriptDirectory = "";
-            function locateFile(path2) {
+            function locateFile(path) {
               if (Module["locateFile"]) {
-                return Module["locateFile"](path2, scriptDirectory);
+                return Module["locateFile"](path, scriptDirectory);
               }
-              return scriptDirectory + path2;
+              return scriptDirectory + path;
             }
             var readAsync, readBinary;
             if (ENVIRONMENT_IS_NODE) {
@@ -1119,7 +1119,7 @@ var require_tree_sitter = __commonJS({
                 return;
               }
               addRunDependency("loadDylibs");
-              dynamicLibraries.reduce((chain, lib) => chain.then(() => loadDynamicLibrary(lib, {
+              dynamicLibraries.reduce((chain, lib2) => chain.then(() => loadDynamicLibrary(lib2, {
                 loadAsync: true,
                 global: true,
                 nodelete: true,
@@ -2561,8 +2561,8 @@ var require_tree_sitter = __commonJS({
                 } else {
                   const url = input;
                   if (typeof process !== "undefined" && process.versions && process.versions.node) {
-                    const fs3 = require("fs");
-                    bytes = Promise.resolve(fs3.readFileSync(url));
+                    const fs2 = require("fs");
+                    bytes = Promise.resolve(fs2.readFileSync(url));
                   } else {
                     bytes = fetch(url).then((response) => response.arrayBuffer().then((buffer) => {
                       if (response.ok) {
@@ -2891,56 +2891,337 @@ ${JSON.stringify(symbolNames, null, 2)}`);
 });
 
 // src/index.js
-var fs2 = require("fs");
-var path = require("path");
-var { execFileSync } = require("child_process");
-var Parser2 = require_tree_sitter();
-var RUNNER_DIR = __dirname;
-var GRAMMAR_DIR = path.join(RUNNER_DIR, "grammars");
-var LANG_DETECT_PATH = path.join(RUNNER_DIR, "lang-detect.json");
-var GRAMMAR_WASM = {
-  c_sharp: "tree-sitter-c_sharp.wasm",
-  typescript: "tree-sitter-typescript.wasm",
-  tsx: "tree-sitter-tsx.wasm",
-  java: "tree-sitter-java.wasm",
-  python: "tree-sitter-python.wasm",
-  javascript: "tree-sitter-javascript.wasm"
-};
-var _initPromise = null;
-function initParser() {
-  if (!_initPromise) {
-    _initPromise = Parser2.init({
-      locateFile: () => path.join(GRAMMAR_DIR, "tree-sitter.wasm")
-    });
+var require_index = __commonJS({
+  "src/index.js"(exports2, module2) {
+    "use strict";
+    var fs2 = require("fs");
+    var path = require("path");
+    var { execFileSync } = require("child_process");
+    var Parser2 = require_tree_sitter();
+    var RUNNER_DIR = __dirname;
+    var GRAMMAR_DIR = path.join(RUNNER_DIR, "grammars");
+    var LANG_DETECT_PATH = path.join(RUNNER_DIR, "lang-detect.json");
+    var GRAMMAR_WASM = {
+      c_sharp: "tree-sitter-c_sharp.wasm",
+      typescript: "tree-sitter-typescript.wasm",
+      tsx: "tree-sitter-tsx.wasm",
+      java: "tree-sitter-java.wasm",
+      python: "tree-sitter-python.wasm",
+      javascript: "tree-sitter-javascript.wasm"
+    };
+    var _initPromise = null;
+    function initParser() {
+      if (!_initPromise) {
+        _initPromise = Parser2.init({
+          locateFile: () => path.join(GRAMMAR_DIR, "tree-sitter.wasm")
+        });
+      }
+      return _initPromise;
+    }
+    var _langCache = {};
+    async function loadLanguage(languageId) {
+      if (_langCache[languageId]) return _langCache[languageId];
+      const wasm = GRAMMAR_WASM[languageId];
+      if (!wasm) throw new Error(`no bundled grammar for languageId: ${languageId}`);
+      const lang = await Parser2.Language.load(path.join(GRAMMAR_DIR, wasm));
+      _langCache[languageId] = lang;
+      return lang;
+    }
+    function loadLangDetect() {
+      return JSON.parse(fs2.readFileSync(LANG_DETECT_PATH, "utf8"));
+    }
+    function detectLanguage(file) {
+      const map = loadLangDetect();
+      const ext = path.extname(file).toLowerCase();
+      return map[ext] || "floor";
+    }
+    async function parseFile(absFilePath, languageId) {
+      await initParser();
+      const lang = await loadLanguage(languageId);
+      const parser = new Parser2();
+      parser.setLanguage(lang);
+      const source = fs2.readFileSync(absFilePath, "utf8");
+      const tree = parser.parse(source);
+      return { tree, language: languageId, source };
+    }
+    function isBinary(absPath) {
+      let fd;
+      try {
+        fd = fs2.openSync(absPath, "r");
+        const buf = Buffer.alloc(8e3);
+        const bytes = fs2.readSync(fd, buf, 0, 8e3, 0);
+        for (let i2 = 0; i2 < bytes; i2++) {
+          if (buf[i2] === 0) return true;
+        }
+        return false;
+      } catch {
+        return false;
+      } finally {
+        if (fd !== void 0) fs2.closeSync(fd);
+      }
+    }
+    function enumerate(dir) {
+      const out2 = execFileSync("rg", ["--files", "--no-require-git"], {
+        cwd: dir,
+        encoding: "utf8",
+        maxBuffer: 64 * 1024 * 1024
+      });
+      return out2.split("\n").filter(Boolean).filter((rel) => !isBinary(path.join(dir, rel)));
+    }
+    module2.exports = {
+      initParser,
+      loadLanguage,
+      parseFile,
+      detectLanguage,
+      enumerate,
+      GRAMMAR_WASM,
+      GRAMMAR_DIR
+    };
   }
-  return _initPromise;
-}
-var _langCache = {};
-async function loadLanguage(languageId) {
-  if (_langCache[languageId]) return _langCache[languageId];
-  const wasm = GRAMMAR_WASM[languageId];
-  if (!wasm) throw new Error(`no bundled grammar for languageId: ${languageId}`);
-  const lang = await Parser2.Language.load(path.join(GRAMMAR_DIR, wasm));
-  _langCache[languageId] = lang;
-  return lang;
-}
-function loadLangDetect() {
-  return JSON.parse(fs2.readFileSync(LANG_DETECT_PATH, "utf8"));
-}
-function detectLanguage(file) {
-  const map = loadLangDetect();
-  const ext = path.extname(file).toLowerCase();
-  return map[ext] || "floor";
-}
-async function parseFile(absFilePath, languageId) {
-  await initParser();
-  const lang = await loadLanguage(languageId);
-  const parser = new Parser2();
-  parser.setLanguage(lang);
-  const source = fs2.readFileSync(absFilePath, "utf8");
-  const tree = parser.parse(source);
-  return { tree, language: languageId, source };
-}
+});
+
+// src/extract-tier1.js
+var require_extract_tier1 = __commonJS({
+  "src/extract-tier1.js"(exports2, module2) {
+    "use strict";
+    var fs2 = require("fs");
+    var path = require("path");
+    var TAGS_DIR = path.join(__dirname, "tags");
+    var OVERLOAD_LANGS = {
+      c_sharp: { paramsRe: /parameter_list/, paramRe: /^parameter$/ },
+      java: { paramsRe: /formal_parameters/, paramRe: /parameter/ }
+    };
+    var PARAM_MODIFIERS = /* @__PURE__ */ new Set(["ref", "out", "in", "params"]);
+    var _queryCache = {};
+    function loadQuery(lang, languageId) {
+      if (_queryCache[languageId]) return _queryCache[languageId];
+      const scm = fs2.readFileSync(path.join(TAGS_DIR, `${languageId}.scm`), "utf8");
+      const q = lang.query(scm);
+      _queryCache[languageId] = q;
+      return q;
+    }
+    function stripWs(s) {
+      return s.replace(/\s+/g, "");
+    }
+    function firstTypeChild(paramNode) {
+      const nameNode = paramNode.childForFieldName("name");
+      for (let i2 = 0; i2 < paramNode.namedChildCount; i2++) {
+        const c = paramNode.namedChild(i2);
+        if (nameNode && c.startIndex === nameNode.startIndex) continue;
+        return c;
+      }
+      return null;
+    }
+    function renderOverload(declNode, cfg) {
+      let params = null;
+      for (let i2 = 0; i2 < declNode.namedChildCount; i2++) {
+        const c = declNode.namedChild(i2);
+        if (cfg.paramsRe.test(c.type)) {
+          params = c;
+          break;
+        }
+      }
+      if (!params) return "()";
+      const types = [];
+      for (let i2 = 0; i2 < params.namedChildCount; i2++) {
+        const p = params.namedChild(i2);
+        if (!cfg.paramRe.test(p.type)) continue;
+        const typeNode = p.childForFieldName("type") || firstTypeChild(p);
+        const typeText = typeNode ? typeNode.text : "";
+        const mods = [];
+        for (let j = 0; j < p.childCount; j++) {
+          const mc = p.child(j);
+          if (typeNode && mc.startIndex >= typeNode.startIndex) break;
+          if (PARAM_MODIFIERS.has(mc.text)) mods.push(mc.text);
+        }
+        const prefix = mods.length ? mods.join(" ") + " " : "";
+        types.push(prefix + stripWs(typeText));
+      }
+      return "(" + types.join(",") + ")";
+    }
+    function errorAtOrBeforeName(declNode, nameNode) {
+      if (!declNode.hasError && !nameNode.isMissing) return false;
+      if (nameNode.isMissing || nameNode.type === "ERROR") return true;
+      let found = false;
+      (function walk(n) {
+        if (found) return;
+        if ((n.type === "ERROR" || n.isMissing) && n.startIndex <= nameNode.startIndex) {
+          found = true;
+          return;
+        }
+        for (let i2 = 0; i2 < n.childCount; i2++) walk(n.child(i2));
+      })(declNode);
+      return found;
+    }
+    function collectDefinitions(query, root) {
+      const defs = [];
+      const matches = query.matches(root);
+      for (const m of matches) {
+        let nameCap = null;
+        let defCap = null;
+        for (const c of m.captures) {
+          if (c.name === "name") nameCap = c;
+          else if (c.name.startsWith("definition.")) defCap = c;
+        }
+        if (!nameCap || !defCap) continue;
+        defs.push({
+          declNode: defCap.node,
+          nameNode: nameCap.node,
+          kind: defCap.name.slice("definition.".length),
+          name: nameCap.node.text
+        });
+      }
+      return defs;
+    }
+    function fqnFor(def, defs) {
+      const ancestors = defs.filter(
+        (a) => a !== def && a.declNode.startIndex <= def.declNode.startIndex && a.declNode.endIndex >= def.declNode.endIndex
+      );
+      ancestors.sort((a, b) => a.declNode.startIndex - b.declNode.startIndex || b.declNode.endIndex - a.declNode.endIndex);
+      return [...ancestors.map((a) => a.name), def.name].join(".");
+    }
+    function extractTier1(relPath, languageId, lang, tree) {
+      const query = loadQuery(lang, languageId);
+      const defs = collectDefinitions(query, tree.rootNode);
+      const overloadCfg = OVERLOAD_LANGS[languageId];
+      for (const d of defs) {
+        if (errorAtOrBeforeName(d.declNode, d.nameNode)) {
+          return { floored: true, reason: "untrusted-name", anchors: [] };
+        }
+      }
+      const anchors = defs.map((d) => {
+        let symbolPath = fqnFor(d, defs);
+        if (overloadCfg && (d.kind === "method" || d.kind === "function" || d.kind === "constructor")) {
+          symbolPath += renderOverload(d.declNode, overloadCfg);
+        }
+        return {
+          anchor: `${relPath}#${symbolPath}`,
+          kind: d.kind,
+          line: d.nameNode.startPosition.row + 1
+        };
+      });
+      return { floored: false, anchors };
+    }
+    module2.exports = { extractTier1, errorAtOrBeforeName, renderOverload };
+  }
+});
+
+// src/extract-tier2-floor.js
+var require_extract_tier2_floor = __commonJS({
+  "src/extract-tier2-floor.js"(exports2, module2) {
+    "use strict";
+    var FLAT_ALLOWLIST = /* @__PURE__ */ new Set(["shell"]);
+    var SHELL_FN = /^[ \t]*(?:function[ \t]+([A-Za-z_][A-Za-z0-9_-]*)[ \t]*(?:\([ \t]*\))?|([A-Za-z_][A-Za-z0-9_-]*)[ \t]*\([ \t]*\))[ \t]*\{/;
+    function extractTier2(relPath, languageId, source) {
+      if (!FLAT_ALLOWLIST.has(languageId)) {
+        return { anchors: [] };
+      }
+      const lines = source.split("\n");
+      const anchors = [];
+      const seen = /* @__PURE__ */ new Set();
+      for (let i2 = 0; i2 < lines.length; i2++) {
+        const m = SHELL_FN.exec(lines[i2]);
+        if (!m) continue;
+        const name2 = m[1] || m[2];
+        if (name2 && !seen.has(name2)) {
+          seen.add(name2);
+          anchors.push({ anchor: `${relPath}#${name2}`, kind: "function", line: i2 + 1 });
+        }
+      }
+      return { anchors };
+    }
+    module2.exports = { extractTier2, FLAT_ALLOWLIST };
+  }
+});
+
+// src/extract-tier3-md.js
+var require_extract_tier3_md = __commonJS({
+  "src/extract-tier3-md.js"(exports2, module2) {
+    "use strict";
+    function slugify(text) {
+      let s = text.replace(/[^A-Za-z0-9 -]/g, "");
+      s = s.toLowerCase();
+      s = s.replace(/ /g, "-");
+      s = s.replace(/-+/g, "-");
+      s = s.replace(/^-+|-+$/g, "");
+      return s;
+    }
+    function extractTier3(relPath, source) {
+      const lines = source.split("\n");
+      const stack = [];
+      const seen = /* @__PURE__ */ new Map();
+      const anchors = [];
+      let headingOrdinal = 0;
+      for (let i2 = 0; i2 < lines.length; i2++) {
+        const m = /^(#{1,6})[ \t]+(.*\S)[ \t]*$/.exec(lines[i2]);
+        if (!m) continue;
+        const level = m[1].length;
+        headingOrdinal++;
+        let slug = slugify(m[2]);
+        if (!slug) slug = `section-${headingOrdinal}`;
+        while (stack.length && stack[stack.length - 1].level >= level) stack.pop();
+        let full = [...stack.map((e) => e.slug), slug].join("/");
+        const n = seen.get(full) || 0;
+        seen.set(full, n + 1);
+        if (n > 0) full = `${full}-${n}`;
+        anchors.push({ anchor: `${relPath}#${full}`, kind: "heading", line: i2 + 1 });
+        stack.push({ level, slug });
+      }
+      return { anchors };
+    }
+    module2.exports = { extractTier3, slugify };
+  }
+});
+
+// src/extract.js
+var require_extract = __commonJS({
+  "src/extract.js"(exports2, module2) {
+    "use strict";
+    var fs2 = require("fs");
+    var path = require("path");
+    var { initParser, loadLanguage, parseFile, detectLanguage, GRAMMAR_WASM } = require_index();
+    var { extractTier1 } = require_extract_tier1();
+    var { extractTier2, FLAT_ALLOWLIST } = require_extract_tier2_floor();
+    var { extractTier3 } = require_extract_tier3_md();
+    function toRel(absFilePath, root) {
+      const base = root || process.cwd();
+      return path.relative(base, absFilePath).split(path.sep).join("/");
+    }
+    async function extract2(absFilePath, root) {
+      const abs = path.resolve(absFilePath);
+      const relPath = toRel(abs, root);
+      const languageId = detectLanguage(abs);
+      if (GRAMMAR_WASM[languageId]) {
+        await initParser();
+        const lang = await loadLanguage(languageId);
+        const { tree } = await parseFile(abs, languageId);
+        const r2 = extractTier1(relPath, languageId, lang, tree);
+        if (r2.floored) {
+          return { file: relPath, language: languageId, tier: "floor", floored: true, reason: r2.reason, anchors: [] };
+        }
+        return { file: relPath, language: languageId, tier: "grammar", floored: false, anchors: r2.anchors };
+      }
+      if (languageId === "markdown") {
+        const source2 = fs2.readFileSync(abs, "utf8");
+        return { file: relPath, language: languageId, tier: "markdown", floored: false, anchors: extractTier3(relPath, source2).anchors };
+      }
+      const source = fs2.readFileSync(abs, "utf8");
+      const r = extractTier2(relPath, languageId, source);
+      return {
+        file: relPath,
+        language: languageId,
+        tier: FLAT_ALLOWLIST.has(languageId) ? "floor-flat" : "floor",
+        floored: false,
+        anchors: r.anchors
+      };
+    }
+    module2.exports = { extract: extract2 };
+  }
+});
+
+// src/cli.js
+var lib = require_index();
+var { extract } = require_extract();
 function countNodes(node) {
   let n = 1;
   let errors = 0;
@@ -2952,34 +3233,10 @@ function countNodes(node) {
   }
   return { n, errors };
 }
-function isBinary(absPath) {
-  let fd;
-  try {
-    fd = fs2.openSync(absPath, "r");
-    const buf = Buffer.alloc(8e3);
-    const bytes = fs2.readSync(fd, buf, 0, 8e3, 0);
-    for (let i2 = 0; i2 < bytes; i2++) {
-      if (buf[i2] === 0) return true;
-    }
-    return false;
-  } catch {
-    return false;
-  } finally {
-    if (fd !== void 0) fs2.closeSync(fd);
-  }
-}
-function enumerate(dir) {
-  const out2 = execFileSync("rg", ["--files", "--no-require-git"], {
-    cwd: dir,
-    encoding: "utf8",
-    maxBuffer: 64 * 1024 * 1024
-  });
-  return out2.split("\n").filter(Boolean).filter((rel) => !isBinary(path.join(dir, rel)));
-}
 async function cmdParse(argv) {
   const file = argv[0];
-  const languageId = argv[1] || detectLanguage(file);
-  if (!GRAMMAR_WASM[languageId]) {
+  const languageId = argv[1] || lib.detectLanguage(file);
+  if (!lib.GRAMMAR_WASM[languageId]) {
     return {
       tier: "floor",
       reason: languageId === "floor" ? "no-grammar-for-extension" : `no-grammar:${languageId}`,
@@ -2987,7 +3244,7 @@ async function cmdParse(argv) {
       file
     };
   }
-  const { tree } = await parseFile(path.resolve(file), languageId);
+  const { tree } = await lib.parseFile(require("path").resolve(file), languageId);
   const counts = countNodes(tree.rootNode);
   return {
     ok: true,
@@ -2997,22 +3254,20 @@ async function cmdParse(argv) {
     rootType: tree.rootNode.type,
     hasError: tree.rootNode.hasError,
     nodeCount: counts.n,
-    errorCount: counts.errors,
-    span: { startIndex: tree.rootNode.startIndex, endIndex: tree.rootNode.endIndex }
+    errorCount: counts.errors
   };
 }
 function cmdDetect(argv) {
-  const file = argv[0];
-  return { file, language: detectLanguage(file) };
+  return { file: argv[0], language: lib.detectLanguage(argv[0]) };
 }
 function cmdEnumerate(argv) {
-  const dir = path.resolve(argv[0] || ".");
-  return { dir, files: enumerate(dir) };
+  const dir = require("path").resolve(argv[0] || ".");
+  return { dir, files: lib.enumerate(dir) };
 }
 async function cmdProbe() {
   try {
-    await initParser();
-    await loadLanguage("c_sharp");
+    await lib.initParser();
+    await lib.loadLanguage("c_sharp");
     return { node: true, runtime: "loaded", testGrammar: "loaded" };
   } catch (e) {
     return { node: true, runtime: "failed", error: String(e && e.message || e) };
@@ -3034,6 +3289,9 @@ async function main() {
     case "probe":
       result = await cmdProbe();
       break;
+    case "extract":
+      result = await extract(rest[0]);
+      break;
     default:
       process.stderr.write(`unknown command: ${cmd}
 `);
@@ -3041,6 +3299,7 @@ async function main() {
   }
   process.stdout.write(JSON.stringify(result) + "\n");
 }
+module.exports = { ...lib, extract };
 if (require.main === module) {
   main().catch((e) => {
     process.stderr.write(`runner error: ${String(e && e.message || e)}
@@ -3048,4 +3307,3 @@ if (require.main === module) {
     process.exit(1);
   });
 }
-module.exports = { parseFile, detectLanguage, enumerate, GRAMMAR_WASM };
