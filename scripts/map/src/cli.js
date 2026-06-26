@@ -54,15 +54,27 @@ function cmdEnumerate(argv) {
   return { dir, files: lib.enumerate(dir) };
 }
 
-// Capability probe: node runs, the runtime wasm loads, a grammar loads.
+// Capability probe: node runs, the runtime wasm loads, each grammar loads. Reports
+// the landed mode so the map can tell the truth about what it can parse.
 async function cmdProbe() {
   try {
     await lib.initParser();
-    await lib.loadLanguage('c_sharp');
-    return { node: true, runtime: 'loaded', testGrammar: 'loaded' };
   } catch (e) {
-    return { node: true, runtime: 'failed', error: String((e && e.message) || e) };
+    return { node: true, runtime: 'failed', mode: 'floor', grammars: {}, error: String((e && e.message) || e) };
   }
+  const grammars = {};
+  for (const languageId of Object.keys(lib.GRAMMAR_WASM)) {
+    try {
+      await lib.loadLanguage(languageId);
+      grammars[languageId] = true;
+    } catch {
+      grammars[languageId] = false;
+    }
+  }
+  const loaded = Object.values(grammars).filter(Boolean).length;
+  const total = Object.keys(grammars).length;
+  const mode = loaded === 0 ? 'floor' : loaded < total ? 'partial' : 'full';
+  return { node: true, runtime: 'loaded', mode, grammars };
 }
 
 async function main() {

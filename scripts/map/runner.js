@@ -3328,6 +3328,24 @@ var require_assemble_area = __commonJS({
         return null;
       }
     }
+    function isEnabled(root) {
+      let text;
+      try {
+        text = fs2.readFileSync(path.join(root, ".craft", "settings.yaml"), "utf8");
+      } catch {
+        return true;
+      }
+      let inMap = false;
+      for (const line of text.split("\n")) {
+        if (/^map:\s*$/.test(line)) {
+          inMap = true;
+          continue;
+        }
+        if (/^\S/.test(line)) inMap = false;
+        if (inMap && /^\s+enabled:\s*false\b/.test(line)) return false;
+      }
+      return true;
+    }
     function getBudget(root) {
       try {
         const text = fs2.readFileSync(path.join(root, ".craft", "settings.yaml"), "utf8");
@@ -3386,9 +3404,14 @@ var require_assemble_area = __commonJS({
     }
     async function assembleArea2(areaKey, root) {
       root = root || process.cwd();
+      if (!isEnabled(root)) {
+        return { area: areaKey, disabled: true, fileCount: 0, tokenEstimate: 0, rederived: [], cached: [], slice: "" };
+      }
       const absDir = path.resolve(root, areaKey);
       const index = readIndex(root);
       const prev = index.areas && index.areas[areaKey] || { files: {} };
+      const fyiSentinel = path.join(mapDir(root), ".fyi-shown");
+      const firstBuild = !fs2.existsSync(fyiSentinel);
       let files = [];
       try {
         files = enumerate(absDir).filter((f) => !f.includes("/"));
@@ -3402,19 +3425,25 @@ var require_assemble_area = __commonJS({
       for (const f of files) {
         const abs = path.join(absDir, f);
         const rel = path.relative(root, abs).split(path.sep).join("/");
-        const buf = fs2.readFileSync(abs);
-        const hash = crypto.createHash("sha256").update(buf).digest("hex");
-        const stored = prev.files[rel];
-        let result;
-        if (stored && stored.hash === hash) {
-          result = { file: rel, tier: stored.tier, language: stored.language, floored: stored.floored, anchors: stored.anchors };
-          cached.push(rel);
-        } else {
-          result = await extract2(abs, root);
+        try {
+          const buf = fs2.readFileSync(abs);
+          const hash = crypto.createHash("sha256").update(buf).digest("hex");
+          const stored = prev.files[rel];
+          let result;
+          if (stored && stored.hash === hash) {
+            result = { file: rel, tier: stored.tier, language: stored.language, floored: stored.floored, anchors: stored.anchors };
+            cached.push(rel);
+          } else {
+            result = await extract2(abs, root);
+            rederived.push(rel);
+          }
+          perFile.push({ rel, source: buf.toString("utf8"), result, hash });
+          newFiles[rel] = { hash, tier: result.tier, language: result.language, floored: result.floored, anchors: result.anchors };
+        } catch {
+          perFile.push({ rel, source: "", result: { file: rel, tier: "floor", language: "unknown", floored: true, anchors: [] }, hash: "" });
+          newFiles[rel] = { hash: "", tier: "floor", language: "unknown", floored: true, anchors: [] };
           rederived.push(rel);
         }
-        perFile.push({ rel, source: buf.toString("utf8"), result, hash });
-        newFiles[rel] = { hash, tier: result.tier, language: result.language, floored: result.floored, anchors: result.anchors };
       }
       const ranked = rankDefinitions(perFile);
       const fileMeta = new Map(perFile.map((f) => [f.rel, { tier: f.result.tier, language: f.result.language }]));
@@ -3425,6 +3454,12 @@ var require_assemble_area = __commonJS({
       index.areas = index.areas || {};
       index.areas[areaKey] = { headSha: headSha(root), files: newFiles };
       writeIndex(root, index);
+      let fyi = null;
+      if (firstBuild) {
+        const anyGrammar = perFile.some((f) => !f.result.floored && f.result.anchors.length > 0 && f.result.tier !== "floor");
+        fyi = anyGrammar ? "craft is building a structural map with its bundled parser - disable with `map.enabled: false`." : "craft maps in basic mode here (full parsing unavailable) - see the map reference for details.";
+        fs2.writeFileSync(fyiSentinel, "shown\n");
+      }
       return {
         area: areaKey,
         fileCount: files.length,
@@ -3432,6 +3467,8 @@ var require_assemble_area = __commonJS({
         tokenEstimate: estimateTokens(slice),
         rederived,
         cached,
+        firstBuild,
+        fyi,
         slice
       };
     }
@@ -3488,11 +3525,22 @@ function cmdEnumerate(argv) {
 async function cmdProbe() {
   try {
     await lib.initParser();
-    await lib.loadLanguage("c_sharp");
-    return { node: true, runtime: "loaded", testGrammar: "loaded" };
   } catch (e) {
-    return { node: true, runtime: "failed", error: String(e && e.message || e) };
+    return { node: true, runtime: "failed", mode: "floor", grammars: {}, error: String(e && e.message || e) };
   }
+  const grammars = {};
+  for (const languageId of Object.keys(lib.GRAMMAR_WASM)) {
+    try {
+      await lib.loadLanguage(languageId);
+      grammars[languageId] = true;
+    } catch {
+      grammars[languageId] = false;
+    }
+  }
+  const loaded = Object.values(grammars).filter(Boolean).length;
+  const total = Object.keys(grammars).length;
+  const mode = loaded === 0 ? "floor" : loaded < total ? "partial" : "full";
+  return { node: true, runtime: "loaded", mode, grammars };
 }
 async function main() {
   const [cmd, ...rest] = process.argv.slice(2);
