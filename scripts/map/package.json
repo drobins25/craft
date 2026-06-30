@@ -1,0 +1,19 @@
+{
+  "name": "craft-map",
+  "private": true,
+  "version": "0.0.0",
+  "description": "craft Living Map structural generator. Build-time deps only - the user ships bundled runner.js + grammars/*.wasm; node_modules is never committed.",
+  "type": "commonjs",
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "grammar-check": "node grammar-currency/currency-check.js",
+    "test": "node --test \"__tests__/**/*.test.js\""
+  },
+  "dependencies": {
+    "web-tree-sitter": "0.24.7",
+    "tree-sitter-wasms": "0.1.13"
+  },
+  "devDependencies": {
+    "esbuild": "0.24.2"
+  }
+}

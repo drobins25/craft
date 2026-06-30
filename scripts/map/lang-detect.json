@@ -1,0 +1,15 @@
+{
+  ".cs": "c_sharp",
+  ".ts": "typescript",
+  ".tsx": "tsx",
+  ".java": "java",
+  ".py": "python",
+  ".js": "javascript",
+  ".jsx": "javascript",
+  ".mjs": "javascript",
+  ".cjs": "javascript",
+  ".md": "markdown",
+  ".markdown": "markdown",
+  ".sh": "shell",
+  ".bash": "shell"
+}

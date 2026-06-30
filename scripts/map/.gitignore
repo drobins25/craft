@@ -1,0 +1,4 @@
+# Build-time only - never shipped. The user gets the committed bundled runner.js
+# and grammars/*.wasm; the toolchain that produces them stays out of the repo.
+node_modules/
+package-lock.json

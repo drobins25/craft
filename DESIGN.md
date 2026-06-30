@@ -122,6 +122,10 @@ plugins/craft/
 └── README.md                  ← Human-facing docs
 ```
 
+### Map subsystem boundary (Cycle 10, planned)
+
+The Living Map's structural generator lives in a dedicated top-level `scripts/map/` - craft's first Node toolchain. It is **self-contained and invoked only via `scripts/map/map-run.sh`**: nothing else in craft sources or imports `scripts/map/` internals (the `/craft:status` renderer, agent cold-start push, and pull-on-demand all go through `map-run.sh` and nowhere else). Distribution is a bundled single-file `runner.js` (esbuild, no shipped `node_modules`) plus committed grammar `.wasm` data assets under `scripts/map/grammars/`; `node_modules/` is gitignored (build-time only) and a maintainer build step regenerates `runner.js`. The map stays in craft core (not a companion plugin), but this single-seam boundary keeps a future extraction a mechanical move rather than a rethink.
+
 ---
 
 ## Statuses

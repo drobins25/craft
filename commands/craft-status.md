@@ -91,6 +91,20 @@ Read from:
 - `.craft/planning/active.md` — planning live state (if exists)
 - `.craft/planning/README.md` — planning roadmap index (if exists)
 - `.craft/planning/*/README.md` — initiative details (if exists)
+- `.craft/map/capability.json` — Living Map capability verdict (if exists)
+- `.craft/map/index.json` — Living Map index: areas + per-file anchor keys (if exists)
+
+## Map status
+
+The Living Map is an unrequested optimization, so its status is **pulled here, never pushed** - no toast or notice fires when a grammar degrades; the only place a user learns the map's state is by asking for it.
+
+Render ONE line, only if `.craft/map/` exists (a project that has never needed the map shows nothing - that is the normal first-run state, not an error). Read `.craft/map/capability.json`:
+- `mode: full` — `Map: active · N langs` (N = grammars that loaded true)
+- `mode: partial` — `Map: active · N langs · M degraded` (M = grammars that loaded false; name them, e.g. "C# - why?", the "why?" pointing at `commands/references/map.md`)
+- `mode: floor` — `Map: basic mode (full parsing unavailable - see references/map.md)`
+- `mode: disabled` — `Map: off (map.enabled: false)`
+
+This is render-only: read the cached verdict and print the line in the dashboard's existing style. Do NOT probe, build, or re-derive anything from the status command.
 
 ## Implementation
 
