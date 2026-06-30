@@ -9,6 +9,7 @@ const { execFileSync } = require('node:child_process');
 
 const lib = require('../runner.js');
 const MAP_FRESHNESS = path.join(__dirname, '..', 'map-freshness.sh');
+const MAP_RUN = path.join(__dirname, '..', 'map-run.sh');
 
 function tmpProject() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'craftmap-area-'));
@@ -119,4 +120,65 @@ test('map-freshness.sh: fresh on matching hash, stale on changed content', () =>
   assert.strictEqual(execFileSync('bash', [MAP_FRESHNESS, f, hash], { encoding: 'utf8' }).trim(), 'fresh');
   fs.writeFileSync(f, 'def a():\n    return 2\n');
   assert.strictEqual(execFileSync('bash', [MAP_FRESHNESS, f, hash], { encoding: 'utf8' }).trim(), 'stale');
+});
+
+// --root passthrough: a consumer derives its project root from the file it works on,
+// which in a monorepo is not cwd. The assemble seam must target the given root, not cwd.
+// These run the real map-run.sh path (which uses the committed bundle), so they also
+// prove the bundle carries the parse.
+
+function runAssemble(cwd, args) {
+  const out = execFileSync('bash', [MAP_RUN, 'assemble', ...args], { cwd, encoding: 'utf8' });
+  return JSON.parse(out);
+}
+
+test('--root targets the given root from a foreign cwd, not cwd', () => {
+  const root = tmpProject();
+  write(root, 'area/a.py', 'def a():\n    return 1\n');
+  const foreign = tmpProject(); // a different cwd with no .craft and no area/
+
+  const res = runAssemble(foreign, ['area', '--root', root]);
+  assert.match(res.slice, /area\/a\.py/, 'slice came from <root>/area, not foreign cwd');
+  assert.ok(
+    fs.existsSync(path.join(root, '.craft', 'map', 'index.json')),
+    'index written under the given root, not the foreign cwd'
+  );
+  assert.ok(
+    !fs.existsSync(path.join(foreign, '.craft', 'map', 'index.json')),
+    'nothing written under the foreign cwd'
+  );
+});
+
+test('without --root the assemble seam stays cwd-relative (backward compat)', () => {
+  const root = tmpProject();
+  write(root, 'area/a.py', 'def a():\n    return 1\n');
+
+  const res = runAssemble(root, ['area']); // cwd = root, no --root
+  assert.match(res.slice, /area\/a\.py/);
+  assert.ok(fs.existsSync(path.join(root, '.craft', 'map', 'index.json')), 'index under cwd root');
+});
+
+test('--root is order-independent with the area-key', () => {
+  const root = tmpProject();
+  write(root, 'area/a.py', 'def a():\n    return 1\n');
+  const foreign = tmpProject();
+
+  const before = runAssemble(foreign, ['--root', root, 'area']); // flag before key
+  const after = runAssemble(foreign, ['area', '--root', root]); // flag after key
+  assert.strictEqual(before.slice, after.slice, 'same slice regardless of --root position');
+  assert.match(before.slice, /area\/a\.py/);
+});
+
+test('gating is preserved under --root: map.enabled:false returns disabled, writes no index', () => {
+  const root = tmpProject();
+  write(root, 'area/a.py', 'def a():\n    return 1\n');
+  write(root, '.craft/settings.yaml', 'map:\n  enabled: false\n');
+  const foreign = tmpProject();
+
+  const res = runAssemble(foreign, ['area', '--root', root]);
+  assert.strictEqual(res.disabled, true, 'disabled flag honored when targeting via --root');
+  assert.ok(
+    !fs.existsSync(path.join(root, '.craft', 'map', 'index.json')),
+    'no index written when disabled'
+  );
 });

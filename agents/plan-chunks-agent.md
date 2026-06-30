@@ -150,6 +150,7 @@ You already read the story in Phase 1.1 — use what you have, don't re-read it.
 1. Read `.craft/project.md` — tech stack, conventions, component paths, API patterns
 2. Read `.craft/design/locked.md` — approved patterns with example file references
 3. If the story has visual direction or is a UI story, read `.craft/design/tokens.yaml` and `.craft/design/animations.md` (fallback: `${CLAUDE_PLUGIN_ROOT}/templates/craft/design/animations.md`)
+4. To orient in the directories this story touches, read `${CLAUDE_PLUGIN_ROOT}/commands/references/map-for-agents.md` and apply it - pull the Living Map slice for those directories and anchor your codebase research on it. A non-result means orient from scratch as usual.
 
 **Then follow the story's needs.** Based on what the spark, scope, and decisions tell you, identify which files and areas are relevant. Read those. As you go, gather everything — patterns, dependencies, risks, test examples — in one pass.
 

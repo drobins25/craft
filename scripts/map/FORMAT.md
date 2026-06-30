@@ -170,6 +170,8 @@ A cross-story primitive that sits **ALONGSIDE** the anchor grammar - NOT an exte
 - **BUILD = lazy on request**, content-hash / HEAD-keyed freshness.
 - **EXPLICITLY REJECTED: per-file-access hook auto-injection** (intercepting Read/Grep/Glob to splice in a map). No surveyed production tool does per-tool-call injection; the only injection patterns in the wild are per-user-turn push, pull-on-invocation, and implicit agentic retrieval. Claude Code `PreToolUse` cannot return a synthetic result to satisfy a Read, per-call hooks are latency death, and `additionalContext` is only a weak system-reminder.
 
+> **Note (2026-06-29):** the **cold-start push** half above is **superseded by pull-only**. The consumer-wiring design settled on pull-everywhere, no-push: a consumer fetches its own slice when it needs orientation, and the content-hash cache makes repeat pulls cheap, so "who already has the slice" stops mattering. Push only works when a launcher already knows the area (true for a single agent, impossible for the orchestrator, which roams), so it does not generalize. Decided in the Living Map consumer-wiring story (source concept `planning/living-project-map/04-consumer-wiring.md`, DESIGN CALL A). The pull-on-demand bullet and the per-file-access rejection both still stand.
+
 ---
 
 ## 11. Clock note (cross-layer)

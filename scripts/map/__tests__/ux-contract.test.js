@@ -105,3 +105,72 @@ test('the reference doc and status surface exist', () => {
   assert.match(status, /Map status/, 'craft-status renders a map line');
   assert.match(status, /pulled here, never pushed/i, 'status is pull-only by contract');
 });
+
+const AGENT_DOC = path.join(REPO_ROOT, 'commands', 'references', 'map-for-agents.md');
+const PLAN_AGENT = path.join(REPO_ROOT, 'agents', 'plan-chunks-agent.md');
+
+test('agent-facing map doc exists and teaches the four behaviors + kill switch', () => {
+  assert.ok(fs.existsSync(AGENT_DOC), 'commands/references/map-for-agents.md present');
+  const doc = fs.readFileSync(AGENT_DOC, 'utf8');
+  // pull-only invocation
+  assert.match(doc, /map-run\.sh assemble/, 'teaches the pull invocation');
+  assert.match(doc, /--root/, 'teaches passing the derived root');
+  // concept -> directory translation
+  assert.match(doc, /concept into director/i, 'teaches concept->directory translation');
+  // orientation, not search
+  assert.match(doc, /not a search engine/i, 'positions the map as orientation, not search');
+  // kill switch
+  assert.match(doc, /[Kk]ill switch/, 'states the kill switch (remove the pointer)');
+});
+
+test('the thin-slice rule is PROHIBITIVE, not just prescriptive', () => {
+  const doc = fs.readFileSync(AGENT_DOC, 'utf8');
+  assert.match(doc, /thin slice is not a missing map/i, 'a thin slice is explicitly not a missing map');
+  assert.match(
+    doc,
+    /do NOT fall back to full from-scratch research/i,
+    'explicit prohibition against full re-research on a structural-only slice'
+  );
+  assert.match(doc, /REPLACES from-scratch orientation/i, 'the map read replaces orientation, not augments');
+});
+
+test('the directory ceiling routes the scattered remainder to normal research, not a common ancestor', () => {
+  const doc = fs.readFileSync(AGENT_DOC, 'utf8');
+  assert.match(doc, /do NOT widen to a common-ancestor/i, 'forbids widening to a common-ancestor slice');
+  assert.match(doc, /scattered remainder the normal way/i, 'routes the over-scattered remainder to normal research');
+});
+
+test('an empty or floored slice degrades to today behavior with no retry, no block', () => {
+  const doc = fs.readFileSync(AGENT_DOC, 'utf8');
+  assert.match(doc, /empty or floored slice/i, 'names the empty/floored non-result');
+  assert.match(doc, /[Dd]o not retry, do not block/, 'no retry, no block on a non-result');
+});
+
+test('plan-chunks-agent Phase 1.3 carries the map pointer after baseline context, before story-driven research', () => {
+  const agent = fs.readFileSync(PLAN_AGENT, 'utf8');
+  const pointerIdx = agent.indexOf('map-for-agents.md');
+  const baselineIdx = agent.indexOf('Start with your baseline context');
+  const storyNeedsIdx = agent.indexOf("Then follow the story's needs");
+  assert.ok(pointerIdx !== -1, 'the pointer to map-for-agents.md is present');
+  assert.ok(baselineIdx !== -1 && storyNeedsIdx !== -1, 'the surrounding Phase 1.3 anchors exist');
+  assert.ok(pointerIdx > baselineIdx, 'pointer sits after the baseline-context block');
+  assert.ok(pointerIdx < storyNeedsIdx, 'pointer sits before story-driven research');
+});
+
+test('the agent-facing doc is distinct from the user-facing map.md', () => {
+  const agentDoc = fs.readFileSync(AGENT_DOC, 'utf8');
+  const userDoc = fs.readFileSync(path.join(REPO_ROOT, 'commands', 'references', 'map.md'), 'utf8');
+  // The agent doc carries procedure the user doc does not.
+  assert.match(agentDoc, /assemble <directory>/, 'agent doc has the assemble procedure');
+  assert.ok(!/--root/.test(userDoc), 'user-facing map.md carries no agent procedure (--root)');
+});
+
+test('FORMAT.md section 10 carries the push-superseded note without rewriting the section', () => {
+  const format = fs.readFileSync(path.join(REPO_ROOT, 'scripts', 'map', 'FORMAT.md'), 'utf8');
+  // The note is present and flags pull-only supersession.
+  assert.match(format, /cold-start push.*superseded by pull-only/i, 'dated note flags push superseded by pull-only');
+  assert.match(format, /DESIGN CALL A/, 'note points at where pull-only is decided');
+  // Note-not-rewrite: the original section 10 text is untouched.
+  assert.match(format, /PLUS cold-start push/, 'original cold-start-push bullet still present');
+  assert.match(format, /EXPLICITLY REJECTED: per-file-access hook auto-injection/, 'original rejection bullet intact');
+});

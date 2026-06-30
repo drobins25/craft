@@ -96,9 +96,21 @@ async function main() {
     case 'extract':
       result = await extract(rest[0]);
       break;
-    case 'assemble':
-      result = await assembleArea(rest[0]);
+    case 'assemble': {
+      // Parse an optional `--root <path>` out of the assemble args, order-independent
+      // with the area-key. A consuming agent derives its project root from the file it
+      // is working on - in a monorepo that is NOT cwd - so the root must be passable;
+      // without --root, assembleArea falls back to cwd (unchanged behavior).
+      const args = rest.slice();
+      let root;
+      const ri = args.indexOf('--root');
+      if (ri !== -1) {
+        root = args[ri + 1];
+        args.splice(ri, 2);
+      }
+      result = await assembleArea(args[0], root);
       break;
+    }
     default:
       process.stderr.write(`unknown command: ${cmd}\n`);
       process.exit(2);

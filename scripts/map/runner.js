@@ -3561,9 +3561,17 @@ async function main() {
     case "extract":
       result = await extract(rest[0]);
       break;
-    case "assemble":
-      result = await assembleArea(rest[0]);
+    case "assemble": {
+      const args2 = rest.slice();
+      let root;
+      const ri = args2.indexOf("--root");
+      if (ri !== -1) {
+        root = args2[ri + 1];
+        args2.splice(ri, 2);
+      }
+      result = await assembleArea(args2[0], root);
       break;
+    }
     default:
       process.stderr.write(`unknown command: ${cmd}
 `);
