@@ -100,3 +100,54 @@ test('the 3-gate grammar QA harness passes (npm run grammar-check)', () => {
   const out = execFileSync('node', [path.join(CURRENCY, 'currency-check.js')], { encoding: 'utf8' });
   assert.match(out, /grammar-check passed/);
 });
+
+test('tier-1 records the declaration span (signature through closing brace)', async () => {
+  const p = tmpFile('S.cs', 'class C {\n  int M(int a) {\n    return a;\n  }\n}\n');
+  const res = await lib.extract(p);
+  const m = res.anchors.find((a) => sym(a.anchor) === 'C.M(int)');
+  assert.ok(m, res.anchors.map((a) => a.anchor).join(' | '));
+  assert.strictEqual(m.startLine, 2, 'span starts at the declaration line, not the name line');
+  assert.strictEqual(m.endLine, 4, 'span ends at the closing brace');
+});
+
+test('class span encloses its method spans', async () => {
+  const p = tmpFile('S.cs', 'class C {\n  int M(int a) {\n    return a;\n  }\n}\n');
+  const res = await lib.extract(p);
+  const cls = res.anchors.find((a) => sym(a.anchor) === 'C');
+  const m = res.anchors.find((a) => sym(a.anchor) === 'C.M(int)');
+  assert.ok(cls.startLine <= m.startLine && cls.endLine >= m.endLine, `class [${cls.startLine},${cls.endLine}] must contain method [${m.startLine},${m.endLine}]`);
+});
+
+test('markdown heading span runs to the next equal-or-shallower heading, including subsections', async () => {
+  const md = tmpFile('s.md', '# T\n## H1\ntext\n### sub\ntext2\n## H2\nend\n');
+  const res = await lib.extract(md);
+  const bySym = Object.fromEntries(res.anchors.map((a) => [sym(a.anchor), a]));
+  assert.strictEqual(bySym['t/h1'].startLine, 2);
+  assert.strictEqual(bySym['t/h1'].endLine, 5, 'H1 spans through its ### sub and stops above H2');
+  assert.strictEqual(bySym['t/h1/sub'].endLine, 5, 'sub is closed by the shallower H2');
+});
+
+test('last markdown heading spans to EOF (fixture ends in a trailing newline)', async () => {
+  const src = '# T\n## H1\ntext\n### sub\ntext2\n## H2\nend\n';
+  assert.ok(src.endsWith('\n'), 'fixture must exercise the phantom empty-element case');
+  const res = await lib.extract(tmpFile('s.md', src));
+  const bySym = Object.fromEntries(res.anchors.map((a) => [sym(a.anchor), a]));
+  assert.strictEqual(bySym['t/h2'].endLine, 7, 'EOF span ends at the last non-empty line, not the phantom line');
+  assert.strictEqual(bySym['t'].endLine, 7, 'the enclosing # section also runs to EOF');
+});
+
+test('shell emits startLine and null endLine (never-lie floor for spans)', async () => {
+  const sh = await lib.extract(path.join(__dirname, '..', 'map-run.sh'));
+  const fn = sh.anchors[0];
+  assert.ok(Number.isInteger(fn.startLine) && fn.startLine >= 1, 'shell function carries a real startLine');
+  assert.strictEqual(fn.endLine, null, 'no reliable end without a grammar');
+});
+
+test('spans are additive: anchor/kind/line fields are unperturbed across tiers', async () => {
+  const cs = await lib.extract(path.join(FIX, 'Sample.cs'));
+  for (const a of cs.anchors) {
+    assert.ok(a.anchor.includes('#') && a.kind && Number.isInteger(a.line), 'base fields intact');
+    assert.ok(Number.isInteger(a.startLine) && a.startLine >= 1);
+    assert.ok(a.endLine === null || (Number.isInteger(a.endLine) && a.endLine >= a.startLine));
+  }
+});

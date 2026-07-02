@@ -3097,7 +3097,11 @@ var require_extract_tier1 = __commonJS({
         return {
           anchor: `${relPath}#${symbolPath}`,
           kind: d.kind,
-          line: d.nameNode.startPosition.row + 1
+          line: d.nameNode.startPosition.row + 1,
+          // Span of the whole declaration (not just the name), 1-indexed, so a ranged
+          // read gets the full definition body.
+          startLine: d.declNode.startPosition.row + 1,
+          endLine: d.declNode.endPosition.row + 1
         };
       });
       return { floored: false, anchors };
@@ -3125,7 +3129,7 @@ var require_extract_tier2_floor = __commonJS({
         const name2 = m[1] || m[2];
         if (name2 && !seen.has(name2)) {
           seen.add(name2);
-          anchors.push({ anchor: `${relPath}#${name2}`, kind: "function", line: i2 + 1 });
+          anchors.push({ anchor: `${relPath}#${name2}`, kind: "function", line: i2 + 1, startLine: i2 + 1, endLine: null });
         }
       }
       return { anchors };
@@ -3152,6 +3156,8 @@ var require_extract_tier3_md = __commonJS({
       const seen = /* @__PURE__ */ new Map();
       const anchors = [];
       let headingOrdinal = 0;
+      let lastLine = lines.length;
+      while (lastLine > 0 && lines[lastLine - 1] === "") lastLine--;
       for (let i2 = 0; i2 < lines.length; i2++) {
         const m = /^(#{1,6})[ \t]+(.*\S)[ \t]*$/.exec(lines[i2]);
         if (!m) continue;
@@ -3159,13 +3165,20 @@ var require_extract_tier3_md = __commonJS({
         headingOrdinal++;
         let slug = slugify(m[2]);
         if (!slug) slug = `section-${headingOrdinal}`;
-        while (stack.length && stack[stack.length - 1].level >= level) stack.pop();
+        while (stack.length && stack[stack.length - 1].level >= level) {
+          const closed = stack.pop();
+          anchors[closed.anchorIndex].endLine = i2;
+        }
         let full = [...stack.map((e) => e.slug), slug].join("/");
         const n = seen.get(full) || 0;
         seen.set(full, n + 1);
         if (n > 0) full = `${full}-${n}`;
-        anchors.push({ anchor: `${relPath}#${full}`, kind: "heading", line: i2 + 1 });
-        stack.push({ level, slug });
+        anchors.push({ anchor: `${relPath}#${full}`, kind: "heading", line: i2 + 1, startLine: i2 + 1, endLine: null });
+        stack.push({ level, slug, anchorIndex: anchors.length - 1 });
+      }
+      while (stack.length) {
+        const closed = stack.pop();
+        anchors[closed.anchorIndex].endLine = lastLine;
       }
       return { anchors };
     }
@@ -3251,6 +3264,9 @@ var require_rank = __commonJS({
             anchor: a.anchor,
             kind: a.kind,
             line: a.line,
+            // span fields ride along so renderSlice can emit ranged-read annotations
+            startLine: a.startLine,
+            endLine: a.endLine,
             // discount the definition's own occurrence so a never-referenced symbol scores 0
             score: Math.max(0, refCount(name2) - 1)
           });
@@ -3304,6 +3320,7 @@ var require_assemble_area = __commonJS({
     var { rankDefinitions } = require_rank();
     var { trimToBudget, estimateTokens } = require_budget_trim();
     var DEFAULT_BUDGET = 4096;
+    var INDEX_VERSION = 2;
     function mapDir(root) {
       return path.join(root, ".craft", "map");
     }
@@ -3312,9 +3329,11 @@ var require_assemble_area = __commonJS({
     }
     function readIndex(root) {
       try {
-        return JSON.parse(fs2.readFileSync(indexPath(root), "utf8"));
+        const parsed = JSON.parse(fs2.readFileSync(indexPath(root), "utf8"));
+        if (parsed.version !== INDEX_VERSION) return { version: INDEX_VERSION, areas: {} };
+        return parsed;
       } catch {
-        return { version: 1, areas: {} };
+        return { version: INDEX_VERSION, areas: {} };
       }
     }
     function writeIndex(root, index) {
@@ -3386,15 +3405,25 @@ var require_assemble_area = __commonJS({
         for (const d of sourceOrder) {
           const symbolPath = d.anchor.slice(d.anchor.indexOf("#") + 1);
           let node = tree;
+          let info2 = null;
           for (const seg of splitSegments(symbolPath, sep)) {
             if (!node.has(seg)) node.set(seg, { children: /* @__PURE__ */ new Map() });
-            node = node.get(seg).children;
+            info2 = node.get(seg);
+            node = info2.children;
           }
+          if (info2) info2.def = d;
         }
         (function walk(node, depth) {
           for (const [seg, info2] of node) {
+            const d = info2.def;
             let line = "  ".repeat(depth + 1) + seg;
-            if (line.length > 100) line = line.slice(0, 100);
+            if (d && d.startLine != null && d.endLine != null) {
+              const annotation = `  [off=${d.startLine},lim=${d.endLine - d.startLine + 1}]`;
+              if (line.length + annotation.length > 100) line = line.slice(0, 100 - annotation.length);
+              line += annotation;
+            } else if (line.length > 100) {
+              line = line.slice(0, 100);
+            }
             lines.push(line);
             walk(info2.children, depth + 1);
           }
@@ -3450,7 +3479,7 @@ var require_assemble_area = __commonJS({
       const budget = getBudget(root);
       const included = trimToBudget(ranked, (subset) => renderSlice(subset, fileMeta), budget);
       const slice = renderSlice(included, fileMeta);
-      index.version = 1;
+      index.version = INDEX_VERSION;
       index.areas = index.areas || {};
       index.areas[areaKey] = { headSha: headSha(root), files: newFiles };
       writeIndex(root, index);

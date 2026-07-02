@@ -123,15 +123,23 @@ test('agent-facing map doc exists and teaches the four behaviors + kill switch',
   assert.match(doc, /[Kk]ill switch/, 'states the kill switch (remove the pointer)');
 });
 
-test('the thin-slice rule is PROHIBITIVE, not just prescriptive', () => {
+test('the slice-read rule is a POSITIVE ranged-read procedure with all load-bearing elements', () => {
   const doc = fs.readFileSync(AGENT_DOC, 'utf8');
   assert.match(doc, /thin slice is not a missing map/i, 'a thin slice is explicitly not a missing map');
-  assert.match(
-    doc,
-    /do NOT fall back to full from-scratch research/i,
-    'explicit prohibition against full re-research on a structural-only slice'
-  );
-  assert.match(doc, /REPLACES from-scratch orientation/i, 'the map read replaces orientation, not augments');
+  assert.match(doc, /\[off=N,lim=M\]/, 'names the paste-ready annotation');
+  assert.match(doc, /offset=N, limit=M/, 'shows the concrete ranged Read call verbatim');
+  assert.match(doc, /NARROWEST span/i, 'biases to the narrowest span (a class span can be the whole file)');
+  assert.match(doc, /ADJACENT span, never the whole file/i, 'escalation = adjacent span, never whole-file');
+  assert.match(doc, /offset=1, limit=/, 'allows the bounded header read for imports');
+  assert.match(doc, /no reliable span/i, 'floor: only unspanned symbols fall back to whole-file reads');
+});
+
+test('plan-chunks-agent carries the same positive ranged-read instruction', () => {
+  const agent = fs.readFileSync(PLAN_AGENT, 'utf8');
+  assert.match(agent, /issuing the ranged reads the slice hands you/i, 'positive instruction, not a prohibition');
+  assert.match(agent, /NARROWEST span/i, 'narrowest-span bias present');
+  assert.match(agent, /ADJACENT span/i, 'adjacent-span escalation present');
+  assert.match(agent, /NO `\[off,lim\]` annotation has no reliable span/, 'floor present');
 });
 
 test('the directory ceiling routes the scattered remainder to normal research, not a common ancestor', () => {

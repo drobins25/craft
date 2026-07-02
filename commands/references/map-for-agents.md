@@ -22,26 +22,32 @@ There is no "build in progress / try again later" state to wait on: the call is
 synchronous and returns a complete slice in one shot, or it returns a floor. So a
 non-result is final for this invocation - move on.
 
-## 1. The map REPLACES from-scratch orientation - it does not add to it
+## 1. The slice IS your read plan - issue the ranged reads it hands you
 
-When the map returns a real slice, **anchor on it as your orientation and research
-only the specific files your task requires.** The slice IS your map of the area; do
-not also re-derive the area from scratch.
+When the map returns a real slice, anchor on it as your orientation. Each symbol
+line ends in a `[off=N,lim=M]` annotation - the exact, pre-computed parameters for a
+targeted ranged read. The procedure:
 
-**A thin slice is not a missing map.** Right now the map is structural-only: it gives
-you the file-and-symbol skeleton of a directory, not prose about conventions or
-fragile spots. That thinness is expected, not a defect.
+1. **Issue the annotated Read verbatim.** `Read(<file>, offset=N, limit=M)` with the
+   slice's `off`/`lim` exactly as given. The offset is 1-indexed and Read-tool-native -
+   no conversion, no arithmetic, no reason to open the whole file.
+2. **Prefer the NARROWEST span that covers what you need** - the method or member
+   annotation, not the enclosing class annotation. In a one-class-per-file codebase
+   the class span IS effectively the file; read a class span only when you genuinely
+   need the whole type.
+3. **Escalate to the ADJACENT span, never the whole file.** If the span you read is
+   not enough, read the sibling annotation above or below it.
+4. **Header reads are allowed, bounded.** Imports/usings sit above every span: one
+   `Read(<file>, offset=1, limit=<lines before the first span>)` is fine and does not
+   count as a whole-file read.
+5. **The floor:** a symbol with NO `[off,lim]` annotation has no reliable span - only
+   those fall back to a whole-file read. Files the slice does not cover at all are
+   read normally.
 
-> **Do NOT fall back to full from-scratch research just because the slice is
-> structural-only or lacks per-area context.** Use the directory structure the slice
-> gives you as your orientation, and then read only the specific files your task
-> actually touches.
-
-This prohibition is the whole point. Without it, "research only the gaps" quietly
-becomes "research everything" - because a bare directory skeleton can read as if every
-detail is still a gap - and you end up doing the full from-scratch pass anyway, on top
-of the map read. That produces no saving and tells no one whether the map helped. When
-in doubt, lean on the slice and read fewer files, not more.
+**A thin slice is not a missing map.** The map is structural: the file-and-symbol
+skeleton plus read targets, not prose about conventions or fragile spots. That
+thinness is expected - the slice is not something to trust-and-skip, it is a list of
+precise read targets. Lean on it and read fewer lines, not more.
 
 ## 2. How to pull a slice
 
@@ -63,7 +69,10 @@ orchestrator passes you the resolved path. Invoke (substitute the injected
   correct when cwd already is the project root.)
 
 Read the JSON `slice` field as-is. It is a ready-to-read indented outline (file at
-the left margin, symbols nested under it). **Never parse, re-key, or reconstruct the
+the left margin, symbols nested under it). Each symbol line ends in `[off=N,lim=M]` -
+paste those straight into a ranged `Read(<file>, offset=N, limit=M)`, choosing the
+narrowest annotation that covers your need; a line with no such annotation has no
+reliable span - read that one whole. **Never parse, re-key, or reconstruct the
 outline** - the slice is a view to read, not a format to interpret. The other fields
 (`fileCount`, `tokenEstimate`, `cached`, `firstBuild`, `fyi`) are informational.
 

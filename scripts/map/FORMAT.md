@@ -1,6 +1,6 @@
 # Living Map - Format & Anchor Contract
 
-> **STATUS: FROZEN.** This is the canonical on-disk spec for the Living Map's structural layer. It was co-designed and locked 2026-06-22, with two authorized additions locked 2026-06-23 (area-key, build/inject trigger + clock note). It is the cross-story contract: the per-area context deriver (Story 3) and the consumer pilot (Story 4) plan and build strictly against this document and do NOT revise it. Any change here is a deliberate re-open, not an edit.
+> **STATUS: FROZEN.** This is the canonical on-disk spec for the Living Map's structural layer. It was co-designed and locked 2026-06-22, with two authorized additions locked 2026-06-23 (area-key, build/inject trigger + clock note), and an authorized additive reopen 2026-07-02 for Story 5 read-targets (per-anchor spans + slice range annotations in 8a/8c, index schema version 2). It is the cross-story contract: the per-area context deriver (Story 3) and the consumer pilot (Story 4) plan and build strictly against this document and do NOT revise it. Any change here is a deliberate re-open, not an edit.
 
 This document defines three things:
 
@@ -118,16 +118,18 @@ JSON / YAML are ruled out for the slice (the ~69% token tax contradicts the map'
 
 ```
 src/Data/LoadOrders.cs
-  Acme.Data.LoadOrders
-    GenerateIds(int,string)  -> IEnumerable<int>
-    GenerateIds(int)  -> IEnumerable<int>
-    LoadAsync(int)  -> Task<Order>
+  Acme.Data.LoadOrders  [off=8,lim=140]
+    GenerateIds(int,string)  [off=45,lim=83]
+    GenerateIds(int)  [off=129,lim=6]
+    LoadAsync(int)  [off=136,lim=11]
 commands/craft.md
-  routing
-    loop
+  routing  [off=12,lim=30]
+    loop  [off=18,lim=9]
 ```
 
 In the example, the anchor for line 3 is `src/Data/LoadOrders.cs#Acme.Data.LoadOrders.GenerateIds(int,string)`, rebuilt from the indent stack.
+
+**Ranged-read annotation (additive, 2026-07-02 reopen for Story 5).** A symbol whose span is known carries a trailing `  [off=<N>,lim=<M>]`: `N` = the symbol's 1-indexed start line, `M` = its line count (`endLine - startLine + 1`). These are paste-ready parameters for a targeted `Read(file, offset=N, limit=M)` - the Read tool's `offset` starts AT line `N` (1-indexed), so no conversion is ever required of the consumer. A symbol with no reliable span (tier-2 shell, any floor case) renders bare - no annotation, never an error - and bare path segments (scope components with no backing definition) carry no annotation. **Truncation rule:** the 100-char line cap truncates the symbol NAME to make room; the annotation is always preserved intact. Enclosing scopes overlap their children by design (a class span includes its methods; a `##` section includes its `###` subsections) - the consumer picks its granularity.
 
 ### 8b. Index is the source of truth for anchor keys; the slice is a VIEW
 
@@ -149,6 +151,10 @@ The index is internal (not consumer-facing, not token-budgeted). Its on-disk enc
 | **reference graph** | who-references-what edges, the input to reference-frequency (PageRank-style) ranking |
 
 `.craft/map/` holds the per-file extraction cache and this index. It is created on first write; craft imposes no git treatment on it (it inherits the user's existing `.craft/` handling).
+
+**Per-anchor spans (additive, 2026-07-02 reopen for Story 5).** Each stored anchor additionally carries `startLine` (integer, 1-indexed) and `endLine` (integer 1-indexed, or `null` where no reliable end exists - the never-lie floor applied to spans: tier-2 shell, any extraction gap). The span covers the whole declaration (grammar tiers) or the heading's section including its subsections (markdown). These fields feed the slice's ranged-read annotations (section 8a); they are metadata ON an anchor, not a new anchor form - the four required fields above, the anchor grammar (section 1), and the backend-stability invariant are unchanged.
+
+**Schema version (2026-07-02).** The index carries a top-level `version` field, now **2** (v2 = anchors carry spans). The migration rule: a reader treating any version other than its own current schema treats the file as NO INDEX and fully re-derives the area (first-build cost). A version-mismatched entry must never be served on a content-hash match - a pre-span v1 entry would otherwise pin span-less anchors forever on unchanged files.
 
 ---
 

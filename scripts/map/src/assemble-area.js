@@ -16,6 +16,12 @@ const { trimToBudget, estimateTokens } = require('./budget-trim.js');
 
 const DEFAULT_BUDGET = 4096;
 
+// Index schema version. v2 added per-anchor startLine/endLine spans. Any other
+// version (including pre-span v1 and a missing/corrupt file) is treated as no
+// index - the area fully re-derives once, at first-build cost. Serving a v1
+// entry on a hash match would pin span-less anchors forever on unchanged files.
+const INDEX_VERSION = 2;
+
 function mapDir(root) {
   return path.join(root, '.craft', 'map');
 }
@@ -26,9 +32,11 @@ function indexPath(root) {
 
 function readIndex(root) {
   try {
-    return JSON.parse(fs.readFileSync(indexPath(root), 'utf8'));
+    const parsed = JSON.parse(fs.readFileSync(indexPath(root), 'utf8'));
+    if (parsed.version !== INDEX_VERSION) return { version: INDEX_VERSION, areas: {} };
+    return parsed;
   } catch {
-    return { version: 1, areas: {} };
+    return { version: INDEX_VERSION, areas: {} };
   }
 }
 
@@ -114,15 +122,29 @@ function renderSlice(defs, fileMeta) {
     for (const d of sourceOrder) {
       const symbolPath = d.anchor.slice(d.anchor.indexOf('#') + 1);
       let node = tree;
+      let info = null;
       for (const seg of splitSegments(symbolPath, sep)) {
         if (!node.has(seg)) node.set(seg, { children: new Map() });
-        node = node.get(seg).children;
+        info = node.get(seg);
+        node = info.children;
       }
+      // The terminal segment carries its definition so the walk can annotate it
+      // with the span; bare path segments (no backing definition) stay bare.
+      if (info) info.def = d;
     }
     (function walk(node, depth) {
       for (const [seg, info] of node) {
+        const d = info.def;
         let line = '  '.repeat(depth + 1) + seg;
-        if (line.length > 100) line = line.slice(0, 100);
+        if (d && d.startLine != null && d.endLine != null) {
+          // Paste-ready Read parameters; offset is 1-indexed (starts AT that line).
+          // The 100-char cap truncates the name, never the annotation.
+          const annotation = `  [off=${d.startLine},lim=${d.endLine - d.startLine + 1}]`;
+          if (line.length + annotation.length > 100) line = line.slice(0, 100 - annotation.length);
+          line += annotation;
+        } else if (line.length > 100) {
+          line = line.slice(0, 100);
+        }
         lines.push(line);
         walk(info.children, depth + 1);
       }
@@ -188,7 +210,7 @@ async function assembleArea(areaKey, root) {
   const included = trimToBudget(ranked, (subset) => renderSlice(subset, fileMeta), budget);
   const slice = renderSlice(included, fileMeta);
 
-  index.version = 1;
+  index.version = INDEX_VERSION;
   index.areas = index.areas || {};
   index.areas[areaKey] = { headSha: headSha(root), files: newFiles };
   writeIndex(root, index);

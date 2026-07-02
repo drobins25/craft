@@ -44,8 +44,8 @@ test('assembled slice parses as the locked indented outline and fits the budget'
   const res = await lib.assembleArea('area', root);
   const lines = res.slice.split('\n').filter(Boolean);
   assert.strictEqual(lines[0], 'area/x.py', 'first line is the file header at column 0');
-  assert.ok(/^ {2}Foo$/.test(lines[1]), 'class indented one level');
-  assert.ok(/^ {4}bar$/.test(lines[2]), 'method indented under its class');
+  assert.ok(/^ {2}Foo {2}\[off=1,lim=3\]$/.test(lines[1]), `class indented one level with paste-ready range: "${lines[1]}"`);
+  assert.ok(/^ {4}bar {2}\[off=2,lim=2\]$/.test(lines[2]), `method indented under its class with its own range: "${lines[2]}"`);
   assert.ok(res.tokenEstimate <= res.budget, 'slice fits the token budget');
 });
 
@@ -181,4 +181,91 @@ test('gating is preserved under --root: map.enabled:false returns disabled, writ
     !fs.existsSync(path.join(root, '.craft', 'map', 'index.json')),
     'no index written when disabled'
   );
+});
+
+// Per-anchor spans: persistence through index.json, content-hash invalidation, and
+// the v2 schema migration (a pre-span v1 index must never be served from cache).
+
+const INDEX = (root) => JSON.parse(fs.readFileSync(path.join(root, '.craft', 'map', 'index.json'), 'utf8'));
+
+test('spans persist through index.json and the index carries version 2', async () => {
+  const root = tmpProject();
+  write(root, 'area/x.py', 'class Foo:\n    def bar(self):\n        return 1\n');
+  await lib.assembleArea('area', root);
+  const index = INDEX(root);
+  assert.strictEqual(index.version, 2, 'index schema version is 2');
+  for (const a of index.areas.area.files['area/x.py'].anchors) {
+    assert.ok(Number.isInteger(a.startLine) && a.startLine >= 1, `startLine persisted on ${a.anchor}`);
+    assert.ok(Number.isInteger(a.endLine) && a.endLine >= a.startLine, `endLine persisted on ${a.anchor}`);
+  }
+});
+
+test('spans re-derive on content change and only for the changed file', async () => {
+  const root = tmpProject();
+  write(root, 'area/x.py', 'def a():\n    return 1\n');
+  await lib.assembleArea('area', root);
+  const before = INDEX(root).areas.area.files['area/x.py'].anchors[0];
+  write(root, 'area/x.py', '# moved\n\ndef a():\n    return 1\n');
+  const res = await lib.assembleArea('area', root);
+  assert.deepStrictEqual(res.rederived, ['area/x.py']);
+  const after = INDEX(root).areas.area.files['area/x.py'].anchors[0];
+  assert.strictEqual(after.startLine, before.startLine + 2, 'span reflects the edited source');
+});
+
+test('cached spans are served unchanged when content is unchanged', async () => {
+  const root = tmpProject();
+  write(root, 'area/x.py', 'class Foo:\n    def bar(self):\n        return 1\n');
+  await lib.assembleArea('area', root);
+  const first = INDEX(root).areas.area.files['area/x.py'].anchors;
+  const res = await lib.assembleArea('area', root);
+  assert.strictEqual(res.rederived.length, 0, 'second run is a pure cache hit');
+  assert.deepStrictEqual(INDEX(root).areas.area.files['area/x.py'].anchors, first, 'cached spans identical');
+});
+
+test('spanned symbols carry annotations; shell renders bare (floor intact)', async () => {
+  const root = tmpProject();
+  write(root, 'area/x.py', 'class Foo:\n    def bar(self):\n        return 1\n');
+  write(root, 'area/run.sh', '#!/bin/bash\nmy_fn() {\n  echo hi\n}\n');
+  const res = await lib.assembleArea('area', root);
+  const lines = res.slice.split('\n').filter(Boolean);
+  const pyLines = lines.filter((l) => /Foo|bar/.test(l));
+  for (const l of pyLines) assert.match(l, /\[off=\d+,lim=\d+\]$/, `grammar symbol annotated: "${l}"`);
+  const shLine = lines.find((l) => /my_fn/.test(l));
+  assert.ok(shLine, 'shell function appears in the slice');
+  assert.ok(!/\[off=/.test(shLine), `shell line has NO annotation (no reliable span): "${shLine}"`);
+});
+
+test('over-long symbol name truncates; the annotation survives intact', async () => {
+  const root = tmpProject();
+  const longName = 'x'.repeat(120);
+  write(root, 'area/long.py', `def ${longName}():\n    return 1\n`);
+  const res = await lib.assembleArea('area', root);
+  const line = res.slice.split('\n').find((l) => l.includes('xxx'));
+  assert.ok(line, 'long symbol rendered');
+  assert.ok(line.length <= 100, `line respects the 100-char cap: ${line.length}`);
+  assert.match(line, /\[off=1,lim=2\]$/, `annotation preserved intact at the end: "${line.slice(-30)}"`);
+  assert.ok(!line.includes('x'.repeat(120)), 'the NAME is what got truncated');
+});
+
+test('a v1 (pre-span) index is never served, even on a hash match', async () => {
+  const root = tmpProject();
+  write(root, 'area/x.py', 'class Foo:\n    def bar(self):\n        return 1\n');
+  await lib.assembleArea('area', root);
+
+  // Seed the poisoned state: same REAL content hashes (so the hash gate alone would
+  // serve them), anchors stripped of spans, version rolled back to 1.
+  const index = INDEX(root);
+  index.version = 1;
+  for (const f of Object.values(index.areas.area.files)) {
+    f.anchors = f.anchors.map(({ anchor, kind, line }) => ({ anchor, kind, line }));
+  }
+  fs.writeFileSync(path.join(root, '.craft', 'map', 'index.json'), JSON.stringify(index, null, 2) + '\n');
+
+  const res = await lib.assembleArea('area', root);
+  assert.deepStrictEqual(res.rederived, ['area/x.py'], 'version mismatch forces full re-derive despite matching hashes');
+  const migrated = INDEX(root);
+  assert.strictEqual(migrated.version, 2, 'written index is back on the current schema');
+  for (const a of migrated.areas.area.files['area/x.py'].anchors) {
+    assert.ok(Number.isInteger(a.startLine), 'migrated anchors carry spans again');
+  }
 });

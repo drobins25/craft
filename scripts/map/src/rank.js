@@ -41,6 +41,9 @@ function rankDefinitions(perFile) {
         anchor: a.anchor,
         kind: a.kind,
         line: a.line,
+        // span fields ride along so renderSlice can emit ranged-read annotations
+        startLine: a.startLine,
+        endLine: a.endLine,
         // discount the definition's own occurrence so a never-referenced symbol scores 0
         score: Math.max(0, refCount(name) - 1),
       });

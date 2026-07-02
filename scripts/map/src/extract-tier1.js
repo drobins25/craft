@@ -150,6 +150,10 @@ function extractTier1(relPath, languageId, lang, tree) {
       anchor: `${relPath}#${symbolPath}`,
       kind: d.kind,
       line: d.nameNode.startPosition.row + 1,
+      // Span of the whole declaration (not just the name), 1-indexed, so a ranged
+      // read gets the full definition body.
+      startLine: d.declNode.startPosition.row + 1,
+      endLine: d.declNode.endPosition.row + 1,
     };
   });
   return { floored: false, anchors };

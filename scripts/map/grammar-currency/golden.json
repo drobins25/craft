@@ -8,27 +8,37 @@
       {
         "anchor": "__fixtures__/Sample.cs#LoadOrders",
         "kind": "class",
-        "line": 6
+        "line": 6,
+        "startLine": 6,
+        "endLine": 23
       },
       {
         "anchor": "__fixtures__/Sample.cs#LoadOrders.GenerateIds(int,string)",
         "kind": "method",
-        "line": 8
+        "line": 8,
+        "startLine": 8,
+        "endLine": 11
       },
       {
         "anchor": "__fixtures__/Sample.cs#LoadOrders.GenerateIds(int)",
         "kind": "method",
-        "line": 13
+        "line": 13,
+        "startLine": 13,
+        "endLine": 16
       },
       {
         "anchor": "__fixtures__/Sample.cs#LoadOrders.LoadAsync(int)",
         "kind": "method",
-        "line": 18
+        "line": 18,
+        "startLine": 18,
+        "endLine": 22
       },
       {
         "anchor": "__fixtures__/Sample.cs#Order",
         "kind": "class",
-        "line": 25
+        "line": 25,
+        "startLine": 25,
+        "endLine": 27
       }
     ]
   },
@@ -41,22 +51,30 @@
       {
         "anchor": "__fixtures__/Sample.java#OrderService",
         "kind": "class",
-        "line": 3
+        "line": 3,
+        "startLine": 3,
+        "endLine": 14
       },
       {
         "anchor": "__fixtures__/Sample.java#OrderService.load(int)",
         "kind": "method",
-        "line": 4
+        "line": 4,
+        "startLine": 4,
+        "endLine": 6
       },
       {
         "anchor": "__fixtures__/Sample.java#OrderService.load(int,String)",
         "kind": "method",
-        "line": 8
+        "line": 8,
+        "startLine": 8,
+        "endLine": 10
       },
       {
         "anchor": "__fixtures__/Sample.java#OrderService.save(Order)",
         "kind": "method",
-        "line": 12
+        "line": 12,
+        "startLine": 12,
+        "endLine": 13
       }
     ]
   },
@@ -69,17 +87,23 @@
       {
         "anchor": "__fixtures__/sample.js#OrderService",
         "kind": "class",
-        "line": 1
+        "line": 1,
+        "startLine": 1,
+        "endLine": 5
       },
       {
         "anchor": "__fixtures__/sample.js#OrderService.load",
         "kind": "method",
-        "line": 2
+        "line": 2,
+        "startLine": 2,
+        "endLine": 4
       },
       {
         "anchor": "__fixtures__/sample.js#makeId",
         "kind": "function",
-        "line": 7
+        "line": 7,
+        "startLine": 7,
+        "endLine": 9
       }
     ]
   },
@@ -92,22 +116,30 @@
       {
         "anchor": "__fixtures__/sample.py#OrderRepo",
         "kind": "class",
-        "line": 1
+        "line": 1,
+        "startLine": 1,
+        "endLine": 6
       },
       {
         "anchor": "__fixtures__/sample.py#OrderRepo.load",
         "kind": "function",
-        "line": 2
+        "line": 2,
+        "startLine": 2,
+        "endLine": 3
       },
       {
         "anchor": "__fixtures__/sample.py#OrderRepo.save",
         "kind": "function",
-        "line": 5
+        "line": 5,
+        "startLine": 5,
+        "endLine": 6
       },
       {
         "anchor": "__fixtures__/sample.py#make_id",
         "kind": "function",
-        "line": 9
+        "line": 9,
+        "startLine": 9,
+        "endLine": 10
       }
     ]
   },
@@ -120,27 +152,37 @@
       {
         "anchor": "__fixtures__/sample.ts#OrderLike",
         "kind": "interface",
-        "line": 1
+        "line": 1,
+        "startLine": 1,
+        "endLine": 3
       },
       {
         "anchor": "__fixtures__/sample.ts#OrderService",
         "kind": "class",
-        "line": 5
+        "line": 5,
+        "startLine": 5,
+        "endLine": 13
       },
       {
         "anchor": "__fixtures__/sample.ts#OrderService.load",
         "kind": "method",
-        "line": 6
+        "line": 6,
+        "startLine": 6,
+        "endLine": 8
       },
       {
         "anchor": "__fixtures__/sample.ts#OrderService.save",
         "kind": "method",
-        "line": 10
+        "line": 10,
+        "startLine": 10,
+        "endLine": 12
       },
       {
         "anchor": "__fixtures__/sample.ts#makeId",
         "kind": "function",
-        "line": 15
+        "line": 15,
+        "startLine": 15,
+        "endLine": 17
       }
     ]
   },

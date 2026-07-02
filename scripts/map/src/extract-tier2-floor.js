@@ -25,7 +25,9 @@ function extractTier2(relPath, languageId, source) {
     const name = m[1] || m[2];
     if (name && !seen.has(name)) {
       seen.add(name);
-      anchors.push({ anchor: `${relPath}#${name}`, kind: 'function', line: i + 1 });
+      // No reliable end line without a grammar (no brace matching) - endLine stays
+      // null and the slice renders this symbol with no range annotation.
+      anchors.push({ anchor: `${relPath}#${name}`, kind: 'function', line: i + 1, startLine: i + 1, endLine: null });
     }
   }
   return { anchors };
