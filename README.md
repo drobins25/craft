@@ -52,7 +52,7 @@ Craft is a Claude Code plugin. It runs inside `claude` CLI sessions and adds opi
 
 ## What you can do, and when
 
-**First session.** Install, run `/craft:init`, and ship one small thing - `/craft:adhoc` for a bug, or `/craft:story-new` → `/craft:story-implement` for something new. You'll see the implement → validate → refine loop in action and you'll have real work shipped within the hour.
+**First session.** Install, run `/craft:init`, and ship one small thing - `/craft:adhoc` for a bug or small tweak, or `/craft:story-new` → `/craft:story-implement` for something new. You'll see the implement → validate → refine loop in action and you'll have real work shipped within the hour.
 
 **By week two.** Plan a real cycle and run multiple stories through it. Watch the chunk-validator + refine-chunk loop catch failures and route them to fixes without you babysitting. Run the analyzer agents post-cycle via `/craft:analyze`. Consult one of the crystallized experts via `/craft:ask` when you're stuck on a design call.
 
@@ -162,7 +162,7 @@ This runs the story end-to-end. Craft flows through four beats: a creative pass 
 | `/craft:workflow-design` | Author workflow definitions - create new, edit existing, archive unused |
 | `/craft:research` | Ad-hoc research - discover, elaborate, synthesize with ranked branches |
 | `/craft:research-verify` | Verify existing research findings against independent primary sources |
-| `/craft:adhoc` | Adhoc fix for small bugs without story ceremony. Creates permanent record in `.craft/fixes/` |
+| `/craft:adhoc` | Adhoc fix or tweak without story ceremony. Bugs record to `.craft/fixes/`, tweaks to `.craft/tweaks/` |
 | `/craft:project` | Switch projects or cross-project dashboard |
 | `/craft:init` | One-time project setup |
 
@@ -260,7 +260,7 @@ A future story adds `[[wikilink]]` syntax and a craft-wide graph helper that res
 | `validate-chunk` | Implement | Quick validation after chunk implementation. Derives `FILES_CHANGED` from git diff, not spec file list |
 | `refine-chunk` | Implement | Targeted fixes for validation failures |
 | `test-fix` | Implement | Triage failing tests, fix the right thing |
-| `adhoc` | Any | Adhoc fix without story ceremony. Investigate → confidence check → apply → validate → commit |
+| `adhoc` | Any | Adhoc fix or tweak without story ceremony. Classifies bug vs tweak: fixes gate on root-cause confidence, tweaks on visual fit - your reaction closes them |
 | `approve` | Any | Request scoped write permission from the user. Opens the write gate only after explicit AskUserQuestion approval |
 | `browser` | Any | Launch a persistent playwright-cli browser session. ~4x cheaper than Chrome DevTools MCP in token cost |
 
@@ -374,7 +374,8 @@ After initialization, your project will have:
 │       ├── .state
 │       └── stories/
 ├── checkpoints/          # Chunk rollback points
-├── fixes/                # Adhoc fix records (created by /craft:adhoc)
+├── fixes/                # Adhoc fix records (created by /craft:adhoc, bug path)
+├── tweaks/               # Tweak records (created by /craft:adhoc, open until accepted)
 ├── analysis/             # Persistent analysis findings
 │   └── pending/          # Findings queues (survive sessions)
 ├── inspiration/          # Reference library

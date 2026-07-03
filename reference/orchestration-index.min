@@ -11,7 +11,7 @@ validation FAILED (test)|test-fix (via story-implement)
 validation FAILED (build/lint)|refine-chunk (via story-implement)
 all stories complete|cycle-complete
 post-cycle|analyze (QA,UX,Creative,Style)
-known bug/post-story issue (no active story)|craft:adhoc (adhoc,no story needed)
+known bug or small tweak to shipped work (no active story)|craft:adhoc (no story needed)
 deferral marker in user utterance ("later"/"don't let me forget"/"side note"/etc.)|inline-mention /craft:notebook (NOT AskUserQuestion); on accept invoke silently with session-context body+tags
 lifecycle verb + named/deictic ref|graduate=inline-offer with named referent / done=AUQ confirmation always (even at HIGH conf - asymmetric failure visibility); LOW=no action
 =LOOP
@@ -28,7 +28,7 @@ test-fix→triage→HAND BACK TO story-implement
 refine-chunk→surgical fix→HAND BACK TO story-implement
 cycle-design→content-spark(per story)→creative-spark(opt)→design-vibe→plan-chunks MODE=batch
 story-new→content-spark→creative-spark(opt)→plan-chunks
-adhoc→investigate→confidence-check→ON yes:edit→validate symptom|ON no:escalate→story-new
+adhoc→classify|bug:investigate→confidence→edit→validate|tweak:fit-check→edit→validate→AUQ(record open until user accepts)|unsure:ask user
 notebook→capture | notebook→capture→done (conversational, AUQ always) | notebook→capture→graduate(conversational)→story-new (pre-fills spark, flags source on success)
 =RULES
 !implement chunks directly—ALWAYS invoke implementer via Task
@@ -43,7 +43,7 @@ notebook→capture | notebook→capture→done (conversational, AUQ always) | no
 +breadcrumb before nested skill invocation
 +clean up breadcrumb on ALL exit paths
 !stop after chunk/story completes—continue to next chunk or next story
-!conflate notebook todos with TaskCreate—different lifetimes (notebook=persistent across sessions, TaskCreate=ephemeral, /craft:adhoc=adhoc-bug)
+!conflate notebook todos with TaskCreate—different lifetimes (notebook=persistent across sessions, TaskCreate=ephemeral, /craft:adhoc=act-now bug/tweak)
 =SCRIPTS
 start-cycle.sh [cycle]|activate,set ACTIVE_CYCLE
 complete-cycle.sh|archive,clear ACTIVE_CYCLE
@@ -62,4 +62,5 @@ Story frontmatter:status|planning→ready→active→complete
 .craft/design/locked.md|locked decisions(enforced by validation)
 .craft/design/tokens.yaml|design tokens(enforced by style-analyzer)
 .craft/fixes/*.md|adhoc fix records(category,root cause,validation)
-.craft/.active-fix|safety marker for in-progress fix(session-start clears)
+.craft/tweaks/tweak-*.md|tweak records(surface,kind,attempts,verbatim reactions;open until user accepts)
+.craft/.active-fix|safety marker for in-progress adhoc work(session-start clears)

@@ -431,5 +431,5 @@ The silent-mark-done path does NOT exist at any confidence level. AC25.
 
 - **`TaskCreate`** - In-session task tracking, ephemeral (this conversation only). Notebook todos persist across sessions and survive cycle completion. Different lifetimes, different tools.
 - **`/craft:craft-story-new`** - For thoughts that are already story-shape with a clear acceptance shape. Notebook captures things that are NOT yet story-shape.
-- **`/craft:adhoc`** - For known bugs that need an adhoc fix. Notebook todos are intent items, not bug records.
+- **`/craft:adhoc`** - For known bugs or small tweaks to act on NOW. Notebook todos are deferred intent items, not act-now work.
 - **`.craft/design/locked.md`** - For decisions that constrain future work. Notebook ideas are unconstrained explorations.

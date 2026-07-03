@@ -542,7 +542,7 @@ flowchart LR
 | `/craft:workflow-design` | Author workflow definitions — create new, edit existing, archive unused |
 | `/craft:research` | Ad-hoc research — discover, elaborate, synthesize with ranked branches |
 | `/craft:research-verify` | Verify existing research findings against independent primary sources |
-| `/craft:adhoc` | Adhoc fix for small bugs without story ceremony. Creates record in `.craft/fixes/` |
+| `/craft:adhoc` | Adhoc fix or tweak without story ceremony. Bugs record to `.craft/fixes/`, tweaks to `.craft/tweaks/` |
 | `/craft:notebook` | Low-ceremony capture for ideas, todos, and notes (durable project facts) before they harden into stories |
 | `/craft:riff` | Two-gear thinking partner - senses the moment, runs a tight calibration loop in the main loop or hands open exploration to the riff agent |
 | `/craft:planning` | Feature roadmap and planning - initiatives, concepts, open questions |
@@ -564,7 +564,7 @@ flowchart LR
 | `validate-chunk` | story-implement | TypeScript, lint, tests. Derives FILES_CHANGED from git diff |
 | `refine-chunk` | story-implement | Fix validation failures |
 | `test-fix` | story-implement | Triage failing tests, fix the right thing |
-| `adhoc` | /craft:adhoc | Adhoc fix without story ceremony |
+| `adhoc` | /craft:adhoc | Adhoc fix or tweak without story ceremony |
 | `approve` | any (write gate) | Request scoped write permission from the user |
 | `browser` | /craft:browser | Launch persistent playwright-cli browser session |
 
@@ -644,7 +644,8 @@ See `docs/agent-catalog.md` for full descriptions, model assignments, and usage 
 | `.craft/cycles/[N]-[name]/stories/[N]-[name].md` | Story details | status, chunks, decisions (typed), acceptance |
 | `.craft/backlog/[name].md` | Backlog stories | status: ready, priority |
 | `.craft/analysis/pending/*.yaml` | Pending findings | QA, UX, Creative, Style, Walkthrough queues |
-| `.craft/fixes/[name].md` | Adhoc fix records | Created by /craft:adhoc |
+| `.craft/fixes/[name].md` | Adhoc fix records | Created by /craft:adhoc (bug path) |
+| `.craft/tweaks/tweak-[slug].md` | Tweak records, open until the user accepts | Created by /craft:adhoc (tweak path) |
 | `.craft/workflows/` | Workflow session state | per-session state dirs |
 | `.craft/notebook/` | Low-ceremony captured ideas and todos | idea / todo entries |
 | `.craft/research/` | Research and become branch files | `{slug}/_plan.md`, `NN-branch.md` |

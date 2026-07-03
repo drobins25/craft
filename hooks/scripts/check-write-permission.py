@@ -195,8 +195,9 @@ def deny():
             "permissionDecisionReason": (
                 "BLOCKED: No active story or workflow session. "
                 "For workflow sessions, run start-workflow-session.sh to activate the session first. "
-                "For small fixes with a known root cause (bug, misalignment, broken interaction), "
-                "use Skill(craft:adhoc). "
+                "For small targeted changes to existing behavior or appearance - a bug with a "
+                "known root cause OR a small enhancement to something already built (different "
+                "icon, wording, spacing) - use Skill(craft:adhoc). "
                 "For new features or complex changes, use Skill(craft:craft-story-new) or "
                 "Skill(craft:craft-story-implement)."
             ),

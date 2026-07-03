@@ -75,7 +75,7 @@ plugins/craft/
 │   ├── content-spark/         ← Surface content assumptions before creative/planning
 │   ├── creative-spark/        ← Generate creative options; supports muse/alchemist drivers
 │   ├── design-vibe/           ← Visual cohesion review across stories
-│   ├── fix/                   ← Adhoc fix without story ceremony; records to .craft/fixes/
+│   ├── adhoc/                 ← Adhoc fix or tweak; shell + references/{fix,tweak}.md
 │   ├── lock-decision/         ← Formalize approved decisions
 │   ├── plan-chunks/           ← Batch planning with file-based dependency verification
 │   ├── validate-chunk/        ← Validation via git diff (not spec file list)
@@ -306,8 +306,10 @@ project-root/
 │   │       └── stories/
 │   │           └── 1-story-name.md
 │   ├── checkpoints/           ← Chunk rollback points (YAML)
-│   ├── fixes/                 ← Adhoc fix records (created by /craft:adhoc)
+│   ├── fixes/                 ← Adhoc fix records (created by /craft:adhoc, bug path)
 │   │   └── fix-name.md        ← category, root cause, solution, lesson
+│   ├── tweaks/                ← Tweak records (created by /craft:adhoc, open until accepted)
+│   │   └── tweak-name.md      ← surface, kind, attempts, verbatim reactions
 │   ├── analysis/              ← Persistent analysis findings
 │   │   ├── pending/           ← Findings queue (survives sessions)
 │   │   │   ├── qa.yaml
