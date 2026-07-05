@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.99.30
+
+- Fixed the tweak flow's lock-conflict decline path to also suggest a mockup when escalating, matching the design-question escalation
+
 ## 1.99.29
 
 - Added /craft:mockup: a live HTML mockup funnel - a persistent alchemist builds 3 genuinely different options, you converge by reacting through diverge/refine/polish rounds, and new design values solidify to tokens.yaml at acceptance
