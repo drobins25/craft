@@ -12,7 +12,7 @@ standards:
   visual:
     pixel_perfect_alignment: true
     consistent_spacing: true        # Tokens only, no magic numbers
-    smooth_animations: true         # 60fps, 150ms default
+    smooth_animations: true         # 60fps; durations/easings per tokens.yaml transitions
     responsive: true                # Mobile-first, all breakpoints
 
   interaction:
@@ -102,16 +102,15 @@ polish:
 
   responsive:
     required: true
-    breakpoints:
-      - mobile     # < 640px
-      - tablet     # 640px - 1024px
-      - desktop    # > 1024px
+    breakpoints:                  # px ranges defined in tokens.yaml (single source)
+      - mobile
+      - tablet
+      - desktop
     description: "Works beautifully at all screen sizes"
 
   animations:
     required: true                # YES required for pristine
-    style: subtle                 # Micro-interactions, not flashy
-    duration: 150ms               # Default, snappy
+    style: subtle                 # Micro-interactions, not flashy; durations/easings per tokens.yaml transitions
     description: "Smooth, purposeful motion that guides attention"
 
 # ─────────────────────────────────────────────────────────────
