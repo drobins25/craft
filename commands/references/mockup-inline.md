@@ -72,9 +72,9 @@ Spawn the alchemist ONCE via the Agent tool (`subagent_type: "craft:alchemist"`)
 
 **Recovery (designed, not hoped):** if the agent dies or the session breaks mid-funnel, re-anchor a fresh agent from record.md (brief, reactions so far, `## New Values`, any pending `## Polish Ledger` lines) + the current mockup.html - NEVER from transcript continuity alone. Update `agent_session` to the new id. This is why the record is written before anything else exists.
 
-**The living page:** the mockup is ONE page - `mockup.html`. Each round REPLACES its content, so the page only ever shows the current decision: all options at Diverge, the pick's variations at Refine, the finalist at Polish. Before each rewrite, the outgoing round is archived to `rounds/round-N.html` (kept for resurrection, never rendered or linked). Presentation adapts to scope: component-scale options stack in real surrounding context (scroll to compare); page-scale options each fill the viewport behind a thin fixed top toggle bar (A/B/C). Toggle, replay buttons, and round label are visually distinct dev chrome - never part of the design, never ported.
+**The living page:** the mockup is ONE page - `mockup.html`. Each round REPLACES its content, so the page only ever shows the current decision: all options at Diverge, the pick's variations at Refine, the finalist at Polish. Before each round transition, the outgoing round is archived to `rounds/round-N.html` (kept for resurrection, never rendered or linked); the new round is then EDITED into the living page, never rewritten from scratch. Presentation adapts to scope: component-scale options stack in real surrounding context (scroll to compare); page-scale options each fill the viewport behind a thin fixed top toggle bar (A/B/C). Toggle, replay buttons, and round label are visually distinct dev chrome - never part of the design, never ported.
 
-**Verification is orchestrator-owned.** The alchemist builds and self-reports; reports never count as verification. After every handoff, the orchestrator loads the page and screenshots it (desktop + mobile emulation when mobile applies) before showing the user anything.
+**Verification is orchestrator-owned.** The alchemist builds and self-reports; reports never count as verification. After every handoff, the orchestrator loads the page and verifies in TEXT - console errors listed, one evaluate_script assertion pass (expected sections/ids present, body has height, option count matches the brief) - before pointing the user at it. Screenshots are NOT the verification medium when the user is watching a headed browser: the user's own screen is the display, and pixels are reserved for what they can't see - mobile emulation, unattended sessions (no visible browser) - or their explicit request (including disambiguating a reaction the DOM can't resolve from words).
 
 ## Step 3: Diverge (Round 1)
 
@@ -84,13 +84,13 @@ Write the verbatim reaction to `## Reactions`. Mark Diverge complete. If the use
 
 ## Step 4: Refine (Round 2)
 
-The pick becomes the base; brief the alchemist with variations of it. Hybrids are legal briefs ("B with C's cards"). Same mechanics: rebuild the living page (archive first), verify, show, collect the reaction conversationally, record verbatim. Mark Refine complete.
+The pick becomes the base; brief the alchemist with variations of it. Hybrids are legal briefs ("B with C's cards"). Same mechanics: archive the outgoing round, then EDIT the living page toward the new round - never a from-scratch rewrite; the surrounding context and base CSS that didn't change are not regenerated - then verify, show, collect the reaction conversationally, record verbatim. Mark Refine complete.
 
 **Mid-round lock crossings (any round):** when a direction crosses a locked.md decision, say ONE ignorable line - "that crosses the [X] lock; trying it anyway - we'll settle the lock if this is what you accept" - and proceed. No question, no AUQ, no locked.md write mid-round. The lock settles once, at the solidify beat.
 
 ## Step 5: Polish (Round 3) - the live loop
 
-The finalist iterates until explicit acceptance. This round runs differently: the ORCHESTRATOR drives micro-adjustments live via `evaluate_script` on the loaded page (CSS/style/class injection) - try/see/discard in seconds, screenshot after each, user reacts, next adjustment. The alchemist re-enters only for structural work (new sections, choreography), which rebuilds the page normally.
+The finalist iterates until explicit acceptance. This round runs differently: the ORCHESTRATOR drives micro-adjustments live via `evaluate_script` on the loaded page (CSS/style/class injection) - try/see/discard in seconds, the user watches the change land in their own browser and reacts, next adjustment. No per-injection screenshots - the user's screen is the display; pixels only for viewports they can't see or on request. The alchemist re-enters only for structural work (new sections, choreography), which follows the same archive-then-edit discipline as any round.
 
 **Tell the user ONCE when the loop starts:** "Changes are live in the page only - don't refresh until they're written."
 
