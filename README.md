@@ -510,7 +510,7 @@ A batch of related stories shipped together. Has its own state, learnings, and c
 A focused unit of work that owns one outcome. Has a spark, design decisions, an implementation plan, and a completion state.
 
 ### chunk
-An implementable unit inside a story with a rollback boundary. Each chunk gets a checkpoint commit; failures roll back to the last checkpoint.
+An implementable unit inside a story with a rollback boundary. Each chunk is checkpointed before it starts; failures roll back to that checkpoint. The git commit happens once, at story completion.
 
 ### spark
 The creative seed of a story before it's been researched or planned. Captured first; everything else expands outward from it.

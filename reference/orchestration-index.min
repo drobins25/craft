@@ -51,7 +51,7 @@ complete-cycle.sh|archive,clear ACTIVE_CYCLE
 start-story.sh [file]|set CURRENT_STORY,CHUNK=1,status=active
 complete-story.sh [file]|clear CURRENT_STORY,status=complete
 complete-chunk.sh|increment CURRENT_CHUNK
-create-checkpoint.sh [story] [chunk]|git commit+snapshot
+create-checkpoint.sh [story] [chunk]|YAML state snapshot,no commit(commit at complete-story.sh)
 update-global-state.sh KEY VAL|safe .global-state update
 =STATE
 .craft/.global-state|ACTIVE_CYCLE,CURRENT_STORY,PLANNING_CYCLE,RUN_MODE

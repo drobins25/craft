@@ -258,7 +258,7 @@ All hooks defined in `hooks/hooks.json`. Scripts in `hooks/scripts/`.
 ### Utility Scripts (called by hooks or commands)
 | Script | Purpose |
 |--------|---------|
-| `create-checkpoint.sh` | Git stash-based rollback points before chunks |
+| `create-checkpoint.sh` | YAML state snapshots before chunks (no commit; git commit at complete-story.sh) |
 | `create-cycle.sh` | Scaffold a new cycle directory |
 | `create-story.sh` | Create story file from template |
 | `delete-story.sh` | Remove a story file |
