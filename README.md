@@ -44,9 +44,17 @@ And you never fill out a form to use it. You just talk:
 
 > "Can you check our notebook todos?"
 
-> "Create a notebook entry for adding a `craft:reskin` command with optional token extraction, or a design pairing session with the alchemist and muse."
+> "Create a notebook entry for a `craft:reskin` command with optional token extraction."
 
-That second one is a real entry - a feature idea with commands and agents woven into it, captured in one line. It isn't a ticket describing work for a human to interpret later. When you come back, you don't start over. You say go.
+That second one doesn't exist yet - it's an idea, and ideas in the book can graduate into anything: a tweak, a story, an entire cycle.
+
+And soon, some entries won't be yours at all. When tweaks you loved stack up, craft's scout goes looking for the other places that taste belongs - and writes the todo itself:
+
+> *Run `/craft:mockup` on the pricing cards - your last three tweaks kept warming the palette, and these are still cold. Creative direction and origin tweak attached.*
+
+You didn't ask for that one. Craft was paying attention.
+
+That's the real reason the notebook exists: **your taste compounds.** Every design you love is recorded, not spent - a vote for what "good" means in your project. And it climbs: the morphing glow you tweaked onto one flat card becomes the move craft proposes for the row of cards, then the page, then the DNA of a site-wide experience - every step still linked back to the card where it started. Most tools forget what you liked the moment the session ends. Craft keeps score and builds upward from it, until the work isn't just more you - it's you, *refined*.
 
 Craft holds up its end, too. Say "don't let me forget" in the middle of a story and craft offers the notebook - one ignorable line, never a popup - and the entry lands stamped with the story, cycle, or tweak that produced it. And when a build reaches a step only you can do - a deploy setting, a DNS record - Claude writes the full walkthrough into the book, tied to the work it belongs to, waiting for your hands.
 
