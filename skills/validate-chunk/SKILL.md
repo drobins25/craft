@@ -55,7 +55,8 @@ Task tool:
     PROJECT_ROOT: [PROJECT_ROOT value]
     PM: [PM value]
     STORY_FILE: [STORY_FILE value]
-    MODE: per-chunk"
+    MODE: per-chunk
+    PLUGIN_ROOT: [resolved ${CLAUDE_PLUGIN_ROOT} - the subagent cannot resolve the variable itself]"
 ```
 
 **For story-final mode**, set CHUNK to "final":
@@ -72,7 +73,8 @@ Task tool:
     PROJECT_ROOT: [PROJECT_ROOT value]
     PM: [PM value]
     STORY_FILE: [STORY_FILE value]
-    MODE: story-final"
+    MODE: story-final
+    PLUGIN_ROOT: [resolved ${CLAUDE_PLUGIN_ROOT} - the subagent cannot resolve the variable itself]"
 ```
 
 **NEVER use `run_in_background: true`.** Validation must run synchronously — wait for the agent to complete.
@@ -93,7 +95,7 @@ The agent outputs structured markdown. Parse these fields:
 **Error block format** (may have multiple):
 ```
 - **Check:** [check name]
-- **Type:** [type-error|lint-error|build-error|test-failure]
+- **Type:** [type-error|lint-error|build-error|test-failure|verified-gate-error]
 - **File:** [file path]
 - **Line:** [line number or -]
 - **Message:** [error message]
@@ -103,7 +105,7 @@ The agent outputs structured markdown. Parse these fields:
 **Warning block format** (may have multiple):
 ```
 - **Check:** [check name]
-- **Type:** [lint-warning|any-type-warning|token-warning]
+- **Type:** [lint-warning|any-type-warning|token-warning|verified-gate-warning|rot-warning]
 - **File:** [file path]
 - **Line:** [line number or -]
 - **Message:** [warning message]
@@ -116,6 +118,8 @@ Phase 3 (verdict routing) and Phase 4 (CLI error detection) run independently - 
 ## Phase 3: Enforce Verdict and Route
 
 ### If PASSED
+
+**Gate reconcile beat (both per-chunk branches):** Read `commands/references/gate-reconcile.md` and run it inline (NOT via the Skill tool) BEFORE complete-chunk.sh. Steady state (Gates row `full coverage`, no rot-warnings) exits silently; an uncovered unrecorded signal gets one ignorable offer line. Never fires on FAILED.
 
 Per-chunk mode (non-final):
 - Run complete-chunk.sh: `bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/complete-chunk.sh`

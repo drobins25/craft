@@ -526,6 +526,18 @@ Run by the `chunk-validator` agent after every chunk:
 
 Failures route to `refine-chunk` (build/lint) or `test-fix` (tests). FAIL is FAIL - no override.
 
+### Beyond npm: verified command gates
+
+The six built-ins auto-detect npm-shaped projects. For everything else - .NET, Go, Python, Rust, Make, multi-stack monorepos - craft never guesses. It measures what it can see and tells you the truth about the rest:
+
+- **The coverage line.** Every validation report carries one `Gates` row. A fast filesystem probe (`gate-signals.sh`) fingerprints which toolchain manifests your repo actually has; when every signal is measured by some gate, the row reads `full coverage`, otherwise it names what's unmeasured (`1 uncovered: *.csproj`). Coverage is judged by what actually ran - a package.json whose checks all skipped counts as uncovered, not covered.
+- **The reconcile offer.** When a chunk passes validation while a toolchain sits unmeasured, craft says one ignorable line: "New since gates were last set: *.csproj - wire it up? Otherwise continuing." Say nothing and it continues. Decline and that signal never asks again (until the signal itself changes).
+- **The setup beat.** Accept, and craft proposes a command from the evidence - as an editable draft, not a take-it-or-leave-it. Your edits become the candidate, and every candidate is run once to prove it starts before anything is written. Pre-existing failures are surfaced honestly with a `blocking: false` option so the gate catches new breakage only. The result lands in `quality.yaml` with a `verified:` date stamp.
+- **Only verified commands run.** A `command:` in quality.yaml with no `verified:` stamp is inert. You can also wire gates by hand: write the command, run it yourself, add your own `verified:` stamp - honored without ceremony.
+- **Rot detection.** If a verified command stops *starting* (toolchain removed, script renamed), that's broken verification, not a failure - the report WARNs and craft offers to re-verify. A gate that can't start never fails your chunk and never goes silent.
+
+Two things worth knowing. **Trust model:** quality.yaml commands execute with your shell - treat a cloned `.craft/` like you treat package.json scripts, because a hand-stamped `verified:` command in a cloned repo runs at first validation. **Per-machine memory:** declined signals are recorded in `.craft/.gate-signals`; on projects that gitignore `.craft/`, each teammate is asked once per machine - by design, since gate choices ride with the workspace that runs them.
+
 ### Reviewer-enforced polish
 
 These can't be unit-tested - they need an agent reading the UI like a person. Three analyzers run post-cycle via `/craft:analyze`:

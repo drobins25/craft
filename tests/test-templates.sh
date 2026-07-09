@@ -138,5 +138,24 @@ fi
 cleanup_test_dir
 echo ""
 
+# Test 6: quality.yaml template gates carry no command fields
+begin_test "quality.yaml template gates carry no command fields"
+
+QUALITY_TEMPLATE="$TEMPLATES_DIR/craft/quality.yaml"
+
+# Extract the gates: block (from "gates:" to the next top-level key), comments stripped
+GATES_BLOCK=$(awk '/^gates:/{flag=1; next} /^[a-z_]+:/{flag=0} flag' "$QUALITY_TEMPLATE" | grep -v '^[[:space:]]*#')
+
+if echo "$GATES_BLOCK" | grep -q "command:"; then
+  echo "  FAIL: template gates carry a command: field — commands must only enter quality.yaml through the verified path"
+  echo "    found: $(echo "$GATES_BLOCK" | grep "command:" | head -3)"
+  FAIL=$((FAIL + 1))
+else
+  echo "  PASS: no command: fields in template gates"
+  PASS=$((PASS + 1))
+fi
+
+echo ""
+
 # --- Summary ---
 finish_tests

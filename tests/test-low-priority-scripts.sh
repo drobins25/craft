@@ -1,6 +1,6 @@
 #!/bin/bash
 # test-low-priority-scripts.sh — Happy-path tests for LOW priority scripts
-# Batched: statusline, run-gates, setup-craft, discover-projects, generate-project-md,
+# Batched: statusline, setup-craft, discover-projects, generate-project-md,
 #          track-usage, self-critique, check-polish
 #
 # SAFETY: Script invocations use (cd "$TEST_DIR" && unset CRAFT_PROJECT_ROOT && ...)
@@ -59,22 +59,6 @@ else
   echo "  SKIP: jq not installed"
   PASS=$((PASS + 1))
 fi
-echo ""
-
-# Test 2: run-gates — exits 0 when no quality.yaml
-begin_test "run-gates — exits 0 with no quality.yaml"
-
-TEST_DIR=$(create_minimal_craft)
-
-set +e
-RESULT=$(cd "$TEST_DIR" && unset CRAFT_PROJECT_ROOT && bash "$SCRIPTS_DIR/run-gates.sh" 2>/dev/null)
-EXIT_CODE=$?
-set -e
-
-assert_eq "exits 0 without quality.yaml" "0" "$EXIT_CODE"
-assert_contains "mentions skipping" "Skipping" "$RESULT"
-
-cleanup_test_dir
 echo ""
 
 # Test 3: setup-craft — creates directory structure

@@ -285,7 +285,7 @@ All hooks defined in `hooks/hooks.json`. Scripts in `hooks/scripts/`.
 | `read-events.sh` | Read from the event log |
 | `append-event.sh` | Append an entry to the event log |
 | `aggregate-failures.py` | Aggregate failure records for triage |
-| `run-gates.sh` | Run quality gate checks |
+| `gate-signals.sh` | Fingerprint the project's stack signals and hold per-signal gate-reconcile state |
 | `check-polish.sh` | Check polish requirements |
 | `self-critique.sh` | Self-critique against locked patterns |
 | `generate-project-md.sh` | Generate project.md from scan |

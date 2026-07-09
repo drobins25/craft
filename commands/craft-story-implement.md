@@ -546,7 +546,8 @@ fi
        PROJECT_ROOT: ${CRAFT_PROJECT_ROOT:-.}
        PM: [package manager]
        STORY_FILE: [absolute path to story .md file]
-       MODE: per-chunk"
+       MODE: per-chunk
+       PLUGIN_ROOT: [resolved ${CLAUDE_PLUGIN_ROOT} - the subagent cannot resolve the variable itself]"
    ```
 
    **NEVER use `run_in_background: true`.** Validation must run synchronously.
@@ -567,6 +568,7 @@ fi
    **Route by verdict:**
 
    **If PASSED (or PARTIAL on non-final chunk):**
+   - **Gate reconcile beat:** Read [references/gate-reconcile.md](references/gate-reconcile.md) and run it inline (NOT via the Skill tool). Steady state (Gates row `full coverage`, no rot-warnings) exits silently; an uncovered unrecorded signal gets one ignorable offer line. This runs BEFORE complete-chunk.sh and never fires on FAILED.
    - Run complete-chunk.sh: `bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/complete-chunk.sh`
    - Write continuation breadcrumb for next chunk:
    ```bash

@@ -46,6 +46,7 @@ You receive these values in your prompt:
 - **PM:** package manager (pnpm/npm/yarn/bun)
 - **STORY_FILE:** absolute path to the story markdown file
 - **MODE:** "per-chunk" or "story-final" (derived from CHUNK value: if CHUNK is "final" then story-final, otherwise per-chunk)
+- **PLUGIN_ROOT:** absolute path to the craft plugin root (locates plugin-internal scripts like gate-signals.sh). If absent from your prompt, the Gates row reports `coverage unknown (no probe)` — never guess the path.
 
 ## Mode Detection
 
@@ -64,9 +65,9 @@ Parse the CHUNK value to determine chunk position:
 
 WARN means the issue is logged but does NOT block completion. FAIL means the issue blocks completion.
 
-## Pre-Check: Read quality.yaml and package.json
+## Pre-Check: Read quality.yaml and package.json, scan stack signals
 
-Before running any checks, read TWO files using the **Read** tool:
+Before running any checks, read TWO files using the **Read** tool and run ONE Bash call:
 
 1. **`PROJECT_ROOT/.craft/quality.yaml`** — If this file exists, parse the `gates:` section. Each gate has an `enabled:` field (`true`/`false`). If a gate is `enabled: false`, **SKIP** that check entirely. Map gate names to checks:
    - `gates.typecheck.enabled` → TypeScript Strict (check 1)
@@ -77,7 +78,13 @@ Before running any checks, read TWO files using the **Read** tool:
 
    If the file does not exist, all checks are enabled by default.
 
+   While the file is open, also collect **verified command gates**: every gate whose name is NOT one of `typecheck`, `lint`, `build`, `tests` AND whose `command:` is non-empty AND whose `verified:` is non-empty. ANY non-empty `verified:` value activates the gate — never parse or validate its format. These four reserved names stay owned by the built-in checks; every other gate name (including `format` and `accessibility`) is eligible. You use this list in check 7.
+
 2. **`PROJECT_ROOT/package.json`** — Store the content mentally — you will reference it for Lint (check 2), Build (check 4), and Tests (check 5). Do NOT read package.json multiple times.
+
+3. **Stack signals** — run exactly ONE Bash call:
+   `cd "PROJECT_ROOT" && bash "PLUGIN_ROOT/hooks/scripts/gate-signals.sh" scan`
+   Capture the `manifest <glob> <count>` lines — this is the project's stack fingerprint, used for the Gates coverage row. If PLUGIN_ROOT was not provided or the script is missing, skip this call and set the Gates row to `coverage unknown (no probe)` — a visible note, never a silent omission.
 
 ## Checks to Run
 
@@ -208,6 +215,34 @@ Run each check in order. For each check, determine the result: **PASS**, **FAIL*
 
 Assignment is enforced primarily at plan time (the binding is a Contract the implementer treats as law); this is the best-effort after-the-fact catch.
 
+### 7. Verified Command Gates
+
+**Goal:** Execute the project's own verified gates alongside the built-in checks.
+**Tool:** Bash (must execute commands)
+
+**How:**
+1. Take the verified command gates collected in Pre-Check step 1. If none → **SKIP**
+2. For each gate, run its `command:` via Bash from PROJECT_ROOT, synchronously. Run the command exactly as written — never invent, repair, or "improve" a command.
+3. Classify each gate's outcome by exit code:
+   - exit 0 → **PASS**
+   - exit 127 → **WARN** — broken verification, not a failure. Message: "verified gate for [gate-name] no longer runs — re-verify?" This is NEVER a silent SKIP: the fail-open rule does not apply to a gate that carries a `verified:` stamp.
+   - any other non-zero → **FAIL**, or **WARN** when the gate has `blocking: false`
+4. Verified gates run in both per-chunk and story-final mode — the project opted into them explicitly.
+
+**Error detail:** first relevant failure line from the command output, max 200 characters.
+
+### Gates Coverage
+
+After all checks resolve, derive the coverage summary for the report's `Gates` row from the Pre-Check stack fingerprint. Coverage keys on OUTCOMES, never on manifest presence:
+
+- A **non-package.json manifest** is **covered** when some verified gate that plausibly exercises its toolchain resolved PASS or WARN (judge from the gate's command and name: `dotnet` → `*.csproj`/`*.sln`, `go` → `go.mod`, `cargo` → `Cargo.toml`, `make` → `Makefile`, `composer` → `composer.json`, python tools → `pyproject.toml`). Otherwise it is **uncovered**.
+- The **package.json** manifest is **covered** when at least one built-in check resolved PASS, WARN, or FAIL. If ALL built-in checks resolved SKIP, package.json is **uncovered** — presence alone never covers.
+
+Row value:
+- No uncovered signals → `full coverage`
+- Otherwise → `N ran, M skipped, K uncovered: <globs>` where ran = checks (built-in + verified) resolving PASS/WARN/FAIL, skipped = checks resolving SKIP, and `<globs>` lists the uncovered manifest globs.
+- Probe unavailable (no PLUGIN_ROOT or script missing) → `coverage unknown (no probe)`
+
 ## After Checks: Determine Status
 
 Determine overall status:
@@ -237,6 +272,7 @@ You MUST return your results in this EXACT format. No deviations.
 | Tests + Coverage | PASS|FAIL|SKIP |
 | Design Tokens | PASS|WARN|SKIP |
 | Visual Binding Assignment | PASS|WARN|SKIP |
+| Gates | full coverage | N ran, M skipped, K uncovered: <globs> | coverage unknown (no probe) |
 
 **Fix count:** 0 | No fixes required
 ```
@@ -245,7 +281,7 @@ If there are FAILs, add an **Errors:** section:
 ```
 **Errors:**
 - **Check:** [check name]
-- **Type:** [type-error|lint-error|build-error|test-failure]
+- **Type:** [type-error|lint-error|build-error|test-failure|verified-gate-error]
 - **File:** [file path]
 - **Line:** [line number or -]
 - **Message:** [error message]
@@ -256,20 +292,23 @@ If there are WARNs, add a **Warnings:** section:
 ```
 **Warnings:**
 - **Check:** [check name]
-- **Type:** [lint-warning|any-type-warning|token-warning|visual-binding-warning]
+- **Type:** [lint-warning|any-type-warning|token-warning|visual-binding-warning|verified-gate-warning|rot-warning]
 - **File:** [file path]
 - **Line:** [line number or -]
 - **Message:** [warning message]
 ```
 
+For a verified command gate, the **Check** field is ALWAYS the literal `Verified Gate: <gate-name>` (e.g., `Verified Gate: tests-dotnet`) — never an improvised label. Use Type `rot-warning` for exit-127 broken verification, `verified-gate-warning` for a non-blocking failure, `verified-gate-error` for a blocking failure.
+
 ## Rules
 
 - **Report, don't fix.** You run checks and report results. You never modify source code.
 - **Exact output format.** The skill parses your output with string matching. Any format deviation breaks routing.
-- **Run checks in order.** TypeScript → Lint → Any Types → Build → Tests → Tokens → Visual Binding.
-- **Minimize tool calls.** Use Read, Grep, and Glob instead of Bash wherever possible. Only use Bash for lint, build, and test execution. Read package.json ONCE and reuse it. Target ~8 total tool calls, not 20+.
+- **Run checks in order.** TypeScript → Lint → Any Types → Build → Tests → Tokens → Visual Binding → Verified Gates.
+- **Minimize tool calls.** Use Read, Grep, and Glob instead of Bash wherever possible. Only use Bash for the stack-signal scan, lint, build, test, and verified-gate execution. Read package.json ONCE and reuse it. Target ~8 total tool calls, not 20+ (the scan adds exactly one; verified gates add one per gate only when a project has wired them).
 - **Truncate long output.** Error/warning messages max 200 characters. Test output can be verbose — extract only the relevant failure line.
-- **Fail open on check errors.** If a check command itself errors (e.g., tool not installed), mark it SKIP with a note, not FAIL.
+- **Fail open on check errors.** If a check command itself errors (e.g., tool not installed), mark it SKIP with a note, not FAIL. EXCEPTION: a verified command gate that cannot start (exit 127) is a rot-warning WARN, never a silent SKIP — a `verified:` stamp promises measurement, so broken measurement must surface.
+- **Never invent or repair commands.** You run what is written-and-verified in quality.yaml, or what npm auto-detection derives. Nothing else.
 - **No commentary.** Output ONLY the structured result. No explanations, no suggestions, no "I noticed..." text.
 - **Per-chunk mode skips Build and Tests.** These checks produce SKIP in per-chunk mode. They run fully in story-final mode. This is intentional — the implementer runs per-file tests during TDD, and story-final is the comprehensive safety net.
 - **NEVER use `run_in_background: true` on Bash commands.** All checks (lint, build, tests) must run synchronously. A backgrounded command orphans its result — validation cannot parse output that never arrives.

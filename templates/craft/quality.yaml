@@ -41,32 +41,29 @@ standards:
 # QUALITY GATES (all must pass before "complete")
 # ─────────────────────────────────────────────────────────────
 gates:
-  # NOTE: Commands use $PM variable which should be detected from:
-  # 1. .craft/project.md (package_manager field)
-  # 2. Lockfiles (pnpm-lock.yaml, yarn.lock, bun.lockb, package-lock.json)
-  # Default fallback is npm if neither found
+  # Built-in gates (typecheck, lint, tests, build) auto-detect their commands
+  # from the project's package manager and scripts. A gate only carries a
+  # `command:` when it has been wired through the verified path - proposed or
+  # hand-written, run once to prove it starts, then stamped `verified: <date>`.
+  # A command with no `verified:` stamp is never executed.
 
   typecheck:
     enabled: true
-    command: "$PM run typecheck"
     blocking: true
 
   lint:
     enabled: true
-    command: "$PM run lint"
     fix_automatically: true
     blocking: true
 
   format:
     enabled: true
-    command: "$PM run format:check"
     fix_automatically: true
     blocking: false               # Auto-fix, don't block
 
   tests:
     enabled: true
     scope: affected               # Only run affected tests
-    command: "$PM test -- --passWithNoTests"
     coverage_threshold: 80        # High bar for pristine
     blocking: true
 
@@ -78,7 +75,6 @@ gates:
 
   build:
     enabled: true
-    command: "$PM run build"
     blocking: true
 
 # ─────────────────────────────────────────────────────────────
