@@ -41,11 +41,17 @@ standards:
 # QUALITY GATES (all must pass before "complete")
 # ─────────────────────────────────────────────────────────────
 gates:
+  # Starting gate set, written at init. It is not static: as your project's
+  # toolchains get wired, gates gain commands (see below).
+  #
   # Built-in gates (typecheck, lint, tests, build) auto-detect their commands
-  # from the project's package manager and scripts. A gate only carries a
-  # `command:` when it has been wired through the verified path - proposed or
-  # hand-written, run once to prove it starts, then stamped `verified: <date>`.
-  # A command with no `verified:` stamp is never executed.
+  # from the package manager and scripts, so they carry no `command:` here.
+  # A gate gains a `command:` only through the verified path:
+  #   - the gate reconcile offer: when a chunk passes validation while a
+  #     toolchain sits unmeasured, craft proposes a command, runs it once to
+  #     prove it starts, then writes it with a `verified: <date>` stamp; or
+  #   - you hand-write the command and add your own `verified:` stamp.
+  # A `command:` with no `verified:` stamp is never executed.
 
   typecheck:
     enabled: true
