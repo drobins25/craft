@@ -73,7 +73,19 @@ flowchart TD
 
     CLARIFY -->|No| ASK_CLARIFY["Clarify with user"]
     ASK_CLARIFY --> CLARIFY
-    CLARIFY -->|Yes| CHOOSE_PATH{"Step 3: How formed is this idea?"}
+    CLARIFY -->|Yes| SCAN{"Step 2.5: Story Source Detection<br/>concepts in .craft/planning/ OR<br/>non-abandoned .craft/mockups/ records?"}
+
+    SCAN -->|"Both empty — zero behavior change"| CHOOSE_PATH
+    SCAN -->|"Either has matches"| SOURCE{"AskUserQuestion:<br/>where does this story come from?<br/>(only options whose scan hit, plus Freeform)"}
+
+    SOURCE -->|Freeform| CHOOSE_PATH
+    SOURCE -->|"From mockup"| FROM_MOCKUP["Pre-fill from converged record<br/>mockup CSS is normative"]
+    SOURCE -->|"From planning"| FROM_PLANNING["Read commands/references/story-from-planning.md<br/>execute phases 1-7 INLINE<br/>(NOT the Skill tool — chain break)"]
+
+    FROM_PLANNING --> FP_WRITE["Concept select → Explore-agent extraction →<br/>gap-fill → write story with ## Reference Materials,<br/>source_concept, alignment: pending →<br/>forward-link active.md + consumed concepts"]
+    FP_WRITE --> FP_END["FLOW ENDS at Phase 7<br/>do NOT continue to Step 3 or Step 3b"]
+
+    CHOOSE_PATH{"Step 3: How formed is this idea?"}
 
     CHOOSE_PATH -->|"Just a spark"| SAVE_MIN["Step 10: Save & Place<br/>(minimal — no content-spark, no chunks)"]
     CHOOSE_PATH -->|"Let's get creative"| CONTENT_CREATIVE["Step 3b: Execute content-spark-inline.md<br/>(inline, NOT Skill tool — chain break)"]
@@ -205,7 +217,14 @@ flowchart TD
     MODE_DISPATCH -->|"Args = ready/active/complete cycle"| ERR["Error: cycle not in planning.<br/>Use /craft:cycle-start instead"]
     MODE_DISPATCH -->|"No args (new cycle)"| NAME["Step 1: Name & Goal"]
 
-    NAME --> CREATE_FILES["Create cycle.yaml + .state IMMEDIATELY<br/>(create-cycle.sh)<br/>Set PLANNING_CYCLE in .global-state<br/>(prevents orphaned dirs on interrupt)"]
+    NAME --> PLAN_SCAN["Scan conversation for planning doc refs<br/>verify each exists in .craft/planning/<br/>prepare source_concept, or empty"]
+    PLAN_SCAN --> GATE{"Safety gate — MANDATORY, runs every path,<br/>cannot be skipped<br/>AskUserQuestion: confirm name + goal +<br/>source_concept BEFORE any file write"}
+    GATE -->|"Change source"| GATE
+    GATE -->|"Change name or goal"| GATE
+    GATE -->|"Actually this is freeform"| GATE
+    GATE -->|"Confirm and proceed"| CREATE_FILES
+
+    CREATE_FILES["Create cycle.yaml + .state IMMEDIATELY<br/>(create-cycle.sh, 5th arg = source-concept-paths)<br/>Set PLANNING_CYCLE in .global-state<br/>(prevents orphaned dirs on interrupt)"]
     CREATE_FILES --> DEPTH{"Step 1b: Planning depth?"}
 
     DEPTH -->|"Add stories now"| DEFAULT["Read references/cycle-design/<br/>default-mode.md"]
@@ -218,7 +237,13 @@ flowchart TD
     ADJUST --> LIST
     CONFIRM_LIST -->|Yes| FOR_EACH["FOR EACH STORY (Step 3)"]
 
-    FOR_EACH --> STORY_SPARK["3a: Discuss spark"]
+    FOR_EACH --> MOMENT{"Step 2.7 Planning-Source Routing<br/>cycle.yaml source_concept populated?"}
+    MOMENT -->|"Empty — freeform cycle"| STORY_SPARK
+    MOMENT -->|"Add-a-separate-story moment"| STORY_SPARK
+    MOMENT -->|"Planning-extraction moment"| EXTRACT_STORY["Read commands/references/story-from-planning.md<br/>execute inline with the INVOCATION marker<br/>(Phase 1 auto-resolves from cycle.yaml)"]
+    EXTRACT_STORY --> SAVE_STORY
+
+    STORY_SPARK["3a: Discuss spark"]
     STORY_SPARK --> STORY_CONTENT["3b: content-spark per story<br/>(inline-via-reference)"]
     STORY_CONTENT --> STORY_PATH{"With creative-spark or skip?"}
     STORY_PATH -->|With creative-spark| STORY_CREATIVE["creative-spark per story<br/>(inline-via-reference)<br/>visual direction included"]
@@ -248,6 +273,8 @@ flowchart TD
 
     ROADMAP --> ROADMAP_DONE["Story titles sketched.<br/>Detail later via<br/>/craft:cycle-design [name]<br/>(re-enters via Detailing Mode)"]
 ```
+
+**Planning-source routing (Step 2.7)** applies in all three modes (default, roadmap, detailing). For each story, the moment is determined independently: a *planning-extraction* story is drawn from the cycle's `source_concept` via `story-from-planning.md` (Read inline, with the `INVOCATION` marker so Phase 1 auto-resolves), while an *add-a-separate-story* story is freeform and gets no `source_concept`. Mixed cycles work natively. Existing stories are never retroactively stamped — populating `source_concept` on an existing story is a user-initiated recovery affordance, never silent.
 
 ---
 
@@ -439,6 +466,124 @@ flowchart TD
     DEST -->|"Park"| PARK["Notebook todo holds the pointer<br/>pickup re-enters this fork"]
     DEST -->|"No choice"| OPEN["Record stays converged<br/>task pending, never nagged"]
 ```
+
+---
+
+## Planning Flow: `/craft:planning`
+
+The strategic roadmap layer above cycles and stories. Manages initiatives, concepts, and open questions, and matures concepts into cycle stories. The main flow below routes on whether a planning folder already exists; the Alignment Walkthrough (further down) is a reusable sub-procedure called from two points.
+
+```mermaid
+%%{init: {'theme': 'dark'}}%%
+flowchart TD
+    PLANNING["/craft:planning"] --> EXISTS{"Step 1:<br/>.craft/planning/active.md exists?"}
+
+    EXISTS -->|No| SETUP{"Step 2: Setup — how to start?"}
+    SETUP -->|"Generate from input"| INPUT["Step 5: Add From Input<br/>transcript / doc / conversation"]
+    SETUP -->|"Start from scratch"| CONVO["Step 6: Conversational Setup"]
+    SETUP -->|"Import from backlog"| IMPORT["Step 7: Import From Backlog<br/>(backlog story is NOT moved or modified)"]
+
+    INPUT --> EXTRACT["5b: Extract candidate concepts<br/>name, scope, open questions, deps"]
+    CONVO --> EXTRACT
+    IMPORT --> EXTRACT
+    EXTRACT --> CONFIRM["5c: Confirm — MANDATORY<br/>AskUserQuestion multiSelect<br/>unselected candidates are discarded"]
+
+    CONFIRM --> ALIGN_NEW["Alignment Walkthrough per confirmed concept<br/>(see sub-procedure below)"]
+    ALIGN_NEW --> STRUCTURE{"5d: 3+ concepts share a theme?"}
+    STRUCTURE -->|Yes| INITIATIVE["Initiative folder + sub-concept files"]
+    STRUCTURE -->|No| STANDALONE["Standalone concept files"]
+    INITIATIVE --> WRITE
+    STANDALONE --> WRITE["5e: Write from templates/planning/<br/>update README.md roadmap table"]
+    WRITE --> UPDATE["Step 4: Update active.md<br/>(called after EVERY planning write)"]
+
+    EXISTS -->|Yes| ASSESS["Step 3: Active Flow<br/>Read active.md + roadmap<br/>rank the most useful next action"]
+    ASSESS --> MENU{"AskUserQuestion: what would you like to do?"}
+
+    MENU -->|"Resume deferred decisions"| ALIGN_RESUME["Alignment Walkthrough (resume path)"]
+    MENU -->|"Add concept or input"| INPUT
+    MENU -->|"Review open questions"| Q["Step 8: grep unresolved checkboxes<br/>scope is ## Open questions ONLY<br/>pending_decisions is out of scope by structure"]
+    MENU -->|"Create stories from a concept"| PICK["9a: Select concept"]
+
+    ALIGN_RESUME --> UPDATE
+    Q --> Q_ACT{"Try to answer from input?"}
+    Q_ACT -->|"Back to menu"| MENU
+    Q_ACT -->|Yes| Q_RESOLVE["Confirm proposed answers, then<br/>mark resolved + add source citation"]
+    Q_RESOLVE --> UPDATE
+
+    PICK --> ALIGN_STORY["9a.1: Alignment Walkthrough"]
+    ALIGN_STORY --> DGATE{"Destination-coverage gate<br/>intra-session, scans TaskTool history<br/>did every closed task file somewhere?"}
+    DGATE -->|No| REFUSE["REFUSE story creation<br/>surface the unfiled item by name<br/>route back to alignment"]
+    REFUSE --> ALIGN_STORY
+    DGATE -->|Yes| ANALYZE["9b: Read + analyze concept"]
+    ANALYZE --> PROPOSE{"9c: Approve the N-story breakdown?"}
+    PROPOSE -->|"Adjust breakdown"| ANALYZE
+    PROPOSE -->|"Not ready yet"| MENU
+    PROPOSE -->|"Approve and create"| CREATE["9d: Write stories to backlog<br/>+ source_concept<br/>+ source_concept_last_updated snapshot<br/>+ concept stories backlink"]
+    CREATE --> PLANNED["9e: concept status → planned"]
+    PLANNED --> UPDATE
+```
+
+**Notes on the main flow:**
+
+- **Step 11 — Auto-promotion.** Adding a sub-concept to a concept that exists as a single `.md` file promotes it to a folder: the original content becomes the folder's `README.md` (reformatted as an initiative README), the new sub-concept lands beside it, and `README.md`'s roadmap reference updates.
+- **Path-discovery rule.** Only `active.md` and `README.md` are hardcoded paths (fixed convention, never promote). Every other planning path is discovered via Glob.
+- **TaskTool is a hard dependency.** The Alignment Walkthrough's working queue lives in TaskTool. If a future harness mode restricts `TaskCreate`, the walkthrough must **fail loudly**, not silently fall back to bundled AskUserQuestion.
+
+Concept completion is a separate entry point — it is called from the story/cycle completion flow, never by the user directly:
+
+```mermaid
+%%{init: {'theme': 'dark'}}%%
+flowchart TD
+    DONE["Story completes<br/>(story-implement / cycle-complete)"] --> HAS_SRC{"Step 10: story frontmatter<br/>has source_concept?"}
+    HAS_SRC -->|No| NOOP["No concept check"]
+    HAS_SRC -->|Yes| ALL{"All stories linked from<br/>the concept complete?"}
+    ALL -->|No| NOOP
+    ALL -->|Yes| CASK{"AskUserQuestion:<br/>mark the concept done?"}
+    CASK -->|"Yes, mark complete"| COMPLETE["concept status → complete<br/>then Step 4"]
+    CASK -->|"Not yet"| STAYS["stays planned<br/>(more stories may follow)"]
+```
+
+### Alignment Walkthrough (sub-procedure)
+
+Invoked from Step 5c (after candidate concepts are confirmed) and Step 9a.1 (before story breakdown). Resolves a concept's strategic sub-decisions one at a time. Conversation is the primary resolution surface; `AskUserQuestion` is the **parking** mechanism, not the asking mechanism — firing it for a question the user can answer right now is a bug.
+
+```mermaid
+%%{init: {'theme': 'dark'}}%%
+flowchart TD
+    AW["Alignment Walkthrough<br/>invoked from Step 5c and Step 9a.1"] --> RESUME{"Concept has<br/>pending_decisions?"}
+    RESUME -->|Yes| REGEN["Regenerate those as TaskTool tasks FIRST<br/>(the user explicitly said 'ask me again')"]
+    RESUME -->|No| DERIVE
+    REGEN --> DERIVE["Derive new candidates from concept state"]
+
+    DERIVE --> CEILING{"Depth ceiling:<br/>more than ~10 candidates?"}
+    CEILING -->|Yes| REFRAME["Reframe some as implementation detail<br/>defer to story-new / plan-chunks"]
+    CEILING -->|No| SHAPE
+    REFRAME --> SHAPE["Present the rough shape:<br/>'anything to add or strike?'"]
+    SHAPE --> QUEUE["TaskCreate one task per confirmed candidate<br/>speculative working queue"]
+
+    QUEUE --> WALK["Walk tasks ONE at a time<br/>conversation is the primary surface"]
+    WALK --> TERM{"How does this task terminate?"}
+
+    TERM -->|"Path A: resolved in conversation"| ASK_LOCK{"MUST ASK explicitly:<br/>'want me to lock this as X?'"}
+    ASK_LOCK -->|"Hedge / open question / implied consent"| WALK
+    ASK_LOCK -->|"Explicit yes"| LOCK["Write to ## Locked decisions IMMEDIATELY<br/>never batched to concept end<br/>close task"]
+
+    TERM -->|"Path B/C: user cannot resolve now"| PARK["AskUserQuestion<br/>the PARKING mechanism, not the asking mechanism"]
+    PARK -->|"Skip - ask me next session"| DEFER["Write to pending_decisions frontmatter<br/>REGENERATES as a task on resume"]
+    PARK -->|"Blocked - waiting on someone"| OWNER["Ask conversationally: who's blocking?"]
+    OWNER --> BLOCKED["Write to ## Open questions with owner<br/>does NOT regenerate<br/>surfaces only via Step 8"]
+
+    LOCK --> NEXT{"More tasks?"}
+    DEFER --> NEXT
+    BLOCKED --> NEXT
+    NEXT -->|Yes| WALK
+    NEXT -->|No| FIN["Walkthrough complete"]
+
+    WALK -.->|"user explicitly says 'drill in'"| DRILL["Opt-in drill-down: same queue pattern<br/>orchestrator NEVER proposes this itself"]
+    DRILL -.-> WALK
+```
+
+**The three-destination invariant.** Every strategic sub-decision terminates in exactly one of: `## Locked decisions` (Path A, explicit lock only), `pending_decisions[]` frontmatter (Path B, regenerates on resume), or `## Open questions` with an owner annotation (Path C, does not regenerate). The concept file is canonical state and survives sessions because resolutions hit disk the moment they resolve; TaskTool is session-scoped working memory and is allowed to die.
 
 ---
 
