@@ -17,6 +17,15 @@ Craft is a Claude Code plugin that runs your work through a creative → impleme
 
 *Craft building its own repo page, live.*
 
+> [!TIP]
+> **Don't want to read any of this?** You don't have to.
+>
+> Just say it to craft, in your own words:
+>
+> > *"How can the craft guide agent help me solve this?"*
+>
+> The read-only `guide` agent auto-triggers on questions like that and answers from craft's actual source, not vibes. No command to memorize - though `/craft:guide` is there if you want to reach it on purpose.
+
 ## Built with Craft
 
 Craft has shipped real, public products across different domains - click through and see working software:
