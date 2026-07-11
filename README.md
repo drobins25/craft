@@ -1,8 +1,8 @@
-![Craft - a Claude Code plugin. Stop vibe coding, start crafting. Craft steals your best ideas back: you say "that's it!" after working through a tweak, and craft remembers - then brings that taste back on a completely different feature later, elevated.](docs/media/hero.svg)
+![Craft - a Claude Code plugin. Stop vibing, start crafting. Craft steals your best ideas back: you say "that's it!" after working through a tweak, and craft remembers - then brings that taste back on a completely different feature later, elevated.](docs/media/hero.svg)
 
 # Craft
 
-> **Stop Vibe Coding. Start Crafting.**
+> **Stop Vibing. Start Crafting.**
 
 Craft is a Claude Code plugin that runs your work through a creative → implement → review loop, with a workshop for building expert agents you consult along the way.
 

@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "craft",
-      "description": "A Claude Code plugin: build your own expert agents, keep your own taste. Stop vibe coding, start crafting.",
+      "description": "A Claude Code plugin: build your own expert agents, keep your own taste. Stop vibing, start crafting.",
       "source": "./",
       "category": "development"
     }
