@@ -67,6 +67,64 @@ else
 fi
 rm -rf "$ROOT"
 
+echo "-- Test: two-arg done writes graduated_to alongside done_at --"
+fresh_root
+TODO=$(bash "$CAP" todo "build the ecosystem closing beat")
+OUT=$(bash "$DONE" "$TODO" "demo-story")
+grep -q "^status: done$" "$OUT" && pass "status flipped to done" || fail "status flipped to done"
+grep -q "^done_at: " "$OUT" && pass "done_at field set" || fail "done_at field set"
+grep -q "^graduated_to: demo-story$" "$OUT" && pass "graduated_to set to ref" || fail "graduated_to set to ref"
+case "$OUT" in
+  */todos/done/*) pass "destination in todos/done/";;
+  *) fail "destination in todos/done/" "*/todos/done/*" "$OUT";;
+esac
+rm -rf "$ROOT"
+
+echo "-- Test: single-arg done writes no graduated_to --"
+fresh_root
+TODO=$(bash "$CAP" todo "close without a destination")
+OUT=$(bash "$DONE" "$TODO")
+grep -q "^done_at: " "$OUT" && pass "done_at field set" || fail "done_at field set"
+if grep -q "^graduated_to:" "$OUT"; then
+  fail "no graduated_to on bare close" "absent" "present"
+else
+  pass "no graduated_to on bare close"
+fi
+rm -rf "$ROOT"
+
+echo "-- Test: tolerant status - hand-edited non-open status still closes cleanly --"
+fresh_root
+TODO=$(bash "$CAP" todo "hand-edited straggler")
+python3 -c "
+import sys, re
+p = sys.argv[1]
+c = open(p).read()
+open(p, 'w').write(re.sub(r'^status: open$', 'status: graduated', c, count=1, flags=re.MULTILINE))
+" "$TODO"
+OUT=$(bash "$DONE" "$TODO")
+grep -q "^status: done$" "$OUT" && pass "non-open status normalized to done" || fail "non-open status normalized to done"
+grep -q "^done_at: " "$OUT" && pass "done_at inserted despite hand-edit" || fail "done_at inserted despite hand-edit"
+rm -rf "$ROOT"
+
+echo "-- Test: tolerant status - hand-set status:done + stray completed field --"
+fresh_root
+TODO=$(bash "$CAP" todo "hand-closed with improvised frontmatter")
+python3 -c "
+import sys, re
+p = sys.argv[1]
+c = open(p).read()
+c = re.sub(r'^status: open$', 'status: done\ncompleted: 2026-07-01', c, count=1, flags=re.MULTILINE)
+open(p, 'w').write(c)
+" "$TODO"
+if OUT=$(bash "$DONE" "$TODO"); then
+  pass "exits 0 on hand-set done + stray completed field"
+else
+  fail "exits 0 on hand-set done + stray completed field"
+fi
+grep -q "^done_at: " "$OUT" && pass "done_at inserted alongside stray completed" || fail "done_at inserted alongside stray completed"
+[ -f "$OUT" ] && pass "file moved to done/" || fail "file moved to done/"
+rm -rf "$ROOT"
+
 echo ""
 echo "-- Summary --"
 echo "Total:  $TOTAL"; echo "Passed: $PASS_COUNT"; echo "Failed: $FAIL_COUNT"

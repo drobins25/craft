@@ -296,7 +296,7 @@ when_to_use must resolve these 7 cases:
 
 Lifecycle operations (`graduate`, `done`) are NOT user-typed subcommands in v1. They run conversationally: Claude detects intent in the user's utterance and runs the helper scripts directly. This section documents the trigger heuristics, confidence tiers, confirmation pattern, and disambiguation rules.
 
-**Lifecycle applies to ideas and todos ONLY - never notes.** `graduate` is an idea operation (idea -> story); `done` is a todo operation (todo -> done/). Notes are durable reference, not work: they have no `status`, never graduate, and never get marked done. Never offer or fire either operation against a note, at any confidence tier. The list view shows no lifecycle affordance for the Notes group. (Mirrors AC21's "no typed subcommand" discipline - notes simply have no lifecycle to invoke.)
+**Lifecycle applies to ideas and todos ONLY - never notes.** `graduate` spans ideas AND todos (entry -> story); for a todo, graduation ALSO closes it as done - the story owns the tracking from that point. `done` is a todo operation (todo -> done/). Notes are durable reference, not work: they have no `status`, never graduate, and never get marked done. Never offer or fire either operation against a note, at any confidence tier. The list view shows no lifecycle affordance for the Notes group. (Mirrors AC21's "no typed subcommand" discipline - notes simply have no lifecycle to invoke.)
 
 ### Graduate flow (AC5, AC22)
 
@@ -323,23 +323,40 @@ Lifecycle operations (`graduate`, `done`) are NOT user-typed subcommands in v1. 
 
 **LOW boundary is strict.** Vague positive sentiment ("that's a good idea," "I like that") is NOT a graduate signal. Future-leaning ("we should make that a story someday") is NOT a graduate signal.
 
-**Inline offer pattern (non-blocking):**
+**Inline offer pattern (non-blocking), by type:**
+
+For an idea:
 
 ```
 Graduate 'compounding kb idea' to a story? I'll run /craft:craft-story-new with it as the spark.
 ```
 
+For a todo, the offer names BOTH effects - story creation and the close:
+
+```
+Graduate 'ecosystem closing beat' todo to a story? I'll create the story and mark the todo done.
+```
+
 The user can ignore the line. On accept ("yes," "do it," "go ahead"):
 
-1. Read the idea file's body
+1. Read the entry file's body
 2. Invoke `/craft:craft-story-new` via Skill tool with the body pre-populated as the spark seed
-3. On story-new success, run:
-   ```bash
-   bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/notebook-graduate-mark.sh "{idea-file}" "{new-story-slug}"
-   ```
-4. Print: `Graduated '{idea-slug}' → story '{story-slug}'.`
+3. On story-new success, branch by the entry's `type`:
+   - `type: idea`:
+     ```bash
+     bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/notebook-graduate-mark.sh "{idea-file}" "{new-story-slug}"
+     ```
+   - `type: todo`:
+     ```bash
+     bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/notebook-done.sh "{todo-file}" "{new-story-slug}"
+     ```
+4. Print, by type:
+   - Idea: `Graduated '{idea-slug}' → story '{story-slug}'.`
+   - Todo: `Done '{todo-slug}' -> tracked by story '{story-slug}'.`
 
-All steps happen in ONE Claude turn. The idea file remains in `.craft/notebook/ideas/` with frontmatter updated (`status: graduated, graduated_to: {story-slug}`).
+All steps happen in ONE Claude turn. The idea file remains in `.craft/notebook/ideas/` with frontmatter updated (`status: graduated, graduated_to: {story-slug}`). The todo file moves to `.craft/notebook/todos/done/` with `status: done, done_at: {date}, graduated_to: {story-slug}` - closed because the story now owns the tracking.
+
+**Consent boundary (do not "fix" this into a second prompt):** the graduate accept is the SINGLE consent covering both story creation and the todo close - the offer text names both effects, so accepting it authorizes both. NO separate done-AUQ fires on the graduation path. AC25's silent-false-positive prohibition governs the Done flow below (completion-claim closes, where no prior explicit consent exists); it does not apply to a close the user explicitly accepted by name. Adding a second confirmation here would ask the user to re-approve the thing they just asked for.
 
 ### Done flow (AC6, AC23, AC25)
 

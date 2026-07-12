@@ -30,7 +30,7 @@ refine-chunk→surgical fix→HAND BACK TO story-implement
 cycle-design→content-spark(per story)→creative-spark(opt)→design-vibe→plan-chunks MODE=batch
 story-new→content-spark→creative-spark(opt)→plan-chunks
 adhoc→classify|bug:investigate→confidence→edit→validate|tweak:fit-check→edit→validate→AUQ(record open until user accepts)|unsure:ask user
-notebook→capture | notebook→capture→done (conversational, AUQ always) | notebook→capture→graduate(conversational)→story-new (pre-fills spark, flags source on success)
+notebook→capture | notebook→capture→done (conversational, AUQ always) | notebook→capture→graduate(conversational)→story-new (pre-fills spark; idea flagged graduated / todo closed done+graduated_to - graduate accept is the one consent, no done-AUQ)
 =RULES
 !implement chunks directly—ALWAYS invoke implementer via Task
 !validate directly—invoke chunk-validator via Task (validate-chunk skill is manual-only)

@@ -325,6 +325,18 @@ You won't type `/craft:notebook graduate 3`. Just tell Claude what you want:
 > **Claude:** *runs story-new, flags the source idea on success*
 > "Graduated 'compounding-kb-decisions' → story 'compounding-kb-decisions'."
 
+Todos graduate too - and graduating a todo also closes it, because the story owns the tracking from that point. The offer names both effects, and that one yes covers both; no second confirmation:
+
+> **You:** "Turn the ecosystem closing beat todo into a story."
+>
+> **Claude:** "Graduate 'ecosystem closing beat' todo to a story? I'll create the story and mark the todo done."
+>
+> **You:** "Yes."
+>
+> **Claude:** "Done 'ecosystem-closing-beat' -> tracked by story 'ecosystem-closing-beat'."
+
+The closed todo lands in `todos/done/` with `graduated_to` pointing at its story - so "where did this story come from" stays answerable.
+
 For done, Claude always confirms first - the file moves silently from active view to `todos/done/`, so the two-second confirmation prevents you from losing track of state:
 
 > **You:** "I took care of the verifier todo."

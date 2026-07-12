@@ -2,6 +2,10 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 1.99.41
+
+- Fixed notebook todos that graduate into a story being left open forever - graduating a todo now closes it as done in the same confirmation and records the story it's tracked by, so your open-todo list only shows work that still needs a home.
+
 ## 1.99.40
 
 - Added intent-seeded inspiration suggestions to /craft:init: the inspiration question now offers "Suggest some for me (Recommended)" when you described your project earlier in init - craft searches the live web for up to 3 reference sites in genuinely different directions (at least one outside the obvious category), verifies every link actually loads before showing it, and presents them as starting points to react to in plain conversation. Pick one and the existing extraction flow pulls its colors and typography; reject all three and you get exactly one smarter re-roll before falling back to the usual "give me a URL" prompt. Users who skipped the intent questions see the same two options as before.
