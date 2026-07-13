@@ -136,19 +136,27 @@ done < <(grep -oE '(commands/)?references/[A-Za-z0-9_./-]+\.md' reference/decisi
 #    fixes), so the newest entry may LAG plugin.json - internal changes bump
 #    with no entry - but it must never be AHEAD of it or malformed. Ahead
 #    means release notes exist for a version that doesn't.
-#    Format is Claude Code style: "## <version>" headings, newest first.
+#    Format: "## <version> - <YYYY-MM-DD>" headings, newest first. Every
+#    heading (not just the newest) must carry a date - a date-less heading
+#    is a format regression, not an older style.
 plugin_version="$(grep -oE '"version": *"[^"]+"' .claude-plugin/plugin.json 2>/dev/null \
   | sed -E 's/.*"([^"]+)"$/\1/')"
 top_entry="$(grep -m1 -E '^## ' CHANGELOG.md 2>/dev/null | sed -E 's/^## +//')"
+top_version="$(printf '%s' "$top_entry" | sed -E 's/ - [0-9]{4}-[0-9]{2}-[0-9]{2}$//')"
 if [ -z "$plugin_version" ]; then
   add "[changelog] cannot read a version from .claude-plugin/plugin.json"
 elif [ -z "$top_entry" ]; then
-  add "[changelog] CHANGELOG.md has no '## <version>' entries"
-elif ! printf '%s' "$top_entry" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-  add "[changelog] CHANGELOG.md's newest heading '## $top_entry' is not a bare version number"
-elif [ "$(printf '%s\n%s\n' "$top_entry" "$plugin_version" | sort -V | tail -1)" != "$plugin_version" ]; then
-  add "[changelog] CHANGELOG.md's newest entry ($top_entry) is ahead of plugin.json ($plugin_version)"
+  add "[changelog] CHANGELOG.md has no '## <version> - <date>' entries"
+elif ! printf '%s' "$top_entry" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+ - [0-9]{4}-[0-9]{2}-[0-9]{2}$'; then
+  add "[changelog] CHANGELOG.md's newest heading '## $top_entry' is not '<version> - <YYYY-MM-DD>'"
+elif [ "$(printf '%s\n%s\n' "$top_version" "$plugin_version" | sort -V | tail -1)" != "$plugin_version" ]; then
+  add "[changelog] CHANGELOG.md's newest entry ($top_version) is ahead of plugin.json ($plugin_version)"
 fi
+while read -r h; do
+  [ -z "$h" ] && continue
+  add "[changelog] heading '## $h' is missing its date - format is '## <version> - <YYYY-MM-DD>'"
+done < <(grep -E '^## ' CHANGELOG.md 2>/dev/null | sed -E 's/^## +//' \
+  | grep -vE '^[0-9]+\.[0-9]+\.[0-9]+ - [0-9]{4}-[0-9]{2}-[0-9]{2}$')
 
 # 9. Feature release notes: an unpushed feat: commit must be accompanied by a
 #    CHANGELOG.md change somewhere in the unpushed range - a feature cannot
