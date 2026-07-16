@@ -59,7 +59,7 @@ _The widget:_
 ```
 AskUserQuestion:
   header: "1 of 1"
-  question: "Apply the new address check to all three forms now, or just checkout?"
+  question: "The new address check would fit two other forms (the account page and the shipping-book editor), but covering them roughly doubles this story. Apply the check to all three forms now, or just checkout?"
   options:
     - label: "Checkout only (Recommended)"
       description: "Ships this cycle. The other two forms are real work - a clean follow-up, not a corner cut."
@@ -74,6 +74,9 @@ is an honest one-line verdict - the endorsement on the runner-up, the cost state
 plainly. `Let's discuss` closes the set. The evidence was cited once, as a
 coordinate ("three call sites"), never as a claim of diligence. Every option was
 already argued in the prose; none is filler invented to round out the list.
+And the question field stands alone: one or two sentences of the problem, then
+the ask - answerable by someone who saw nothing above it, on every model. This
+holds for both gates, always; the prose enriches, it is never load-bearing.
 
 ## The worked dead end
 
@@ -98,7 +101,7 @@ _The widget:_
 ```
 AskUserQuestion:
   header: "1 of 1"
-  question: "The reminder this story describes is already built and running. What should this story become?"
+  question: "The saved-cart reminder this story asks for is already built and running; the only gap is that no test covers it. What should this story become?"
   options:
     - label: "Close it - already built (Recommended)"
       description: "Mark it done; the missing test lands as a quick fix, not a story."

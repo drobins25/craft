@@ -71,6 +71,8 @@ assert_file_contains "bold lean modeled" '\*\*My lean:\*\*' "$GRAMMAR"
 assert_file_contains "evidence cited once as a coordinate" 'three call sites' "$GRAMMAR"
 assert_file_contains "escape option modeled" "Let's discuss" "$GRAMMAR"
 assert_file_contains "header chip carries the position counter" 'header: "1 of 1"' "$GRAMMAR"
+assert_file_contains "question field stands alone: problem then ask" 'one or two sentences of the problem, then' "$GRAMMAR"
+assert_file_contains "prose is enrichment, never load-bearing" 'the prose enriches, it is never load-bearing' "$GRAMMAR"
 assert_file_contains "honest runner-up verdicts" 'honest one-line verdict' "$GRAMMAR"
 
 finish_tests
