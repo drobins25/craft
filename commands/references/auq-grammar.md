@@ -37,8 +37,10 @@ _The brief, once, before the first finding:_
 > I looked at where this lands. One thing needs your call - I settled the rest
 > myself (test names, error copy: engineering, not product).
 
-_The finding:_
+_The finding (it opens on a title naming the problem):_
 
+> **The address check fits three forms - the story covers one.**
+>
 > You want the new address check on the checkout form. The same check would fit the
 > two other forms that take an address - the account page and the shipping-book
 > editor.
@@ -84,11 +86,12 @@ real question is what the story becomes. Mirror this shape: state the fact in
 a few sentences, cite the location once, and ask the story-fate question.
 No brief, no lean, no argued case - a dead end decides itself.
 
-_The finding:_
+_The finding (same rule - a title, then the fact):_
 
-> The saved-cart reminder this story asks for already exists - checkout builds
-> it and sends it on the schedule the spark describes. I read the reminder job
-> end to end to confirm.
+> **The saved-cart reminder is already built.**
+>
+> Checkout builds it and sends it on the schedule the spark describes. I read
+> the reminder job end to end to confirm.
 >
 > The only gap is that no test covers it.
 

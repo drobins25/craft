@@ -67,6 +67,8 @@ assert_file_contains "visible prose named as requirement" 'Visible prose' "$GRAM
 assert_file_contains "airy paragraphs modeled" 'Short, airy paragraphs' "$GRAMMAR"
 assert_file_contains "opens from the user's intent" 'Opens from the user' "$GRAMMAR"
 assert_file_not_contains "prose counter retired - the chip carries position" 'Finding 1 of 1' "$GRAMMAR"
+assert_file_contains "fork finding opens on a problem title" 'The address check fits three forms - the story covers one' "$GRAMMAR"
+assert_file_contains "dead-end finding opens on a problem title" 'The saved-cart reminder is already built' "$GRAMMAR"
 assert_file_contains "bold lean modeled" '\*\*My lean:\*\*' "$GRAMMAR"
 assert_file_contains "evidence cited once as a coordinate" 'three call sites' "$GRAMMAR"
 assert_file_contains "escape option modeled" "Let's discuss" "$GRAMMAR"
