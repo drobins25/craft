@@ -58,6 +58,7 @@ _The widget:_
 
 ```
 AskUserQuestion:
+  header: "1 of 1"
   question: "Apply the new address check to all three forms now, or just checkout?"
   options:
     - label: "Checkout only (Recommended)"
@@ -96,6 +97,7 @@ _The widget:_
 
 ```
 AskUserQuestion:
+  header: "1 of 1"
   question: "The reminder this story describes is already built and running. What should this story become?"
   options:
     - label: "Close it - already built (Recommended)"
