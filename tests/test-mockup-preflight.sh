@@ -34,10 +34,10 @@ assert_eq "beat heading between determination and mkdir anchor" "between" "$POSI
 
 # --- Setup AUQ transcribed verbatim ---
 begin_test "Setup AUQ transcribed verbatim"
-assert_file_contains "Setup question line verbatim" 'These options can come from what'"'"'s already on disk, or from what you'"'"'re actually chasing right now. Bring inspiration in first, or just go from your existing code.' "$MOCKUP"
+assert_file_contains "Setup question line verbatim" 'This mockup can grow from what'"'"'s already on disk, or from what you'"'"'re actually chasing right now. Bring inspiration in first, or just go from your existing code.' "$MOCKUP"
 assert_file_contains "Setup header present" 'header: "Setup"' "$MOCKUP"
-assert_file_contains "Init first label present" 'label: "Init first"' "$MOCKUP"
-assert_file_contains "Init first description verbatim" 'The full session - pull colors from one site, type from another, riff until it'"'"'s right. These options come from that.' "$MOCKUP"
+assert_file_contains "Init first label present with Recommended marker" 'label: "Init first (Recommended)"' "$MOCKUP"
+assert_file_contains "Init first description verbatim" 'The full session - pull colors from one site, type from another, riff until it'"'"'s right. The mockup grows out of that.' "$MOCKUP"
 assert_file_contains "Go from disk label present" 'label: "Go from what'"'"'s on disk"' "$MOCKUP"
 assert_file_contains "Go from disk description verbatim" 'Reads your actual code, no reference brought in. Fast, and still real - just working from what you'"'"'ve already made, not what you'"'"'re chasing next.' "$MOCKUP"
 
@@ -56,13 +56,15 @@ assert_contains "no marker write on the exit" 'No marker is ever written on this
 
 # --- Scope AUQ transcribed verbatim with {Section} placeholder ---
 begin_test "Scope AUQ transcribed verbatim with {Section} placeholder"
-assert_file_contains "Scope question line verbatim" 'Full page means 3 options, up to 3 rounds - the big swing. Want the whole page now, or take {Section} first to see your range before you spend it all on page one?' "$MOCKUP"
+assert_file_contains "Scope question line verbatim" 'Full page means 3 options, up to 3 rounds - the big swing. Want the whole page now, or aim everything at {Section} first? Tighter canvas, sharper rounds - the best full pages start small.' "$MOCKUP"
 assert_file_contains "Scope header present" 'header: "Scope"' "$MOCKUP"
 assert_file_contains "Full page label present" 'label: "Full page"' "$MOCKUP"
 assert_file_contains "Full page description verbatim" 'All 3 rounds, the whole page. Go big now.' "$MOCKUP"
-assert_file_contains "Section-first label with literal placeholder" 'label: "{Section} first"' "$MOCKUP"
-assert_file_contains "Section-first description verbatim" 'One section, same 3 rounds. Fast look at your range before you spend it all on page one.' "$MOCKUP"
+assert_file_contains "Section-first label with literal placeholder and Recommended marker" 'label: "{Section} first (Recommended)"' "$MOCKUP"
+assert_file_contains "Section-first description verbatim" 'All 3 rounds focused on one surface. Small canvas, sharper results - grow the page from what wins here.' "$MOCKUP"
 assert_contains "never-hardcode-hero instruction present" 'never hardcoded "hero"' "$BEAT_BLOCK"
+assert_contains "interpolation must sell" 'it has to SELL' "$BEAT_BLOCK"
+assert_contains "bare slot names rejected" 'never a bare slot name' "$BEAT_BLOCK"
 
 # --- Triggers: Setup cold + first-mockup, Scope whole-page + first-mockup ---
 begin_test "Setup trigger is cold + first-mockup-only"

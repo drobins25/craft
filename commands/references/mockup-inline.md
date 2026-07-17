@@ -23,18 +23,18 @@ All writes live under the project's own `.craft/` (cold path: `$MOCKUP_ROOT/.cra
   - **Zero visual files -> route to `/craft:init`.** No confirmation AskUserQuestion (invoking the command is consent - the same rule /craft itself uses to route to init) and no auto-resume: the funnel STOPS here and init takes over. The user re-invokes `/craft:mockup` after init completes. If they already gave rich mockup detail before the gate, capture it to the notebook AFTER init exists (notebook needs a resolvable root) - never at the gate itself.
   - **Visual files present -> the cold path.** Set `MOCKUP_ROOT` to the git toplevel (`git rev-parse --show-toplevel`) when in a repo, else PWD - never a subdirectory. Every mockup write lives under `$MOCKUP_ROOT/.craft/`, created on demand - only the subdirectories the mockup itself needs. The cold path NEVER writes `.craft/.global-state` or `.craft/project.md`: their absence is craft's "not yet onboarded" signal, and writing either would silently kill the init offer. Run the funnel below reading `${CRAFT_PROJECT_ROOT:-.}` as `$MOCKUP_ROOT`.
 
-**Pre-flight copy rules (locked).** The two pre-flight questions below are transcribed copy - never re-voiced, never "improved". No pre-flight string may contain "guess" or "guessing": the alchemist reads real code on both paths (the never-fabricate rule below - "no default palette ever reaches a brief"), and guess-language is the generic-AI framing this funnel is not. Never escalate: this is one honest ask, all options stay first-class permanently, and no future pass may add urgency, warn harder about what is "lost", re-order or re-weight options, or otherwise tune this beat to drive init adoption. Init is never pitched as a feature list, and "Go from what's on disk" is never written as the lesser option - for someone whose shipped code already is what they want, it is the right call. The pre-flight is a substep of Brief: substeps never become tasks, so it gets no entry on the task rail.
+**Pre-flight copy rules (locked).** The two pre-flight questions below are transcribed copy - never re-voiced, never "improved". No pre-flight string may contain "guess" or "guessing": the alchemist reads real code on both paths (the never-fabricate rule below - "no default palette ever reaches a brief"), and guess-language is the generic-AI framing this funnel is not. Never escalate: this is one honest ask, all options stay first-class permanently, and no future pass may add urgency, warn harder about what is "lost", re-order or re-weight options, or otherwise tune this beat to drive init adoption. The two sanctioned weights are the "(Recommended)" markers on "Init first" and "{Section} first" - owner-locked copy (2026-07-17), not later escalations: the section marker recommends for quality (the tighter scope produces the sharper mockup), and no pass may remove either. Init is never pitched as a feature list, and "Go from what's on disk" is never written as the lesser option - for someone whose shipped code already is what they want, it is the right call. The pre-flight is a substep of Brief: substeps never become tasks, so it gets no entry on the task rail.
 
 **Pre-flight (first mockup only) - Setup, then Scope.** Two conditional questions that teach what the funnel never says out loud: this is craft's expensive end, and init is a design session whose output these options would grow from. Both gate on the same check - `.craft/mockups/` holds no `*/record.md`, resolved against the funnel's own root (`$MOCKUP_ROOT` on the cold path, `${CRAFT_PROJECT_ROOT:-.}` warm), never PWD-relative and never the shell's Step 2 idiom, which resolves before `MOCKUP_ROOT` exists. The `mkdir` + `record.md` write below is what deletes them: a project that has mocked before sees neither question, and an answered-and-entered run is never re-asked. They are TWO SEPARATE AskUserQuestion calls, never batched into one widget (the solidify beat's one-call idiom does not apply here): Setup runs first because it can terminate the funnel, and Scope's trigger is evaluated only after Setup resolves to "Go from what's on disk" - a batched Scope answer would be collected and then discarded when "Init first" stops the run.
 
 **Setup** - fires on the cold path's visual-files-present branch only (the zero-visual-files branch above keeps its hard route to `/craft:init` - nothing on disk to go from, no question to ask), and only while the record check above is empty:
 
 ```
-question: "These options can come from what's already on disk, or from what you're actually chasing right now. Bring inspiration in first, or just go from your existing code."
+question: "This mockup can grow from what's already on disk, or from what you're actually chasing right now. Bring inspiration in first, or just go from your existing code."
 header: "Setup"
 options:
-  - label: "Init first"
-    description: "The full session - pull colors from one site, type from another, riff until it's right. These options come from that."
+  - label: "Init first (Recommended)"
+    description: "The full session - pull colors from one site, type from another, riff until it's right. The mockup grows out of that."
   - label: "Go from what's on disk"
     description: "Reads your actual code, no reference brought in. Fast, and still real - just working from what you've already made, not what you're chasing next."
 ```
@@ -43,16 +43,16 @@ options:
 
 **If "Go from what's on disk":** continue to Scope.
 
-**Scope** - fires on any path, warm or cold, when the subject names a whole page or multi-section surface AND the record check above is empty. Single components - a nav, pricing cards, a hero, a modal - never trigger it. `{Section}` is interpolated from the subject and the surrounding code (the page's own first meaningful section), never hardcoded "hero":
+**Scope** - fires on any path, warm or cold, when the subject names a whole page or multi-section surface AND the record check above is empty. Single components - a nav, pricing cards, a hero, a modal - never trigger it. `{Section}` is interpolated from the subject and the surrounding code, and it has to SELL - name the section by its most alive element ("the header with the brand mark", "the hero with the scroll reveal"), never a bare slot name ("the header"), never hardcoded "hero". If the section option doesn't sound like a design moment, the interpolation failed - the tighter scope genuinely produces the sharper mockup, and the name should make that believable:
 
 ```
-question: "Full page means 3 options, up to 3 rounds - the big swing. Want the whole page now, or take {Section} first to see your range before you spend it all on page one?"
+question: "Full page means 3 options, up to 3 rounds - the big swing. Want the whole page now, or aim everything at {Section} first? Tighter canvas, sharper rounds - the best full pages start small."
 header: "Scope"
 options:
+  - label: "{Section} first (Recommended)"
+    description: "All 3 rounds focused on one surface. Small canvas, sharper results - grow the page from what wins here."
   - label: "Full page"
     description: "All 3 rounds, the whole page. Go big now."
-  - label: "{Section} first"
-    description: "One section, same 3 rounds. Fast look at your range before you spend it all on page one."
 ```
 
 The Scope answer settles the subject BEFORE the folder below is created, so a narrowed scope names the slug correctly and no orphan folder exists. A user who answered once - full page or section - made their standing decision; it is never re-asked on later mockups (the record they are about to create keeps both questions silent forever).
