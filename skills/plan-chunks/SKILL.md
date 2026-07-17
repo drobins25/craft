@@ -303,7 +303,7 @@ Include in the prompt:
 **Step 0 - PLAN FORK check:**
 
 If the agent's output is a `## PLAN FORK` report instead of a concerns summary, the agent hit a two-plans question only the user can answer. Do NOT validate or triage yet:
-1. Read `${CLAUDE_PLUGIN_ROOT}/commands/references/auq-grammar.md` and mirror the fork gate, then surface ONE **AskUserQuestion**: the question field self-contained (one or two sentences of the problem, then the ask), the agent's recommended branch first labeled "(Recommended)", an honest one-line verdict on each branch, and "Let's discuss" closing the set.
+1. Read `${CLAUDE_PLUGIN_ROOT}/commands/references/auq-grammar.md` and mirror the fork gate, then surface ONE **AskUserQuestion**: the question field self-contained (one or two sentences of the problem, then the ask), the agent's recommended branch first labeled "(Recommended)", and an honest one-line verdict on each branch.
 2. **SendMessage the answer back to the SAME planning agent** - addressed by the agentId from the spawn result, never the description: "Fork resolved: [chosen branch]. Continue planning." Its investigation context is intact — do not spawn a fresh agent. (Only if the agent is unreachable or SendMessage is unavailable in this environment: re-launch S-1 with the fork resolution included in the prompt.)
 3. When the agent returns its concerns summary, proceed with Step 1 below as normal.
 
@@ -379,13 +379,13 @@ If the concerns summary's Critical Blockers section has entries, surface them im
 
 > "[Story Name] has a blocker: [blocker description]. [Agent's recommendation]."
 
-Use **AskUserQuestion** per blocker - the question field carries the blocker and its consequence (self-contained), the agent's recommendation first labeled "(Recommended)", honest one-line verdicts on the alternatives, and "Let's discuss" closing the set. If the blocker means the story can't be planned, stop and report why. (A blocker with no live alternatives is a dead end - mirror the dead-end gate and ask the story-fate question.)
+Use **AskUserQuestion** per blocker - the question field carries the blocker and its consequence (self-contained), the agent's recommendation first labeled "(Recommended)", and honest one-line verdicts on the alternatives. If the blocker means the story can't be planned, stop and report why. (A blocker with no live alternatives is a dead end - mirror the dead-end gate and ask the story-fate question.)
 
 **Step 2 - Flagged Concerns:**
 
 Review the Flagged Concerns table. Surface by confidence level - **each concern gets its own individual AskUserQuestion** (the anti-collapse principle applies here too):
 
-- **Low confidence:** Individual AskUserQuestion with agent's recommendation + alternative + "Let's discuss"
+- **Low confidence:** Individual AskUserQuestion with agent's recommendation + alternative
 - **Medium confidence:** Individual AskUserQuestion with "(Recommended)" label + alternative + "Accept as-is"
 - **High confidence:** Informational only - include in plan presentation as "Risks Acknowledged," don't surface during triage
 
@@ -402,8 +402,6 @@ options:
     description: "[Why original doesn't work + how this solves it]"
   - label: "Keep original anyway"
     description: "[The honest cost of keeping it, in a phrase]"
-  - label: "Let's discuss"
-    description: "I want to explore alternatives"
 ```
 
 If all decisions validated as `valid` → proceed with no interaction.
@@ -425,8 +423,6 @@ options:
     description: "[Agent's reasoning]"
   - label: "[Alternative]"
     description: "[Different approach]"
-  - label: "Let's discuss"
-    description: "I want to think about this more"
 ```
 
 - **mention** → no question. Collect into the "Decisions you'd want to know" block of the plan presentation (S-4) — the "cool, that's nice" tier.

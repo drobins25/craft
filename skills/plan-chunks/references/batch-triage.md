@@ -57,7 +57,7 @@ options:
     description: "Leave this for implementation to figure out"
 ```
 
-**Deriving the alternative:** Look at the agent's concern description. If it mentions two approaches, use the non-recommended one. If it's a yes/no decision, the alternative is the opposite. If no natural alternative exists, use "Different approach — let's discuss" as the second option.
+**Deriving the alternative:** Look at the agent's concern description. If it mentions two approaches, use the non-recommended one. If it's a yes/no decision, the alternative is the opposite. If no natural alternative exists, use "Different approach" as the second option - the built-in "Chat about this" exit already covers discussion.
 
 ### BT-3: Worth Noting (per item — same as BT-2)
 
@@ -74,7 +74,7 @@ options:
     description: "Agent's call is fine, move on"
 ```
 
-**Deriving the alternative:** Same as BT-2 — look at the concern description for a natural alternative. Use "Different approach — let's discuss" if no natural alternative exists.
+**Deriving the alternative:** Same as BT-2 — look at the concern description for a natural alternative. Use "Different approach" if no natural alternative exists.
 
 ### BT-4: Cohesion Issue (per issue)
 

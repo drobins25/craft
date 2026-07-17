@@ -65,15 +65,15 @@ AskUserQuestion:
       description: "Ships this cycle. The other two forms are real work - a clean follow-up, not a corner cut."
     - label: "All three now"
       description: "Also solid if you'd rather land it once - but it roughly doubles the diff and moves the ship date."
-    - label: "Let's discuss"
-      description: "Want to weigh the split before I plan."
 ```
 
 The recommendation is first and carries `(Recommended)`. Each option's description
 is an honest one-line verdict - the endorsement on the runner-up, the cost stated
-plainly. `Let's discuss` closes the set. The evidence was cited once, as a
-coordinate ("three call sites"), never as a claim of diligence. Every option was
-already argued in the prose; none is filler invented to round out the list.
+plainly. The harness renders its own `Chat about this` exit under every widget -
+never author an escape option; every authored option is a real outcome. The
+evidence was cited once, as a coordinate ("three call sites"), never as a claim
+of diligence. Every option was already argued in the prose; none is filler
+invented to round out the list.
 And the question field stands alone: one or two sentences of the problem, then
 the ask - answerable by someone who saw nothing above it, on every model. This
 holds for both gates, always; the prose enriches, it is never load-bearing.
@@ -106,6 +106,4 @@ AskUserQuestion:
       description: "Mark it done; the missing test lands as a quick fix, not a story."
     - label: "Re-scope to the unbuilt part"
       description: "Keep the story, rewrite the spark around what's genuinely missing - if you had more in mind."
-    - label: "Let's discuss"
-      description: "Walk me through what you found first."
 ```

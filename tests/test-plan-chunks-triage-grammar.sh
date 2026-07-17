@@ -30,7 +30,7 @@ assert_contains "fork block exists" 'PLAN FORK' "$FORK_BLOCK"
 assert_contains "fork reads auq-grammar at gate time" 'auq-grammar.md' "$FORK_BLOCK"
 assert_contains "recommended branch first, labeled" '(Recommended)' "$FORK_BLOCK"
 assert_contains "honest verdict per branch" 'honest one-line verdict' "$FORK_BLOCK"
-assert_contains "Let's discuss closes the fork set" "Let's discuss" "$FORK_BLOCK"
+assert_not_contains "authored escape retired from the fork" "et's discuss" "$FORK_BLOCK"
 assert_contains "question field self-contained" 'one or two sentences of the problem' "$FORK_BLOCK"
 
 # --- S-3: one gate-time Read covers all five triage questions ---
@@ -84,6 +84,11 @@ begin_test "BT-6 is reconciliation and Adjust binds landed decisions"
 assert_file_contains "BT-6 demoted to reconciliation" 'BT-6 is reconciliation, not first-write' "$BATCH"
 assert_file_contains "Adjust re-plan binds landed decisions" 'BINDING constraints' "$BATCH"
 assert_file_contains "receipted answers never silently dropped" 'never silently drop a receipted answer' "$BATCH"
+
+# --- The authored escape stays dead everywhere in plan-chunks ---
+begin_test "no authored Let's discuss anywhere in plan-chunks"
+assert_file_not_contains "escape absent from SKILL.md (any case)" "et's discuss" "$SKILL"
+assert_file_not_contains "escape absent from batch-triage.md (any case)" "et's discuss" "$BATCH"
 
 # --- The hard boundary: non-insight AUQ surfaces stay ungated ---
 # Each block is extracted by its stable heading (never edited by this story) so the
