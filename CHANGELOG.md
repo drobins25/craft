@@ -4,7 +4,7 @@ Notable, user-facing changes per version. Internal changes (tests, refactors, co
 
 ## 1.99.49 - 2026-07-17
 
-- Added a first-run pre-flight to the mockup funnel: on a project's first-ever mockup, craft now asks up front whether to run the init design session first or build from the code already on disk, and - for whole-page subjects - whether to mock one section first to see your range before spending all three rounds on the full page. Both questions disappear on their own once a first mockup record exists.
+- Added a first-run pre-flight to the mockup funnel: on a cold project's first-ever mockup, craft now asks up front whether to run the init design session first or build from the code already on disk. The question disappears on its own once a first mockup record exists.
 
 ## 1.99.48 - 2026-07-17
 

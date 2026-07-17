@@ -1,13 +1,14 @@
 #!/bin/bash
 # test-mockup-preflight.sh - Guard Story 18's locked strings in the mockup funnel spec.
 # Doc-level assertions that the first-run pre-flight beat is specced as locked: the
-# Setup and Scope AUQ copy verbatim, the beat's position (after the cold-start
-# determination, before the mkdir anchor), the amended taste-AUQ invariant, the
-# never-escalate and scoped no-guess rules, the self-elimination property with its
-# one deliberate exception (Init-first exits before the record), the separate-calls
-# rule, and the survival of the load-bearing guards (:74 no-default-palette,
-# :88 (Recommended) marker, :92 substeps-never-tasks). Adjacent stories edit this
-# same shared file; a paraphrased rule or re-voiced copy should fail the suite.
+# Setup AUQ copy verbatim, the beat's position (after the cold-start determination,
+# before the mkdir anchor), the amended taste-AUQ invariant, the never-escalate and
+# scoped no-guess rules, the self-elimination property with its one deliberate
+# exception (Init-first exits before the record), and the survival of the
+# load-bearing guards (no-default-palette, (Recommended) marker, substeps-never-
+# tasks). The Scope AUQ was REMOVED at owner review 2026-07-17 (it minimalized the
+# first-run wow) - a negative below guards against its return. Adjacent stories edit
+# this same shared file; a paraphrased rule or re-voiced copy should fail the suite.
 
 source "$(dirname "${BASH_SOURCE[0]}")/test_helper.sh"
 
@@ -54,28 +55,15 @@ assert_contains "exit precedes the record" 'This exit happens BEFORE the record 
 assert_contains "re-offer is deliberate" 'offered Setup again - deliberately' "$BEAT_BLOCK"
 assert_contains "no marker write on the exit" 'No marker is ever written on this exit' "$BEAT_BLOCK"
 
-# --- Scope AUQ transcribed verbatim with {Section} placeholder ---
-begin_test "Scope AUQ transcribed verbatim with {Section} placeholder"
-assert_file_contains "Scope question line verbatim" 'Full page means 3 options, up to 3 rounds - the big swing. Want the whole page now, or aim everything at {Section} first? Tighter canvas, sharper rounds - the best full pages start small.' "$MOCKUP"
-assert_file_contains "Scope header present" 'header: "Scope"' "$MOCKUP"
-assert_file_contains "Full page label present" 'label: "Full page"' "$MOCKUP"
-assert_file_contains "Full page description verbatim" 'All 3 rounds, the whole page. Go big now.' "$MOCKUP"
-assert_file_contains "Section-first label with literal placeholder and Recommended marker" 'label: "{Section} first (Recommended)"' "$MOCKUP"
-assert_file_contains "Section-first description verbatim" 'All 3 rounds focused on one surface. Small canvas, sharper results - grow the page from what wins here.' "$MOCKUP"
-assert_contains "never-hardcode-hero instruction present" 'never hardcoded "hero"' "$BEAT_BLOCK"
-assert_contains "interpolation must sell" 'it has to SELL' "$BEAT_BLOCK"
-assert_contains "bare slot names rejected" 'never a bare slot name' "$BEAT_BLOCK"
+# --- Scope AUQ stays removed (owner call, 2026-07-17: it minimalized the wow) ---
+begin_test "Scope AUQ stays removed"
+assert_file_not_contains "no Scope header returns" 'header: "Scope"' "$MOCKUP"
+assert_file_not_contains "no Section placeholder returns" '{Section}' "$MOCKUP"
 
-# --- Triggers: Setup cold + first-mockup, Scope whole-page + first-mockup ---
+# --- Trigger: Setup cold + first-mockup ---
 begin_test "Setup trigger is cold + first-mockup-only"
 assert_contains "Setup rides the visual-files-present branch" 'fires on the cold path'"'"'s visual-files-present branch only' "$BEAT_BLOCK"
 assert_contains "zero-visual-files branch keeps its hard route" 'keeps its hard route' "$BEAT_BLOCK"
-
-begin_test "Scope trigger is first-mockup-only and whole-page"
-assert_contains "warmth-independent trigger" 'fires on any path, warm or cold' "$BEAT_BLOCK"
-assert_contains "whole-page subject required" 'whole page or multi-section surface' "$BEAT_BLOCK"
-assert_contains "single-component subjects trigger no pre-flight" 'a nav, pricing cards, a hero, a modal - never trigger it' "$BEAT_BLOCK"
-assert_contains "prior answer stands" 'never re-asked on later mockups' "$BEAT_BLOCK"
 
 # --- Gate: record glob under the funnel's resolved root ---
 begin_test "gate check names the resolved root and the record glob"
@@ -84,23 +72,10 @@ assert_contains "resolved against the funnel root" 'resolved against the funnel'
 assert_contains "never PWD-relative" 'never PWD-relative' "$BEAT_BLOCK"
 assert_contains "shell Step 2 idiom excluded" 'never the shell'"'"'s Step 2 idiom' "$BEAT_BLOCK"
 
-# --- Ordering + separate calls ---
-begin_test "Setup precedes Scope with stated rationale, as two separate calls"
-SETUP_LINE="$(grep -n 'header: "Setup"' "$MOCKUP" | head -1 | cut -d: -f1)"
-SCOPE_LINE="$(grep -n 'header: "Scope"' "$MOCKUP" | head -1 | cut -d: -f1)"
-ORDER="wrong"
-if [ -n "$SETUP_LINE" ] && [ -n "$SCOPE_LINE" ] && [ "$SETUP_LINE" -lt "$SCOPE_LINE" ]; then
-  ORDER="setup-first"
-fi
-assert_eq "Setup block precedes Scope block" "setup-first" "$ORDER"
-assert_contains "termination rationale stated" 'Setup runs first because it can terminate the funnel' "$BEAT_BLOCK"
-assert_contains "two separate calls, never batched" 'TWO SEPARATE AskUserQuestion calls, never batched' "$BEAT_BLOCK"
-assert_contains "Scope evaluated only after Setup resolves" 'evaluated only after Setup resolves to "Go from what'"'"'s on disk"' "$BEAT_BLOCK"
-
 # --- Amended invariant ---
-begin_test "amended invariant names three taste + up to two pre-flight AUQs"
+begin_test "amended invariant names three taste + one pre-flight AUQ"
 assert_file_contains "amended taste count present" 'Exactly three taste AskUserQuestion calls exist' "$MOCKUP"
-assert_file_contains "pre-flight allowance present" 'Up to two first-run pre-flight AUQs' "$MOCKUP"
+assert_file_contains "pre-flight allowance present" 'One first-run pre-flight AUQ' "$MOCKUP"
 assert_file_contains "retained taste-protection sentence verbatim" 'a widget between the user and their taste kills the funnel' "$MOCKUP"
 assert_file_not_contains "old exactly-three literal gone" 'Exactly three AskUserQuestion calls exist' "$MOCKUP"
 assert_file_not_contains "old never-add-a-fourth literal gone" 'Never add a fourth' "$MOCKUP"
@@ -120,10 +95,9 @@ assert_not_contains "beat slice free of guess" 'guess' "$BEAT_BLOCK"
 assert_not_contains "beat slice free of Guess" 'Guess' "$BEAT_BLOCK"
 
 # --- Self-elimination ---
-begin_test "self-elimination stated - the run's own record creation deletes both questions"
-assert_contains "record write is the eraser" 'write below is what deletes them' "$BEAT_BLOCK"
-assert_contains "prior mockup silences both" 'a project that has mocked before sees neither question' "$BEAT_BLOCK"
-assert_contains "slug settles before the folder" 'settles the subject BEFORE the folder below is created' "$BEAT_BLOCK"
+begin_test "self-elimination stated - the run's own record creation deletes the question"
+assert_contains "record write is the eraser" 'write below is what deletes it' "$BEAT_BLOCK"
+assert_contains "prior mockup silences it" 'a project that has mocked before never sees it' "$BEAT_BLOCK"
 
 # --- Load-bearing guards survive ---
 begin_test "load-bearing guards survive"
