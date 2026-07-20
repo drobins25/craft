@@ -30,7 +30,7 @@ All writes live under the project's own `.craft/` (cold path: `$MOCKUP_ROOT/.cra
 **Setup** - fires on the cold path's visual-files-present branch only (the zero-visual-files branch above keeps its hard route to `/craft:init` - nothing on disk to go from, no question to ask), and only while the record check above is empty:
 
 ```
-question: "This mockup can grow from what's already on disk, or from what you're actually chasing right now. Bring inspiration in first, or just go from your existing code."
+question: "Craft hasn't met your taste yet. Init is a short design session - sites you love, colors from one, type from another - and this mockup grows out of it. Or build from the code you already have."
 header: "Setup"
 options:
   - label: "Init first (Recommended)"
