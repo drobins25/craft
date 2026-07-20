@@ -43,16 +43,13 @@ Task tool:
     (what's on screen, how it's arranged, how it moves) with the feeling it
     produces. A stance a designer could start sketching from immediately.
     No free-floating poetry, no abstractions that don't name visible form.
-    Each stance ships widget-ready - recognition, not composition:
-    - label = a recognizable aesthetic territory, a place the user has
-      been ("Boutique Hotel", "Terminal Native") - it triggers a mental
-      image from the label alone. Never a coined concept, never a spec.
-    - description = ONE committed structural detail that makes the label
-      concrete ("Monospace, dense, dark - three plans stacked tight like
-      a pricing diff"). One added fact - never a synonym restatement,
-      never a hedge, never a second idea.
-    The stances must read like they came from different design teams -
-    structurally different screens, not one screen in three tones.]
+    Each stance ships widget-ready:
+    - label = the visible mechanic, plain and concrete
+      (e.g. "Sparkline draws in, number ticks up")
+    - description = additive footnote: "feeling: [what it produces].
+      trade: [what it costs]"
+      (e.g. "feeling: alive, continuous. trade: drama on a static fact")
+    Genuinely different leans, not synonyms.]
 
     ## Rules
     - Return the briefing and stances only. Do not build, do not generate wireframes.
@@ -69,8 +66,8 @@ The moment the briefing returns, write it to record.md `## Brief` - BEFORE any w
 ## 3. Parse-guard (checklist - every check must pass before the stances render)
 
 1. **Count:** 2-3 stances came back.
-2. **Detail:** each stance's description commits to one concrete structural detail - no hedge, no synonym restatement of its label.
-3. **Distinctness:** the stances are structurally different screens - not one screen in three tones, not rewordings of each other.
+2. **Trade:** each stance's description names an honest trade.
+3. **Distinctness:** no stance is a rewording of another - different lean, not a synonym.
 
 Never fail a stance for brevity.
 

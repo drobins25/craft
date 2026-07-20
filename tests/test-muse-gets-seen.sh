@@ -87,9 +87,8 @@ assert_file_contains "budget reading present" 'counts taste checkpoints, not wid
 
 begin_test "reference carries the parse-guard checklist and retry handling"
 assert_file_contains "count check" '2-3 stances came back' "$MUSE_PATH"
-assert_file_contains "detail check" 'one concrete structural detail' "$MUSE_PATH"
-assert_file_contains "distinctness check" 'structurally different screens' "$MUSE_PATH"
-assert_file_contains "territory label spec" 'recognizable aesthetic territory' "$MUSE_PATH"
+assert_file_contains "trade check" 'names an honest trade' "$MUSE_PATH"
+assert_file_contains "distinctness check" 'rewording of another' "$MUSE_PATH"
 assert_file_contains "brevity never fails a stance" 'Never fail a stance for brevity' "$MUSE_PATH"
 assert_file_contains "retry once on dead spawn or failed check" 're-spawn the muse ONCE' "$MUSE_PATH"
 assert_file_contains "second failure is a plain disclosure" "The muse isn't answering" "$MUSE_PATH"
