@@ -88,6 +88,7 @@ assert_file_contains "taste-protection sentence intact" 'a widget between the us
 assert_file_contains "amended taste-AUQ budget intact" 'Exactly three taste AskUserQuestion calls exist' "$MOCKUP"
 assert_file_contains "refine-never-silently-converges rule intact" 'converging to one is never inferred' "$MOCKUP"
 assert_file_contains "refine convergence confirm is conversational" 'One converged take this round, or options again?' "$MOCKUP"
+assert_file_contains "recommended muse option leads the list" 'Position follows the marker' "$MOCKUP"
 
 RIFF_SKILL="$PLUGIN_ROOT/commands/craft-riff.md"
 
