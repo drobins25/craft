@@ -2,6 +2,11 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 1.99.51 - 2026-07-20
+
+- Added the muse path to the mockup funnel: on a design-empty project the muse now briefs the emotional job and authors the vibe question itself; on a design-rich project a "Let's ask the muse" option joins the vibe question. The muse's work is shown and steerable - silent brief enrichment is gone.
+- Fixed the alchemist's brief: the builder now receives the mockup record's Brief section whole and verbatim - including the full muse briefing - instead of a paraphrase of the picked direction. One definition of the brief everywhere.
+
 ## 1.99.50 - 2026-07-20
 
 - Improved the mockup's first-run setup question after live testing: it now tells you craft hasn't met your taste yet and honestly describes what init's design session can do, instead of describing two doors neutrally.

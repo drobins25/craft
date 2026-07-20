@@ -1,6 +1,6 @@
 {
   "name": "craft",
-  "version": "1.99.50",
+  "version": "1.99.51",
   "description": "A Claude Code plugin with a workshop where you build your own expert agents - and it locks in the taste you keep showing. Stop vibing, start crafting.",
   "author": {
     "name": "Darin Drobinski"
