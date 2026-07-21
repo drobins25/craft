@@ -8,19 +8,6 @@ Open-source Claude Code plugin: a creative-first development harness.
 
 This file is the operating contract for Claude working in this repo. Routing and live state are injected on every prompt via the UserPromptSubmit hook (the `v1|craft-orchestration-index` block) - don't duplicate that here.
 
-## IMPORTANT: Surface architectural changes before making them
-
-These categories of change have repeatedly broken the plugin via unsolicited refactors. Surface the proposed change and get explicit approval before:
-
-- Workflow changes (how commands and skills flow into each other)
-- State changes (what gets stored, where, in what format)
-- New behaviors (auto-commits, git push, new validations)
-- Removing features, even ones that look unused
-- Skill invocation patterns (how skills call each other)
-- File format changes (YAML structure, frontmatter fields)
-
-When unsure whether a change is architectural: ask first.
-
 ## Safety rules
 
 - **Never use `/craft:story-implement` in this repo.** It invokes the implementer agent against the plugin's own files, which is self-modification mid-work and breaks the harness. Contributors: see CONTRIBUTING.md for the manual implementation procedure.
