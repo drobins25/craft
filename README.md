@@ -1,6 +1,6 @@
 ![Craft - a Claude Code plugin. Claude proposes. You decide. Craft builds. Stop Vibing. Start Crafting. Your codebase is read-only until a tweak, a fix, or a story opens it. Claude proposes a researched plan, you decide, and everything that lands on disk goes on file. And your taste compounds - say "Love it!" once, and craft builds with it next time, without being asked.](docs/media/hero.svg)
 
-# Craft
+# Craft [![version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fdrobins25%2Fcraft%2Fmain%2F.claude-plugin%2Fplugin.json&query=%24.version&label=version&color=blue)](CHANGELOG.md)
 
 > **Stop Vibing. Start Crafting.**
 
@@ -8,12 +8,11 @@ Claude Code plugin: guided + controlled development orchestration harness with b
 
 Your codebase is read-only by default. Changes never land as a side effect of asking a question - every write goes through a channel you opened: a planned story, an investigated fix, a live tweak, or an approved one-off.
 
-![version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fdrobins25%2Fcraft%2Fmain%2F.claude-plugin%2Fplugin.json&query=%24.version&label=version&color=blue)
 ![license](https://img.shields.io/badge/license-MIT-green)
 ![status](https://img.shields.io/badge/status-actively%20developed-brightgreen)
 ![requires](https://img.shields.io/badge/requires-Claude%20Code%202.1%2B-orange)
 
-**[Install](#install)** · [Getting Started](#getting-started) · [Commands](#commands) · [How it works](#how-craft-work-flows)
+**[Install](#install)** · [Getting Started](#getting-started) · [Commands](#commands) · [How it works](#how-craft-work-flows) · [What's New](CHANGELOG.md)
 
 Install in about a minute:
 
