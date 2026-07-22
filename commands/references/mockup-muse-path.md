@@ -1,6 +1,6 @@
 # The Muse Path (reference - read on demand by the mockup funnel)
 
-Read-and-follow: the mockup funnel (commands/references/mockup-inline.md) reads this file at one of its two doors - the user picks "Let's ask the muse" on the vibe question (warm project), or the design-empty fork routes here automatically (NEITHER tokens.yaml NOR locked.md exists). When a door fires, Read this file once, follow it top to bottom, then rejoin the funnel where noted. Runs that never enter a door never read this file - that is the point of it living here and not inline.
+Read-and-follow: the mockup funnel (commands/references/mockup-inline.md) reads this file at one of its two doors - the user picks "Let the muse drive" on the vibe question (warm project), or the design-empty fork routes here automatically (NEITHER tokens.yaml NOR locked.md exists). When a door fires, Read this file once, follow it top to bottom, then rejoin the funnel where noted. Runs that never enter a door never read this file - that is the point of it living here and not inline.
 
 This path replaces silent brief enrichment: the muse briefs, and its three directions build directly as the Diverge round. The user sees and steers the muse's work on every use.
 

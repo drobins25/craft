@@ -96,7 +96,7 @@ assert_file_contains "second failure is a plain disclosure" "The muse isn't answ
 assert_file_not_contains "no inferred-directions fallback exists" 'fall back to plain' "$MUSE_PATH"
 
 begin_test "Door 1: warm option renamed, unmarked, widget pick is the only warm entry"
-assert_file_contains "option renamed" "Let's ask the muse" "$MOCKUP"
+assert_file_contains "option label states the handoff" "Let the muse drive" "$MOCKUP"
 assert_file_contains "muse option unmarked and listed last" 'the muse option stays unmarked, listed last' "$MOCKUP"
 assert_file_contains "widget pick is the only warm entry" 'The widget pick is the ONLY way into the muse path on a warm project' "$MOCKUP"
 

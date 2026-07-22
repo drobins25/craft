@@ -111,11 +111,11 @@ header: "Vibe"
 options:
   - label: "[2-3 vibe directions inferred from the subject + session context]"
     description: "[one line each]"
-  - label: "Let's ask the muse"
-    description: "The muse interrogates the emotional job, then asks its own question - you steer from its directions"
+  - label: "Let the muse drive"
+    description: "The muse finds the emotional job and authors three directions - they build as the round, you steer by reacting"
 ```
 
-**If "Let's ask the muse" (the chosen door):** Read `${CLAUDE_PLUGIN_ROOT}/commands/references/mockup-muse-path.md` and follow it. The muse briefs and its three directions build directly - no second widget; the user sees and steers the muse's work; silent brief enrichment is not a path. The widget pick is the ONLY way into the muse path on a warm project: never infer muse intent from the invocation wording or session context.
+**If "Let the muse drive" (the chosen door):** Read `${CLAUDE_PLUGIN_ROOT}/commands/references/mockup-muse-path.md` and follow it. The muse briefs and its three directions build directly - no second widget; the user sees and steers the muse's work; silent brief enrichment is not a path. The widget pick is the ONLY way into the muse path on a warm project: never infer muse intent from the invocation wording or session context.
 
 Write the brief into `## Brief` - the vibe answer (or, when the muse path ran, the full muse briefing with all 3 directions), the constraints, the mobile verdict. `## Brief` is the single source of truth for the alchemist: Step 2 passes this section whole, so anything not written here never reaches the builder. Create the task rail - six TaskCreate tasks, blockedBy-chained in order: **Brief -> Diverge -> Refine -> Polish -> Save (mockup + solidify tokens) -> Choose destination**. Task SUBJECTS are exactly the six beat names - `Brief`, `Diverge`, `Refine`, `Polish`, `Save`, `Choose destination` - no "Mockup:" prefix, no descriptive suffix; the subject is a label, detail goes in the task description. Substeps never become tasks. Skipped rounds complete-with-note. Polish holds ONE task across all its attempts. The rail ENDS at Choose destination - destination flows create their own tasks. Mark Brief complete.
 
