@@ -66,6 +66,8 @@ Type is almost always `ui`. Set `alignment: pending` - the alignment check fires
 
 **No token payload.** Tokens were settled at the mockup's solidify beat - the bible is already true, and plan-chunks, chunk-validator, and style-analyzer enforce it with no exceptions. If the record shows a solidify DECLINE, note it in `## Notes`: the mockup-local values will surface as known drift, user-chosen.
 
+**Materials port as a spec, never as bytes.** Read record.md `## Materials`; when non-empty, the produced story carries the material spec as a requirement - the typeface's identity (family, weights, source) or the icon set by name - and states that acquisition is resolved at the story's own plan-chunks per the project's idiom: a package where packages are the idiom (next/font, `@fontsource/*`), a static-asset `@font-face` copy only where static assets are the idiom. The mockup's inlined base64 is never ported. This is the one stack-resolved carve inside the NORMATIVE rule: family, weight, style, and every type measurement still port verbatim - only the acquisition mechanism (where the font file comes from) is resolved against the project. An icon entry is guidance to adopt the library's components, never a verbatim SVG-blob port. Empty `## Materials`: the port behaves exactly as it always has.
+
 ## Phase 4: Backlinks and close
 
 Write both directions: the story frontmatter carries `mockup:` and, when the record had an `origin`, `grew_from:` (both done above); the record gets `graduated_to: [story name]` and `status: graduated-story` (the destination fork may have written these already - verify, don't duplicate).

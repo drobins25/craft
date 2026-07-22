@@ -361,7 +361,8 @@ project-root/
 │   ├── mockups/               ← Mockup artifacts (created by /craft:mockup)
 │   │   └── {date}-{slug}/
 │   │       ├── mockup.html    ← The living page (replaced per round)
-│   │       ├── record.md      ← Durable anchor: status, reactions, polish ledger, backlinks
+│   │       ├── record.md      ← Durable anchor: status, reactions, polish ledger, materials, backlinks
+│   │       ├── assets/        ← Orchestrator-fetched fonts/icons (inlined into the page; travels with the folder)
 │   │       └── rounds/        ← Archived outgoing rounds (never rendered)
 │   ├── project.md             ← Project DNA
 │   ├── quality.yaml           ← Quality gates
@@ -372,6 +373,8 @@ project-root/
 ```
 
 Projects that gitignore `.craft/` get local-only persistence for everything under it - stories, records, mockups alike. That is the existing craft convention (state is per-machine unless the project chooses to track it), not a gap in any one feature.
+
+When the mockup builder needs material it can't fake (a real typeface, a specific icon set), the orchestrator fetches the asset files from pinned open-license sources (Google Fonts; the official Lucide/Phosphor/Heroicons repos) into the mockup's `assets/` folder and the builder inlines them - the page still makes zero requests at load, and the project itself is never touched. Graduation forwards the material's identity (recorded in record.md `## Materials`), never the inlined bytes.
 
 ### .global-state Fields
 
