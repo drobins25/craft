@@ -1,4 +1,4 @@
-![Craft - a Claude Code plugin. Claude proposes. You decide. Craft builds. Stop Vibing. Start Crafting. Your codebase is read-only until a tweak, a fix, or a story opens it. Claude proposes a researched plan, you decide, and everything that lands on disk goes on file. And your taste compounds - say "Love it!" once, and craft builds with it next time, without being asked.](docs/media/hero.svg)
+![Craft - a Claude Code plugin. Claude proposes. You decide. Craft builds. Stop Vibing. Start Crafting. Your codebase is read-only until a tweak, a fix, or a story opens it. Claude proposes a researched plan, you decide, and every code change leaves a paper trail in your project's .craft directory. And your taste compounds - say "Love it!" once, and craft builds with it next time, without being asked.](docs/media/hero.svg)
 
 # Craft [![version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fdrobins25%2Fcraft%2Fmain%2F.claude-plugin%2Fplugin.json&query=%24.version&label=version&color=blue)](CHANGELOG.md)
 
