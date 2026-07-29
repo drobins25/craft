@@ -11,6 +11,7 @@ Your codebase is read-only by default. Changes never land as a side effect of as
 ![license](https://img.shields.io/badge/license-MIT-green)
 ![status](https://img.shields.io/badge/status-actively%20developed-brightgreen)
 ![requires](https://img.shields.io/badge/requires-Claude%20Code%202.1%2B-orange)
+[![Listed on ClaudePluginHub](https://www.claudepluginhub.com/badge/drobins25-craft)](https://www.claudepluginhub.com/plugins/drobins25-craft?ref=badge)
 
 **[Install](#install)** · [Getting Started](#getting-started) · [Commands](#commands) · [How it works](#how-craft-work-flows) · [What's New](CHANGELOG.md)
 
