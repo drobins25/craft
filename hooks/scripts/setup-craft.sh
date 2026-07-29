@@ -70,27 +70,6 @@ if [ -f "$TEMPLATES_DIR/craft/quality.yaml" ]; then
   echo -e "  ${GREEN}✓${NC} Created quality.yaml"
 fi
 
-# Design tokens / conventions
-# For UI projects: SKIP_TOKENS=1 means from-scratch or early - don't generate speculative tokens
-# For CLI projects: always generate (these are conventions, not visual design)
-if [ "$PROJECT_TYPE" = "cli" ]; then
-  if [ -f ".craft/design/tokens.yaml" ]; then
-    # An existing tokens.yaml (e.g. written by a converged mockup) is never overwritten
-    echo -e "  ${GREEN}✓${NC} Preserved existing design/tokens.yaml"
-  elif [ -f "$DESIGN_TEMPLATES/tokens.yaml" ]; then
-    cp "$DESIGN_TEMPLATES/tokens.yaml" .craft/design/tokens.yaml
-    echo -e "  ${GREEN}✓${NC} Created design/tokens.yaml (project conventions)"
-  fi
-elif [ "${SKIP_TOKENS:-0}" != "1" ]; then
-  if [ -f "$DESIGN_TEMPLATES/tokens.yaml" ]; then
-    sed "s/{{DATE}}/$DATE/g; s/{{PRIMARY_COLOR}}/#6366F1/g; s/{{PRIMARY_HOVER}}/#4F46E5/g; s/{{PRIMARY_LIGHT}}/#EEF2FF/g" \
-      "$DESIGN_TEMPLATES/tokens.yaml" > .craft/design/tokens.yaml
-    echo -e "  ${GREEN}✓${NC} Created design/tokens.yaml"
-  fi
-else
-  echo -e "  ${GREEN}✓${NC} Skipped design/tokens.yaml (will learn from your code)"
-fi
-
 # Component patterns (UI only)
 if [ -f "$DESIGN_TEMPLATES/components.md" ]; then
   sed "s/{{DATE}}/$DATE/g" "$DESIGN_TEMPLATES/components.md" > .craft/design/components.md

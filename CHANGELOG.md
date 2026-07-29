@@ -2,6 +2,12 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.0.1 - 2026-07-28
+
+- Fixed brownfield setup dead-ending on design tokens. Initializing craft on an existing codebase used to drop a generic template file moments before your real scanned values were ready, then correctly refuse to overwrite it - leaving init stuck asking you to resolve a mess it created. Now nothing lands in tokens.yaml until there are real values to write: your extracted colors on UI projects, your scanned conventions on backend projects, written once, no roadblock.
+- Changed how a mid-init design session settles color conflicts: your most recent decision wins. If you answer a conflict question early in setup and then lock different values from an inspiration session minutes later, the inspiration choice sticks - the earlier answer no longer bulldozes it.
+- Changed the project-intent question to present its options neutrally. On a codebase you didn't found, skipping intent capture is just as right as filling it in, so neither answer claims to be recommended anymore.
+
 ## 2.0.0 - 2026-07-22
 
 Craft 2.0 is the answer to the fairest criticism the first release got: a hard gate between Claude and your code is only safe until the ceremony makes you want to skip it - and a gate you skip once was never a gate, it was a suggestion. The 2.0 line taught craft to route instead of stop. Your codebase is still read-only by default, but a blocked write now hands Claude the doors that can open it - an investigated fix, a live tweak, a planned story - each with its own machinery to run before anything lands, and every one of them ending at your approval. Same strictness, a fraction of the friction.

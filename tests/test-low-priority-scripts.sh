@@ -76,6 +76,21 @@ assert_dir_exists ".craft/backlog created" "$TEST_DIR/.craft/backlog"
 assert_dir_exists ".craft/cycles created" "$TEST_DIR/.craft/cycles"
 assert_dir_exists ".craft/design created" "$TEST_DIR/.craft/design"
 assert_file_exists ".global-state created" "$TEST_DIR/.craft/.global-state"
+# Setup never creates tokens.yaml - the init flow's Phase 5 is the file's only creator
+assert_file_not_exists "no tokens.yaml on UI setup" "$TEST_DIR/.craft/design/tokens.yaml"
+
+rm -rf "$TEST_DIR"
+
+# Same guarantee with SKIP_TOKENS=1 in the environment - the var is inert now
+TEST_DIR=$(mktemp -d)
+
+set +e
+RESULT=$(cd "$TEST_DIR" && unset CRAFT_PROJECT_ROOT && SKIP_TOKENS=1 CLAUDE_PLUGIN_ROOT="$PLUGIN_ROOT" bash "$SCRIPTS_DIR/setup-craft.sh" "ui" 2>/dev/null)
+EXIT_CODE=$?
+set -e
+
+assert_eq "exits 0 with SKIP_TOKENS=1" "0" "$EXIT_CODE"
+assert_file_not_exists "no tokens.yaml with SKIP_TOKENS=1 (env var inert)" "$TEST_DIR/.craft/design/tokens.yaml"
 
 rm -rf "$TEST_DIR"
 echo ""
@@ -94,8 +109,8 @@ assert_eq "exits 0" "0" "$EXIT_CODE"
 assert_dir_exists ".craft/ created" "$TEST_DIR/.craft"
 # CLI projects don't get inspiration directory
 assert_dir_not_exists "no inspiration for CLI" "$TEST_DIR/.craft/inspiration"
-# CLI branch creates the conventions tokens.yaml when none exists
-assert_file_exists "tokens.yaml created when absent" "$TEST_DIR/.craft/design/tokens.yaml"
+# Setup never creates tokens.yaml on the CLI branch either - Phase 5 owns the file
+assert_file_not_exists "no tokens.yaml on CLI setup" "$TEST_DIR/.craft/design/tokens.yaml"
 
 rm -rf "$TEST_DIR"
 echo ""

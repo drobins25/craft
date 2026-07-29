@@ -127,7 +127,8 @@ YES_OPTION="$(echo "$INTENT_AUQ" | sed -n '/Yes, capture intent/,/label:/p')"
 
 # --- Chunk 4: Phase 0.5 sells the Emotional Core; docs reconciled ---
 begin_test "Phase 0.5 Yes option names the Emotional Core"
-assert_contains "yes label keeps its marker" 'Yes, capture intent (Recommended)' "$INTENT_AUQ"
+assert_contains "yes label present" 'Yes, capture intent' "$INTENT_AUQ"
+assert_not_contains "no option carries a marker" '(Recommended)' "$INTENT_AUQ"
 assert_contains "yes description names the Emotional Core" 'Emotional Core' "$YES_OPTION"
 assert_contains "yes description names what it feeds" 'every cycle you plan later reads it' "$YES_OPTION"
 
