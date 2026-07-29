@@ -1073,6 +1073,8 @@ echo "$ASSEMBLY_VALUES" | python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/merge-toke
 
 Step 4 - On the no-pre-existing-file branch ONLY: write the populated tokens.yaml to `.craft/design/tokens.yaml` using the Write tool (creation is allowed; the deny applies only to an existing file). On the merge branch, Step 3's script already wrote the file - echo its summary line and skip this step.
 
+Whichever Step 3 branch ran, set `INSPIRATION_WROTE_TOKENS=true`. Phase 5 reads this variable - not file existence, which cannot distinguish a file this session just locked from one that predates the run - to decide whether Phase 2's conflict answers still apply.
+
 Step 5 - Update `.craft/inspiration/sites.md` with all source URLs and the creative interpretation.
 
 Step 6 - Delete the session file:
@@ -1290,15 +1292,15 @@ echo "$LOCKED_VALUES" | python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/merge-tokens
 
 `$LOCKED_VALUES` = one `section.key=value|provenance comment` line per value the user locked in Phase 2. Default precedence (existing wins) is correct here. Echo the script's summary line to the user. On a non-zero exit the merge did NOT happen - report the script's error; never fall back to the Write tool.
 
-**Whether the `--resolve` flags ride along depends on one question: did Phase 3's inspiration session write or merge tokens.yaml this session?**
-- **No (the file predates this run - mockup-born or prior init):** include every Phase 2 "take scanned" choice as a `--resolve` flag, as shown above.
-- **Yes (the Lock step just wrote it):** omit ALL `--resolve` flags. Phase 2's conflict answers were given against the pre-inspiration file and must not override a value the user locked from inspiration afterward. Inspiration keeps every conflicting key; extraction fills only keys inspiration never set.
+**Whether the `--resolve` flags ride along depends on `INSPIRATION_WROTE_TOKENS` (set by Phase 3's Lock step):**
+- **Unset or false (Phase 3 never ran, or ran without locking - the file predates this run, mockup-born or prior init):** include every Phase 2 "take scanned" choice as a `--resolve` flag, as shown above.
+- **True (the Lock step wrote or merged the file this session):** omit ALL `--resolve` flags. Phase 2's conflict answers were given against the pre-inspiration file and must not override a value the user locked from inspiration afterward. Inspiration keeps every conflicting key; extraction fills only keys inspiration never set.
 
 **If values were locked and no tokens.yaml exists (UI mid/mature extraction):** CREATE the file with the Write tool - creation on a missing file is always allowed. Read `${CLAUDE_PLUGIN_ROOT}/templates/craft/design/tokens.yaml` as the target structure and fill it with the extracted values the user locked; note provenance in comments (`# from codebase scan`). The template stays in the plugin - never copy it verbatim; every value in the written file is a real extracted value or a deliberately kept structural default.
 
 **For CLI projects (Full setup reaches this phase):** same two live facts. No file → CREATE via Write: read `${CLAUDE_PLUGIN_ROOT}/templates/craft/design-cli/tokens.yaml` as the target structure, fill its sections with the scanner's convention findings, and add project-specific sections on top (layering, wire formats, whatever the scan surfaced - the file describes THIS project, not the template). File exists (re-init): update with targeted Edits on specific keys/sections - never a whole-file Write, which the hook denies.
 
-**For CLI projects:** Use agent's convention findings:
+**For CLI projects, the convention content** - this fills the create-via-Write or the targeted Edits described in the branch above, never a whole-file Write onto an existing file:
 
 ```yaml
 # Conventions for [Project Name]
