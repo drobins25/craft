@@ -27,8 +27,10 @@ else
   ROOT="${PROJECT_ROOT%/}"
 fi
 
+# Cold fallback: mirror notebook-capture.sh's anchor (git toplevel, else PWD)
+# so a note captured before /craft:init is listable from the same root.
 if [ -z "$ROOT" ]; then
-  exit 0
+  ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo "$PWD")"
 fi
 
 FILTER="${1:-}"

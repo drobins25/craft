@@ -138,6 +138,18 @@ No new state files - the records ARE the state. Conversational recall ("what moc
 
 Set `PROJECT` to `${CRAFT_PROJECT_ROOT:-.}`.
 
+**Cold guard (uninitialized project):** if `$PROJECT/.craft/.global-state` and `$PROJECT/.craft/project.md` are both absent, this project is not initialized - do NOT run the dashboard reads below (they assume state that does not exist). Answer instead:
+
+> **Craft is installed here, but this project isn't initialized - so there's no cycle or story state to show yet.**
+>
+> Works right now, no setup: `/craft:mockup` (visual options funnel), `/craft:notebook` (capture thoughts), `/craft:guide` / `/craft:ask` / `/craft:riff` (consult), `/craft:research` and `/craft:become` (artifacts land at the repo root).
+>
+> `/craft:init` unlocks the rest - stories, cycles, tweaks, adhoc fixes - and makes anything already captured recallable and buildable.
+
+If a bare `.craft/` exists (cold captures or mockups), count what's in `.craft/notebook/` and `.craft/mockups/` and name it in the answer ("You already have [N] captured notes and [M] mockups - init makes them part of the workshop"). Recommend `/craft:init` when they're ready to build. Then stop - no dashboard section below applies.
+
+Otherwise (initialized project):
+
 Use **Read** to read `$PROJECT/.craft/.global-state`. Parse key=value pairs to extract `ACTIVE_CYCLE`, `CURRENT_STORY`, etc.
 
 Use **Glob** with pattern `$PROJECT/.craft/cycles/*/cycle.yaml` to find all cycles.

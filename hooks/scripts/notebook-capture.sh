@@ -23,9 +23,16 @@ else
   ROOT="${PROJECT_ROOT%/}"
 fi
 
+# Cold fallback: no initialized project resolved. Anchor to the git toplevel
+# (never a subdirectory), else PWD, so one-line capture works before /craft:init.
+# A non-git landing spot is announced - an orphaned capture must be loud, since
+# nothing recalls it until the project is initialized.
 if [ -z "$ROOT" ]; then
-  echo "Error: Could not resolve project root" >&2
-  exit 1
+  ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  if [ -z "$ROOT" ]; then
+    ROOT="$PWD"
+    echo "not a git repo - capturing to $ROOT/.craft/notebook/ (local to this directory)" >&2
+  fi
 fi
 
 # Parse arguments

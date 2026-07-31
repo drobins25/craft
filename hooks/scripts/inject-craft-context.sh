@@ -6,12 +6,29 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ORCH_INDEX="$(dirname "$SCRIPT_DIR")/../reference/orchestration-index.min"
+COLD_INDEX="$(dirname "$SCRIPT_DIR")/../reference/cold-start-index.min"
 
-# Resolve project root (handles monorepo with multiple .craft/ dirs)
-source "$SCRIPT_DIR/find-workshop.sh" 2>/dev/null || exit 0
+# Uninitialized project: emit the cold-start index instead of going silent,
+# so Claude knows craft exists and can route to what works before /craft:init.
+# Fires on find-workshop failure, which covers BOTH "no .craft/ at all" and
+# "bare .craft/ without .global-state/project.md" (a cold notebook or mockup
+# capture creates that shape, and the index must keep injecting after it).
+emit_cold_index() {
+  if [ -f "$COLD_INDEX" ]; then
+    cat "$COLD_INDEX"
+  fi
+}
 
-# No .craft/ found — not a craft project
+# Resolve project root (handles monorepo with multiple .craft/ dirs).
+# The if-form consumes find-workshop's non-zero return so set -e survives it.
+if ! source "$SCRIPT_DIR/find-workshop.sh" 2>/dev/null; then
+  emit_cold_index
+  exit 0
+fi
+
+# Defensive: resolution succeeded but root is unusable — treat as uninitialized
 if [ -z "$PROJECT_ROOT" ] || [ ! -d "${PROJECT_ROOT}.craft" ]; then
+  emit_cold_index
   exit 0
 fi
 

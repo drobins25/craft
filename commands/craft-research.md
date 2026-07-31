@@ -12,7 +12,9 @@ Ad-hoc research tool. Not part of the craft pipeline - use it whenever you want 
 
 Use `$CRAFT_PROJECT_ROOT` (set at session start) as the base path for all `.craft/` references. If not set, resolve by walking up from PWD to find the nearest `.craft/.global-state`.
 
-Set `PROJECT` to `${CRAFT_PROJECT_ROOT:-.}`.
+**Cold fallback (uninitialized project):** if neither resolves, anchor to the git toplevel (`git rev-parse --show-toplevel`) when in a repo, else PWD - never a subdirectory. Research runs fine before `/craft:init`; artifacts land under the repo-root `.craft/research/`, not wherever the shell happens to sit.
+
+Set `PROJECT` to the resolved root - env var, then walk-up, then git toplevel, then PWD, in that order. Never default to bare `.`.
 
 ## Flow
 

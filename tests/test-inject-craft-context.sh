@@ -78,8 +78,8 @@ assert_contains "shows cycle name" "Plan Cycle" "$RESULT"
 cleanup_test_dir
 echo ""
 
-# Test 3: No .craft/ — exits 0, no output
-begin_test "No .craft/ — exits 0, no output"
+# Test 3: No .craft/ — exits 0, emits the cold-start index (not silence)
+begin_test "No .craft/ — exits 0, emits the cold-start index"
 
 TEST_DIR=$(mktemp -d)
 
@@ -89,7 +89,8 @@ EXIT_CODE=$?
 set -e
 
 assert_eq "exits 0" "0" "$EXIT_CODE"
-assert_eq "no output" "" "$RESULT"
+assert_contains "cold index header" "v1|craft-cold-start-index" "$RESULT"
+assert_not_contains "no full orchestration index" "v1|craft-orchestration-index" "$RESULT"
 
 rm -rf "$TEST_DIR"
 echo ""
@@ -188,8 +189,8 @@ assert_contains "carries the failed-Read stop-rule" "File does not exist" "$RESU
 cleanup_test_dir
 echo ""
 
-# Test 8: Orchestration index — absent when no .craft/
-begin_test "Orchestration index — absent when no .craft/"
+# Test 8: Full orchestration index — absent when no .craft/ (cold index instead)
+begin_test "Full orchestration index — absent when no .craft/"
 
 TEST_DIR=$(mktemp -d)
 
@@ -197,9 +198,10 @@ set +e
 RESULT=$(cd "$TEST_DIR" && unset CRAFT_PROJECT_ROOT && unset PROJECT_ROOT && bash "$INJECT_CONTEXT_SCRIPT" 2>/dev/null)
 set -e
 
-assert_not_contains "no routing section" "=ROUTING" "$RESULT"
-assert_not_contains "no rules section" "=RULES" "$RESULT"
+assert_not_contains "no full-index routing section" "=ROUTING" "$RESULT"
+assert_not_contains "no full-index header" "v1|craft-orchestration-index" "$RESULT"
 assert_not_contains "no plugin-root line" "Craft plugin root:" "$RESULT"
+assert_contains "cold index emitted instead" "v1|craft-cold-start-index" "$RESULT"
 
 rm -rf "$TEST_DIR"
 echo ""
