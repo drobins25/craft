@@ -1,5 +1,5 @@
 ---
-name: craft:update-docs
+name: update-docs
 description: "Re-scan the project and update documentation. Keeps project.md and locked.md current as the codebase evolves."
 ---
 

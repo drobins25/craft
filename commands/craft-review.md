@@ -1,5 +1,5 @@
 ---
-name: craft:review
+name: review
 description: "PR review skill - invokes pr-reviewer-expert agent against branch diff, story commits, or full project audit."
 ---
 

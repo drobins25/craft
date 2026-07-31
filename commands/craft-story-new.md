@@ -1,5 +1,5 @@
 ---
-name: craft:story-new
+name: story-new
 description: "Create a new story. It lands in the backlog until assigned to a cycle."
 ---
 

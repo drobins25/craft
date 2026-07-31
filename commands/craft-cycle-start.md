@@ -1,5 +1,5 @@
 ---
-name: craft:cycle-start
+name: cycle-start
 description: "Activate a cycle and start implementing its stories."
 ---
 

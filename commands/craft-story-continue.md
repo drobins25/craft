@@ -1,5 +1,5 @@
 ---
-name: craft:story-continue
+name: story-continue
 description: "Resume an interrupted story from where you left off."
 ---
 

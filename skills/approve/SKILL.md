@@ -1,5 +1,5 @@
 ---
-name: craft:approve
+name: approve
 description: "Request write permission from the user before making file changes. MUST be invoked before any write attempt when the write gate is closed. Creates scoped approval via AskUserQuestion + TaskCreate, opens the write gate, and closes it when work is done. Triggers: write hook blocks an edit, agent is about to write files outside .craft/, agent needs to modify project source files. This skill requires user approval 100% of the time - never bypass AskUserQuestion."
 allowed-tools: ["Read", "Bash", "Glob", "Grep", "AskUserQuestion", "TaskCreate", "TaskUpdate", "TaskList"]
 ---

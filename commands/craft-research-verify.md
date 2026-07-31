@@ -1,5 +1,5 @@
 ---
-name: craft:research-verify
+name: research-verify
 description: "Verify existing research findings against independent primary sources. Upgrades confidence from 'sources agree' to 'independently verified.'"
 argument-hint: "[topic-slug]"
 ---

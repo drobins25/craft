@@ -1,5 +1,5 @@
 ---
-name: craft:story-implement
+name: story-implement
 description: "Implement a story through the Implement Phase. Stories must be fully designed with chunks before implementation."
 argument-hint: "[story-name]"
 ---

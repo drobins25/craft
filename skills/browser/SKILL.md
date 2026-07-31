@@ -1,5 +1,5 @@
 ---
-name: craft:browser
+name: browser
 description: "Interactive browser automation via playwright-cli. Use when you need to navigate a site, click elements, fill forms, take snapshots, or triage a live app."
 when_to_use: "Triggers: user says 'open browser', 'check this site', 'triage the app', 'test this flow', 'look at this page', or '/craft:browser'. Also when needing visual inspection of a running app, before/after screenshots of UI changes, or interactive site exploration."
 allowed-tools: ["Read", "Bash", "Glob", "Grep", "Agent", "SendMessage"]

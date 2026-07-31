@@ -1,5 +1,5 @@
 ---
-name: craft:adhoc
+name: adhoc
 description: "Adhoc workflow for small targeted changes to existing behavior or appearance, without the full story ceremony. Use when the orchestrator encounters a bug with a clear root cause and surgical solution, OR a small enhancement to something already built (a different icon, wording, spacing, color). Triggers on: 'fix this', 'this is broken', 'the alignment is off', 'that button doesn't work', 'quick fix', 'patch this', 'tweak this', 'change the icon', 'adjust the wording', post-story corrections, or any situation where the write gate blocks a small targeted change. Acts NOW - deferred work belongs in the notebook. Do NOT use for new features, design exploration, or changes requiring creative spark."
 allowed-tools: ["Read", "Edit", "Write", "Glob", "Grep", "Bash", "AskUserQuestion", "TaskCreate", "TaskUpdate"]
 ---

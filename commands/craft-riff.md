@@ -1,5 +1,5 @@
 ---
-name: craft:riff
+name: riff
 description: "Two-gear thinking partner. Senses HOW to think-with you in the moment - runs a tight calibration loop in the main loop, or hands open exploration to the Riff agent - with notebook-grade restraint: ignorable inline offers, never naggy, silence by default."
 when_to_use: |
   Intent and direction aren't shared yet, and a real decision is coming - the user has

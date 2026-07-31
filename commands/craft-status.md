@@ -1,5 +1,5 @@
 ---
-name: craft:status
+name: status
 description: "Show current Craft progress — cycles, stories, backlog in a rich dashboard view."
 ---
 

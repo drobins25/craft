@@ -1,5 +1,5 @@
 ---
-name: craft:story-archive
+name: story-archive
 description: "Move a story from a cycle back to the backlog."
 argument-hint: "[story-name]"
 aliases:

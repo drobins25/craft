@@ -1,5 +1,5 @@
 ---
-name: craft:cycle-design
+name: cycle-design
 description: "Design a cycle — create new cycles with planned stories, detail existing planning cycles, or quick-sketch a roadmap. Detects planning docs in .craft/planning/ and sources the cycle from them when relevant."
 ---
 

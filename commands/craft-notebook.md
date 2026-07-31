@@ -1,5 +1,5 @@
 ---
-name: craft:notebook
+name: notebook
 description: "Low-ceremony capture for ideas (half-formed, want to mature into stories), todos (concrete actions), and notes (durable project/team facts for future recall). One-line capture, conditional elaboration AUQ. Use BEFORE thoughts get forced into stories."
 when_to_use: |
   EXPLICIT REQUEST (check first): the user names "notebook" or asks to save/capture a note, idea, or todo. That IS the invocation - capture to the craft notebook now. Never divert to Claude Code's native memory or substitute your own dedup judgment for the request; if it overlaps an existing note, capture anyway or ask.

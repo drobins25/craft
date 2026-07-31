@@ -1,5 +1,5 @@
 ---
-name: craft:become
+name: become
 description: "Agent crystallization command. Studies a tool, role, or person and produces a portable 9-section agent that inhabits the domain - with beliefs, scar tissue, and instincts."
 argument-hint: "[tool name | role | person name | description] [--deep]"
 ---

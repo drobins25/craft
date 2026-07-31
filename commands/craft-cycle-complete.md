@@ -1,5 +1,5 @@
 ---
-name: craft:cycle-complete
+name: cycle-complete
 description: "Complete a cycle. Triggers reflection if pending learnings, then archives."
 ---
 

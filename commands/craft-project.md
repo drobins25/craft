@@ -1,5 +1,5 @@
 ---
-name: craft:project
+name: project
 description: "Switch between projects in a monorepo, or show a cross-project dashboard."
 ---
 

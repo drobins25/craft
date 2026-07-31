@@ -1,5 +1,5 @@
 ---
-name: craft:workflow-run
+name: workflow-run
 description: "Run a session of an existing workflow - start, continue, advance stages, run-all, batch-create sessions, mark ready."
 argument-hint: "[run <name> | continue | next <name> | run-all <name> | batch <name> | ready <name>]"
 when_to_use: "Use when the user wants to execute workflow work: 'run the workflow', 'continue the workflow', 'next session', 'run all remaining sessions', 'batch create sessions', or 'mark sessions ready'. NOT for authoring or archiving workflow definitions (use craft:workflow-design)."

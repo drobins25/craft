@@ -1,5 +1,5 @@
 ---
-name: craft:guide
+name: guide
 description: "Ask the craft guide how craft works or how to use it on your project. Read-only - it explains how craft's commands, skills, agents, and lifecycle work, and diagnoses your actual .craft/ setup. It never changes anything."
 argument-hint: "[your question about using craft]"
 ---

@@ -1,5 +1,5 @@
 ---
-name: craft:planning
+name: planning
 description: "Feature roadmap and planning. Manage initiatives, concepts, open questions, and story creation from planning."
 aliases:
   - planning

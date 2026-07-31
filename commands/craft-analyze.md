@@ -1,5 +1,5 @@
 ---
-name: craft:analyze
+name: analyze
 description: "Post-cycle analysis — QA, UX, Creative, and Style audits using MCP browser tools."
 ---
 

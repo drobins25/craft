@@ -1,5 +1,5 @@
 ---
-name: craft:docs
+name: docs
 description: "Generate or update project documentation using the crystallized doc-writer agent. Two-pass: brief (analysis + plan) then generate (write docs). Detects first-run vs update automatically."
 argument-hint: "[continue | --scope=<path>]"
 ---

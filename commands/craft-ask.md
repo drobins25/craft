@@ -1,5 +1,5 @@
 ---
-name: craft:ask
+name: ask
 description: "Consult a craft agent. Routes your question to the best mind in the workshop - not a menu, a recommendation."
 argument-hint: "[your question]"
 ---

@@ -1,5 +1,5 @@
 ---
-name: craft:mockup
+name: mockup
 description: "Live HTML mockup funnel - 3 options, converge by reacting, graduate to tweak/story/todo."
 when_to_use: |
   Use on an explicit ask to mock something up or see visual options live

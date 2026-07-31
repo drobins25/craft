@@ -1,5 +1,5 @@
 ---
-name: craft:workflow
+name: workflow
 description: "Workflow status and routing - shows active sessions, draft sessions, and available workflow definitions. Routes to workflow-run or workflow-design."
 when_to_use: "Use when the user asks about workflows generically ('what workflows do I have?', 'show me workflows', 'workflow status'), or hasn't yet specified whether they want to run a session or author a definition. NOT for running sessions directly (use craft:workflow-run) or authoring (use craft:workflow-design)."
 ---

@@ -1,5 +1,5 @@
 ---
-name: craft:init
+name: init
 description: "One-time setup to initialize the Craft harness for a project."
 ---
 

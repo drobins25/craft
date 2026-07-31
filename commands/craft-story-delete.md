@@ -1,5 +1,5 @@
 ---
-name: craft:story-delete
+name: story-delete
 description: "Permanently delete a story."
 argument-hint: "[story-name]"
 ---

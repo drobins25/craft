@@ -1,5 +1,5 @@
 ---
-name: craft:cycle-assign
+name: cycle-assign
 description: "Move a story from backlog to a cycle."
 ---
 

@@ -1,5 +1,5 @@
 ---
-name: craft:reflect
+name: reflect
 description: "Apply captured learnings to improve the Craft harness and project patterns. Converts .learnings.yaml into permanent updates."
 aliases:
   - apply-learnings

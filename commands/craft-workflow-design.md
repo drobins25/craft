@@ -1,5 +1,5 @@
 ---
-name: craft:workflow-design
+name: workflow-design
 description: "Design a workflow - create new definitions, edit existing ones, or archive workflows you no longer need."
 argument-hint: "[create | edit <name> | archive <name>]"
 when_to_use: "Use when the user wants to author or organize workflow definitions: 'create a new workflow', 'edit the workflow', 'refine this workflow', 'archive a workflow'. NOT for running or prepping sessions (use craft:workflow-run)."

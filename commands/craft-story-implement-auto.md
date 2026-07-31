@@ -1,5 +1,5 @@
 ---
-name: craft:story-implement-auto
+name: story-implement-auto
 description: "Autonomous story implementation — auto-picks stories, chains through cycle, no interactive prompts."
 ---
 
