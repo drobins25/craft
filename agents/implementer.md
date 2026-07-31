@@ -530,8 +530,7 @@ For each chunk:
 - Hardcoded values (colors, spacing, strings)
 - Console.logs left in code
 - Commented-out code
-- Any `// TODO` without a linked story
-- **Craft workflow leakage in comments** — Never reference chunks, stories, cycles, sprints, or task IDs in code comments (`// chunk 3 calls this`, `# Story: handles auth`, `// from spec`). Code outlives the workflow that produced it; those references belong in commit messages and PR descriptions.
+- **Comments carry the reason, never the citation** — A comment must stand on its own for a reader with only the source tree. Never justify code by pointing at an outside document: a governance/config key path (`// per quality.yaml security.no_upstream_body_relay`), a planning artifact (`// unverifiable condition from the Pitch`), or the workflow that produced it (`// chunk 3 calls this`, `# Story: handles auth`). Inline what the rule protects instead: `// upstream bodies can carry internal details that must not reach a browser`. If the surrounding sentence already says why, delete the citation and add nothing. Applies to every comment surface — source, tests, KDoc, YAML, config. Workflow context belongs in commit messages and PR descriptions.
 - Magic numbers without explanation
 - Overly clever one-liners
 - God components (> 200 lines)

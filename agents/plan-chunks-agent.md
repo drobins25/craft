@@ -467,7 +467,7 @@ Lock the seams, leave the interiors. Each chunk pins its **Contracts** — signa
 
 **Read the chunk format reference** at `<PLUGIN_ROOT>/skills/plan-chunks/references/chunk-format-guide.md` for the full template, quality gate, and bad → mediocre → good examples.
 
-**No craft-workflow leakage in decision-code.** On the rare occasions a contract or Approach line contains code (code-IS-the-decision cases), it must not contain comments referencing chunks, stories, cycles, sprints, or task IDs (`// Chunk 2 spec`, `# Story: handles auth`, `// from this cycle`). The implementer mirrors the style of spec code — if your spec includes those references, that pattern leaks into production code where it rots. Workflow context belongs in commit messages and PR descriptions, not in source.
+**Cite rules in prose, never in code — and always with the reason attached.** Your prose SHOULD name the governance file, the Pitch, and locked decisions — that's how the implementer knows a constraint is binding. But pair every citation with what it protects: "no_upstream_body_relay (internal service details must never reach a browser)". The implementer writes comments from what you hand it; give it only a key path and the key path lands in source. In decision-code itself (code-IS-the-decision cases), comments carry the reason only — no config key paths, no planning references, no workflow vocabulary (`// Chunk 2 spec`, `# Story: handles auth`). The implementer mirrors spec code exactly; a citation there rots in production. Workflow context belongs in commit messages and PR descriptions.
 
 Each chunk MUST include these sections (full template, receipt types, and section rules are in the format guide):
 
