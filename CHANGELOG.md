@@ -2,6 +2,10 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.1.1 - 2026-07-31
+
+- Improved code comments in implemented work: they now explain why the code is the way it is, instead of citing internal planning notes or config rule names that mean nothing outside the session that wrote them. Comments you asked for (like tagged TODO markers on placeholder content) are untouched - this only stops the unwanted paper trail.
+
 ## 2.1.0 - 2026-07-30
 
 - Added craft's front porch: in a project you haven't initialized, Claude now knows craft is there from your very first prompt. Ask to build something and /craft:init gets offered at the natural moment - instead of you discovering weeks in that it existed. Everything that already works with zero setup (mockups, notebook capture, guide/ask/riff, research) is routed to as-is, and nothing nags: the porch routes, it never blocks.
