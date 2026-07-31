@@ -2,6 +2,12 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.1.0 - 2026-07-30
+
+- Added craft's front porch: in a project you haven't initialized, Claude now knows craft is there from your very first prompt. Ask to build something and /craft:init gets offered at the natural moment - instead of you discovering weeks in that it existed. Everything that already works with zero setup (mockups, notebook capture, guide/ask/riff, research) is routed to as-is, and nothing nags: the porch routes, it never blocks.
+- Added cold capture that actually works: "don't let me forget X" in an uninitialized project now saves the note instead of erroring, anchored at your repo root no matter which subfolder you're in - and research lands there too, instead of scattering into whatever directory the shell happened to sit in. Capturing outside a git repo tells you exactly where the note landed. Run init later and everything you captured is already in the workshop.
+- Fixed the slash menu doubling the plugin prefix: commands now read /craft:status, not /craft:craft:status.
+
 ## 2.0.1 - 2026-07-28
 
 - Fixed brownfield setup dead-ending on design tokens. Initializing craft on an existing codebase used to drop a generic template file moments before your real scanned values were ready, then correctly refuse to overwrite it - leaving init stuck asking you to resolve a mess it created. Now nothing lands in tokens.yaml until there are real values to write: your extracted colors on UI projects, your scanned conventions on backend projects, written once, no roadblock.
