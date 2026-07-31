@@ -136,7 +136,7 @@ No new state files - the records ARE the state. Conversational recall ("what moc
 
 ## Implementation
 
-Set `PROJECT` to `${CRAFT_PROJECT_ROOT:-.}`.
+Set `PROJECT` to `${CRAFT_PROJECT_ROOT:-.}`. **Cold anchor:** if `CRAFT_PROJECT_ROOT` is unset and no walk-up from PWD finds a `.craft/.global-state` or `.craft/project.md`, set `PROJECT` to the git toplevel (`git rev-parse --show-toplevel`) when in a repo, else PWD - never a subdirectory. Cold captures land at the repo root, so the counts below must look there, not wherever the shell sits.
 
 **Cold guard (uninitialized project):** if `$PROJECT/.craft/.global-state` and `$PROJECT/.craft/project.md` are both absent, this project is not initialized - do NOT run the dashboard reads below (they assume state that does not exist). Answer instead:
 

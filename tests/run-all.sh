@@ -24,8 +24,8 @@ echo "  Craft Plugin Test Suite"
 echo "========================================"
 echo ""
 
-# Find and run all test files
-for test_file in "$TESTS_DIR"/test-*.sh; do
+# Find and run all test files (tests/ plus the hook-script tests beside the code they cover)
+for test_file in "$TESTS_DIR"/test-*.sh "$TESTS_DIR/../hooks/scripts/__tests__"/*.test.sh; do
   [ -f "$test_file" ] || continue
 
   test_name=$(basename "$test_file")
