@@ -87,9 +87,10 @@ else
   # Ensure stories directory exists
   mkdir -p "$cycle_dir/stories"
 
-  # Count existing stories for numbering
-  existing=$(ls "$cycle_dir/stories/"*.md 2>/dev/null | wc -l | tr -d ' ')
-  story_num=$((existing + 1))
+  # Next number = highest existing filename prefix + 1
+  # (a file count breaks after any archived story leaves a gap: count < max, so count+1 collides)
+  max=$(ls "$cycle_dir/stories/" 2>/dev/null | grep -o '^[0-9]*' | sed 's/^0*//' | sort -n | tail -1)
+  story_num=$(( ${max:-0} + 1 ))
   new_file="$cycle_dir/stories/${story_num}-${story_name}.md"
 
   # Get cycle name from directory

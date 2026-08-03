@@ -181,5 +181,84 @@ cd "$SCRIPT_DIR"
 cleanup_test_dir
 echo ""
 
+# Test: Numbering after a gap — next number is max+1, never count+1
+# A cycle holding stories 1, 2, 5 (3-4 archived away) has count=3 but max=5.
+# count+1 would assign 4; the new story must get 6. Gaps stay gaps.
+begin_test "Numbering with gap — assigns max+1, not count+1"
+
+TEST_DIR=$(create_craft_with_cycle "test-cycle" "Test Cycle" "1")
+cd "$TEST_DIR"
+
+CYCLE_STORY_DIR="$TEST_DIR/.craft/cycles/1-test-cycle/stories"
+for n in 1 2 5; do
+  cat > "$CYCLE_STORY_DIR/${n}-story-${n}.md" << EOF
+---
+name: story-${n}
+title: "Story ${n}"
+status: ready
+cycle: test-cycle
+story_number: ${n}
+---
+
+# Story ${n}
+EOF
+done
+
+RESULT=$(CRAFT_PROJECT_ROOT="$TEST_DIR" CLAUDE_PLUGIN_ROOT="$PLUGIN_ROOT" "$SCRIPTS_DIR/create-story.sh" "gapped-story" "Gapped Story" --cycle=test-cycle)
+
+assert_file_exists "story file created" "$RESULT"
+RESULT_BASENAME=$(basename "$RESULT")
+if [ "$RESULT_BASENAME" = "6-gapped-story.md" ]; then
+  echo "  PASS: gap folder (1,2,5) assigns 6"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: expected 6-gapped-story.md, got $RESULT_BASENAME (count+1 regression)"
+  FAIL=$((FAIL + 1))
+fi
+
+cd "$SCRIPT_DIR"
+cleanup_test_dir
+echo ""
+
+# Test: Zero-padded prefix — "08" must not crash octal arithmetic
+# bash $((...)) reads a leading-zero string as octal; a file named 08-*.md
+# would abort the script (value too great for base) without the strip guard.
+begin_test "Zero-padded prefix — 08 parses as 8, next is 9"
+
+TEST_DIR=$(create_craft_with_cycle "test-cycle" "Test Cycle" "1")
+cd "$TEST_DIR"
+
+CYCLE_STORY_DIR="$TEST_DIR/.craft/cycles/1-test-cycle/stories"
+cat > "$CYCLE_STORY_DIR/08-story-8.md" << 'EOF'
+---
+name: story-8
+title: "Story 8"
+status: ready
+cycle: test-cycle
+story_number: 8
+---
+
+# Story 8
+EOF
+
+set +e
+RESULT=$(CRAFT_PROJECT_ROOT="$TEST_DIR" CLAUDE_PLUGIN_ROOT="$PLUGIN_ROOT" "$SCRIPTS_DIR/create-story.sh" "padded-story" "Padded Story" --cycle=test-cycle)
+CREATE_EXIT=$?
+set -e
+
+assert_eq "script exits 0 (no octal crash)" "0" "$CREATE_EXIT"
+RESULT_BASENAME=$(basename "$RESULT")
+if [ "$RESULT_BASENAME" = "9-padded-story.md" ]; then
+  echo "  PASS: 08 parsed as 8, assigned 9"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: expected 9-padded-story.md, got $RESULT_BASENAME"
+  FAIL=$((FAIL + 1))
+fi
+
+cd "$SCRIPT_DIR"
+cleanup_test_dir
+echo ""
+
 # --- Summary ---
 finish_tests

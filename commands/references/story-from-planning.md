@@ -418,7 +418,7 @@ Read `${CRAFT_PROJECT_ROOT}/.craft/.global-state` via Bash (absolute path, NEVER
 ACTIVE_CYCLE=$(grep "^ACTIVE_CYCLE=" "${CRAFT_PROJECT_ROOT}/.craft/.global-state" | cut -d= -f2)
 ```
 
-- **If `ACTIVE_CYCLE` set:** place file in `${CRAFT_PROJECT_ROOT}/.craft/cycles/$ACTIVE_CYCLE/stories/`. Story number from `ls` count + 1. File path: `[N]-[slug].md`. Write `cycle:` and `story_number:` frontmatter.
+- **If `ACTIVE_CYCLE` set:** place file in `${CRAFT_PROJECT_ROOT}/.craft/cycles/$ACTIVE_CYCLE/stories/`. Story number = highest existing numeric filename prefix in that stories/ directory + 1 (never file count + 1 - a gap from an archived story makes count+1 collide with an existing number). File path: `[N]-[slug].md`. Write `cycle:` and `story_number:` frontmatter.
 - **If `ACTIVE_CYCLE` empty:** place file in `${CRAFT_PROJECT_ROOT}/.craft/backlog/`. File path: `[slug].md`. **OMIT `cycle:` and `story_number:` from frontmatter entirely** (do NOT write them as empty strings - existing freeform flow omits them).
 
 ### Frontmatter construction

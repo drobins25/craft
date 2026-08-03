@@ -243,5 +243,101 @@ cd "$SCRIPT_DIR"
 cleanup_test_dir
 echo ""
 
+# Test 6: Numbering after a gap — next number is max+1, never count+1
+# A cycle holding stories 1, 2, 5 (3-4 archived away) has count=3 but max=5.
+# count+1 would assign 4; the next story must get 6. Gaps stay gaps.
+begin_test "Numbering with gap — assigns max+1, not count+1"
+
+TEST_DIR=$(create_craft_with_cycle "test-cycle" "Test Cycle" "1")
+create_backlog_story_full "$TEST_DIR" "gapped" "Gapped Story"
+cd "$TEST_DIR"
+
+CYCLE_STORY_DIR="$TEST_DIR/.craft/cycles/1-test-cycle/stories"
+for n in 1 2 5; do
+  cat > "$CYCLE_STORY_DIR/${n}-story-${n}.md" << EOF
+---
+name: story-${n}
+title: "Story ${n}"
+status: ready
+cycle: test-cycle
+story_number: ${n}
+---
+
+# Story ${n}
+EOF
+done
+
+set +e
+MOVED_FILE=$("$SCRIPTS_DIR/move-story.sh" "$TEST_DIR/.craft/backlog/gapped.md" "test-cycle" 2>/dev/null | tail -1)
+MOVE_EXIT=$?
+set -e
+
+if [ -n "$MOVED_FILE" ] && [ -f "$MOVED_FILE" ]; then
+  MOVED_BASENAME=$(basename "$MOVED_FILE")
+  if [ "$MOVED_BASENAME" = "6-gapped.md" ]; then
+    echo "  PASS: gap folder (1,2,5) assigns 6"
+    PASS=$((PASS + 1))
+  else
+    echo "  FAIL: expected 6-gapped.md, got $MOVED_BASENAME (count+1 regression)"
+    FAIL=$((FAIL + 1))
+  fi
+  assert_file_not_exists "no collision with existing story" "$CYCLE_STORY_DIR/4-gapped.md"
+else
+  echo "  FAIL: move-story.sh did not produce a valid output file"
+  echo "    exit code: $MOVE_EXIT"
+  FAIL=$((FAIL + 1))
+fi
+
+cd "$SCRIPT_DIR"
+cleanup_test_dir
+echo ""
+
+# Test 7: Zero-padded prefix — "08" must not crash octal arithmetic
+# bash $((...)) reads a leading-zero string as octal; a file named 08-*.md
+# would abort the script (value too great for base) without the strip guard.
+begin_test "Zero-padded prefix — 08 parses as 8, next is 9"
+
+TEST_DIR=$(create_craft_with_cycle "test-cycle" "Test Cycle" "1")
+create_backlog_story_full "$TEST_DIR" "padded" "Padded Story"
+cd "$TEST_DIR"
+
+CYCLE_STORY_DIR="$TEST_DIR/.craft/cycles/1-test-cycle/stories"
+cat > "$CYCLE_STORY_DIR/08-story-8.md" << 'EOF'
+---
+name: story-8
+title: "Story 8"
+status: ready
+cycle: test-cycle
+story_number: 8
+---
+
+# Story 8
+EOF
+
+set +e
+MOVED_FILE=$("$SCRIPTS_DIR/move-story.sh" "$TEST_DIR/.craft/backlog/padded.md" "test-cycle" 2>/dev/null | tail -1)
+MOVE_EXIT=$?
+set -e
+
+assert_eq "script exits 0 (no octal crash)" "0" "$MOVE_EXIT"
+if [ -n "$MOVED_FILE" ] && [ -f "$MOVED_FILE" ]; then
+  MOVED_BASENAME=$(basename "$MOVED_FILE")
+  if [ "$MOVED_BASENAME" = "9-padded.md" ]; then
+    echo "  PASS: 08 parsed as 8, assigned 9"
+    PASS=$((PASS + 1))
+  else
+    echo "  FAIL: expected 9-padded.md, got $MOVED_BASENAME"
+    FAIL=$((FAIL + 1))
+  fi
+else
+  echo "  FAIL: move-story.sh did not produce a valid output file"
+  echo "    exit code: $MOVE_EXIT"
+  FAIL=$((FAIL + 1))
+fi
+
+cd "$SCRIPT_DIR"
+cleanup_test_dir
+echo ""
+
 # --- Summary ---
 finish_tests

@@ -189,8 +189,10 @@ For each `story-fix` finding with severity `blocks-ship` or `looks-wrong`:
 1. Create a single-chunk story in the **current cycle** (NOT a new cycle):
 
 ```bash
-next_num=$(ls $cycle_dir/stories/*.md 2>/dev/null | wc -l | tr -d ' ')
-next_num=$((next_num + 1))
+# Next number = highest existing filename prefix + 1 (never file count + 1 -
+# a gap from an archived story makes count+1 collide with an existing number)
+max=$(ls "$cycle_dir/stories/" 2>/dev/null | grep -o '^[0-9]*' | sed 's/^0*//' | sort -n | tail -1)
+next_num=$(( ${max:-0} + 1 ))
 ```
 
 Write to `$cycle_dir/stories/[N]-fix-[slug].md`:
