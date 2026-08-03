@@ -2,6 +2,10 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.1.2 - 2026-08-03
+
+- Fixed story numbering handing out a number already in use: after a story was archived out of a cycle, the next story created or assigned there could land on an existing number, leaving two stories answering to "story N". New stories now always get a number higher than every existing one - gaps left by archived stories stay as gaps.
+
 ## 2.1.1 - 2026-07-31
 
 - Improved code comments in implemented work: they now explain why the code is the way it is, instead of citing internal planning notes or config rule names that mean nothing outside the session that wrote them. Comments you asked for (like tagged TODO markers on placeholder content) are untouched - this only stops the unwanted paper trail.
