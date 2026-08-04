@@ -88,14 +88,20 @@ The user clicks letters in their own browser and reacts in chat; the orchestrato
 
 > "Cleared - the page is showing real code again."
 
-**Then file the record** (rungs (c)/(e); NEVER on rung (d)):
+**Then route the exit and file the record - ordering per exit, and the capture ALWAYS runs** (rungs (c)/(e); NEVER on rung (d)):
 
 ```bash
 bash "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/dials-capture.sh" "<subject>" \
   --surface=<surface> --kind=<kind> --scope=<magnitude|approach> \
   --offered="<letters>" --chose=<letter|none> --passed="<letters>" \
-  --outcome=<nothing|tweak|story|todo> [--outcome-ref=<ref>] --reaction="<verbatim>"
+  --outcome=<nothing|tweak|story|todo> [--graduated-to=<artifact>] --reaction="<verbatim>"
 ```
+
+`graduated_to` records graduation intent - the destination artifact's own status is the truth of what shipped. How it gets filled depends on the exit:
+
+- **nothing** - file immediately, `--graduated-to` empty.
+- **story / todo** - run the exit script FIRST (`create-story.sh` / `notebook-capture.sh` print the created artifact's path), then file with the printed slug as `--graduated-to`. The capture is NEVER gated on the exit script's success: if the script fails, file anyway with `--graduated-to` empty - a failed exit must not cost the corpus the record.
+- **tweak** - pre-mint the destination: the handoff brief states the literal target path (`.craft/tweaks/tweak-<slug>.md`) and adhoc uses that name verbatim (its dial-sourced branch). File the record with that pre-minted name as `--graduated-to` BEFORE the handoff, so the brief can also name the dial record's path.
 
 `surface` and `kind` reuse the tweak vocabulary - grep existing `.craft/tweaks/` records for a matching surface slug before minting a new one. A dial record is born closed: no status, no follow-up, no nag - a session that ended in "keep it" is as complete as one that shipped.
 
@@ -104,7 +110,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/dials-capture.sh" "<subject>" \
 1. **Nothing** - the current value won. Speak the keep-current close BEFORE the teardown line, naming what the user now knows:
    > "Current holds - you've now seen it against B and C and it's still the one."
    Then teardown, then file with `outcome: nothing`, exactly as faithfully as any other outcome. This ending is an earned decision, never a shrug.
-2. **Tweak** - hand to `craft:adhoc` with a dial-sourced brief: "direction pre-settled, dial record at [path], chosen position [letter]: [values]" - the Fit Check verifies the PORT, not the idea. The chosen values are normative; port them verbatim. A locked-decision conflict still routes through tweak's existing pre-edit branch - dial never overrides a lock.
+2. **Tweak** - hand to `craft:adhoc` with a dial-sourced brief: "direction pre-settled, dial record at [path], record name: tweak-<slug> (use verbatim), chosen position [letter]: [values]" - the brief's literal target path is the name adhoc MUST use for its record, and the Fit Check verifies the PORT, not the idea. The chosen values are normative; port them verbatim. A locked-decision conflict still routes through tweak's existing pre-edit branch - dial never overrides a lock.
 3. **Story** - story-new, with the dial record path and chosen direction passed as the spark's source material.
 4. **Todo** - a notebook todo naming the dial record and the chosen position; pick it up whenever.
 

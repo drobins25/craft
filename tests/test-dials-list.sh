@@ -22,8 +22,10 @@ echo ""
 
 echo "-- Test: no dials directory is silent and exits 0 --"
 fresh_root
+set +e
 OUT=$(bash "$LIST")
 RC=$?
+set -e
 [ "$RC" -eq 0 ] && pass "exit 0 with no .craft/dials" || fail "exit 0 with no .craft/dials" "0" "$RC"
 [ -z "$OUT" ] && pass "empty stdout with no .craft/dials" || fail "empty stdout with no .craft/dials" "(empty)" "$OUT"
 rm -rf "$ROOT"
@@ -31,7 +33,7 @@ rm -rf "$ROOT"
 echo "-- Test: list emits SURFACE and KIND for the tweak join --"
 fresh_root
 bash "$CAP" "filter row spacing" --surface=filter-row --kind=spacing --scope=magnitude \
-  --offered="a,b,c" --chose=c --passed="a,b" --outcome=tweak --outcome-ref=tweak-filter-row-gap \
+  --offered="a,b,c" --chose=c --passed="a,b" --outcome=tweak --graduated-to=tweak-filter-row-gap \
   --reaction="C - commit to it" > /dev/null
 OUT=$(bash "$LIST")
 echo "$OUT" | grep -q "^SURFACE=filter-row$" && pass "SURFACE= emitted with captured value" || fail "SURFACE= emitted" "SURFACE=filter-row" "$(echo "$OUT" | grep '^SURFACE=' || echo missing)"
@@ -53,7 +55,7 @@ python3 -c "
 import re, sys
 p = sys.argv[1]
 c = open(p).read()
-c = re.sub(r'^outcome_ref:', 'status: open\noutcome_ref:', c, flags=re.MULTILINE)
+c = re.sub(r'^graduated_to:', 'status: open\ngraduated_to:', c, flags=re.MULTILINE)
 open(p, 'w').write(c)
 " "$OUT_FILE"
 grep -q '^status: open$' "$OUT_FILE" || fail "test setup: status injection landed"

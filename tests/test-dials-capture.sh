@@ -37,7 +37,7 @@ if [ -d "$ROOT/.craft/dials" ]; then
 else
   pass "no file written on invalid kind"
 fi
-for k in icon copy spacing color motion content; do
+for k in icon copy spacing size color motion content; do
   OUT=$(bash "$SCRIPT" "kind $k" --surface=filter-row --kind="$k" --scope=magnitude --outcome=nothing)
   [ -f "$OUT" ] && pass "kind=$k accepted" || fail "kind=$k accepted"
 done
@@ -60,14 +60,14 @@ rm -rf "$ROOT"
 echo "-- Test: all eleven frontmatter keys present, in order, on a minimal record --"
 fresh_root
 OUT=$(capture "filter row spacing")
-KEYS_EXPECTED="source slug created surface kind scope offered chose passed outcome outcome_ref"
+KEYS_EXPECTED="source slug created surface kind scope offered chose passed outcome graduated_to"
 KEYS_ACTUAL=$(awk '/^---$/{c++; next} c==1{sub(/:.*/,""); print}' "$OUT" | tr '\n' ' ' | sed 's/ $//')
 if [ "$KEYS_ACTUAL" = "$KEYS_EXPECTED" ]; then
   pass "eleven keys present in contract order"
 else
   fail "eleven keys present in contract order" "$KEYS_EXPECTED" "$KEYS_ACTUAL"
 fi
-grep -q "^outcome_ref:[[:space:]]*$" "$OUT" && pass "unsupplied outcome_ref writes empty key, not omitted line" || fail "unsupplied outcome_ref writes empty key" "outcome_ref: (empty)" "$(grep '^outcome_ref:' "$OUT" || echo 'line missing')"
+grep -q "^graduated_to:[[:space:]]*$" "$OUT" && pass "unsupplied graduated_to writes empty key, not omitted line" || fail "unsupplied graduated_to writes empty key" "graduated_to: (empty)" "$(grep '^graduated_to:' "$OUT" || echo 'line missing')"
 rm -rf "$ROOT"
 
 echo "-- Test: record is born closed - no lifecycle fields --"

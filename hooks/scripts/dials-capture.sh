@@ -1,8 +1,8 @@
 #!/bin/bash
 # dials-capture.sh - Write a .craft/dials/ record for a completed dial session
 # Usage: dials-capture.sh "<slug-text>" --surface=<s> --kind=<k> --scope=<magnitude|approach> \
-#          --offered="<letters>" --chose=<letter|none> --passed="<letters>" \
-#          --outcome=<nothing|tweak|story|todo> [--outcome-ref=<ref>] [--source=<s>] [--reaction="<verbatim>"]
+#          --outcome=<nothing|tweak|story|todo> [--offered="<letters>"] [--chose=<letter|none>] \
+#          [--passed="<letters>"] [--graduated-to=<ref>] [--source=<s>] [--reaction="<verbatim>"]
 #
 # surface and kind reuse the tweak-record vocabulary: they are the join key that
 # lets a future pass cluster dial records against .craft/tweaks/ ("five sessions
@@ -12,6 +12,12 @@
 # A dial record is born closed: no status, no attempts, no lifecycle of any
 # kind. A session that ended in "keep the current value" is as complete as one
 # that graduated to a tweak - the record is the value, not a work item.
+#
+# graduated_to records graduation intent - the artifact the session handed off
+# to (same vocabulary as mockup and notebook records). It is not a shipped
+# confirmation: the destination artifact's own status is the truth of what
+# actually landed. Empty means the exit produced no artifact (outcome: nothing,
+# a cold session, or a failed exit script).
 #
 # Every frontmatter key is written unconditionally (empty when unsupplied),
 # so consumers can rely on the full key set being present on every record.
@@ -49,7 +55,7 @@ OFFERED=""
 CHOSE=""
 PASSED=""
 OUTCOME=""
-OUTCOME_REF=""
+GRADUATED_TO=""
 SOURCE="dial"
 REACTION=""
 
@@ -62,7 +68,7 @@ while [ $# -gt 0 ]; do
     --chose=*)       CHOSE="${1#*=}"; shift ;;
     --passed=*)      PASSED="${1#*=}"; shift ;;
     --outcome=*)     OUTCOME="${1#*=}"; shift ;;
-    --outcome-ref=*) OUTCOME_REF="${1#*=}"; shift ;;
+    --graduated-to=*) GRADUATED_TO="${1#*=}"; shift ;;
     --source=*)      SOURCE="${1#*=}"; shift ;;
     --reaction=*)    REACTION="${1#*=}"; shift ;;
     *)
@@ -86,9 +92,9 @@ if [ -z "$SURFACE" ]; then
 fi
 
 case "$KIND" in
-  icon|copy|spacing|color|motion|content) ;;
+  icon|copy|spacing|size|color|motion|content) ;;
   *)
-    echo "Error: kind must be one of icon|copy|spacing|color|motion|content" >&2
+    echo "Error: kind must be one of icon|copy|spacing|size|color|motion|content" >&2
     exit 1
     ;;
 esac
@@ -162,7 +168,7 @@ done
   echo "chose: $CHOSE"
   echo "passed: $PASSED"
   echo "outcome: $OUTCOME"
-  echo "outcome_ref: $OUTCOME_REF"
+  echo "graduated_to: $GRADUATED_TO"
   echo "---"
   if [ -n "$REACTION" ]; then
     echo ""
