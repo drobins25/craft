@@ -92,6 +92,16 @@ And the mockup isn't the only door into your project's DNA. A two-minute tweak t
 
 craft routes it to `/craft:adhoc`, makes the change in place, shows you, and records what you said. Accepted tweaks reconcile the same way a mockup does: when a tweak's final values drift from your tokens or outgrow a lock, craft asks once - at acceptance, never mid-flow - whether the new taste becomes the documented standard. Say yes and it can snowball, offering to sweep the settled rule across every surface it fits. Whether the change arrived through a mockup or a two-minute tweak, your design system ends the session already agreeing with what you approved.
 
+And when the live page is almost there - just a notch off:
+
+> "Can we dial down the login text and try a different color perhaps?"
+
+You don't have to finish that sentence.
+
+`/craft:dial` drops the options into your running app - A, B, C, D, in a little grey panel on the page you were already looking at. You click until one stops bugging you. "Oh I like B."
+
+That's the review. You stopped describing what you wanted and pointed at it.
+
 Your reactions are recorded verbatim along the way - they're the convergence history, and they feed the taste record the notebook builds on.
 
 ## The Notebook

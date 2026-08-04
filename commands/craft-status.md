@@ -142,7 +142,7 @@ Set `PROJECT` to `${CRAFT_PROJECT_ROOT:-.}`. **Cold anchor:** if `CRAFT_PROJECT_
 
 > **Craft is installed here, but this project isn't initialized - so there's no cycle or story state to show yet.**
 >
-> Works right now, no setup: `/craft:mockup` (visual options funnel), `/craft:notebook` (capture thoughts), `/craft:guide` / `/craft:ask` / `/craft:riff` (consult), `/craft:research` and `/craft:become` (artifacts land at the repo root).
+> Works right now, no setup: `/craft:mockup` (visual options funnel), `/craft:dial` (live value calibration on a running app), `/craft:notebook` (capture thoughts), `/craft:guide` / `/craft:ask` / `/craft:riff` (consult), `/craft:research` and `/craft:become` (artifacts land at the repo root).
 >
 > `/craft:init` unlocks the rest - stories, cycles, tweaks, adhoc fixes - and makes anything already captured recallable and buildable.
 

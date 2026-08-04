@@ -71,6 +71,8 @@ plugins/craft/
 │   ├── craft-workflow-design.md   ← Definition lifecycle (create/edit/archive)
 │   └── references/
 │       ├── workflow-formats.md    ← Shared schema reference (frontmatter, stage-file format)
+│       ├── dial-inject.md         ← Dial injection contract (handles, MEASURE/INJECT/TOGGLE/CLEAR, canonical clear)
+│       ├── dial-inline.md         ← The dial flow logic (single source of truth, read inline)
 │       ├── mockup-inline.md       ← The mockup funnel logic (single source of truth, read inline)
 │       └── story-from-mockup.md   ← Story ramp: pre-fill a story from a converged mockup (CSS normative)
 ├── skills/                    ← Orchestrator-context skills (11 skills)
@@ -209,7 +211,7 @@ Write access restricted to `.craft/` and `.claude/`. Used for story creation, de
 
 **Included skills:** content-spark, creative-spark, design-vibe, lock-decision, plan-chunks, adhoc, approve, browser
 **Included agents:** plan-chunks-agent, project-scanner, muse, riff, alchemist, conductor, doc-writer, product-anthropologist, pr-reviewer-expert, maze-architect, researcher, research-synthesizer, verifier, practitioner-reviewer, playwright-browser, become-researcher, crystallizer, guide
-**Included commands:** craft, craft:init, craft:cycle-design, craft:cycle-start, craft:cycle-complete, craft:cycle-assign, craft:story-new, craft:story-archive, craft:story-delete, craft:status, craft:update-docs, craft:docs, craft:project, craft:review, craft:become, craft:ask, craft:workflow, craft:workflow-run, craft:workflow-design, craft:research, craft:research-verify, craft:adhoc, craft:mockup
+**Included commands:** craft, craft:init, craft:cycle-design, craft:cycle-start, craft:cycle-complete, craft:cycle-assign, craft:story-new, craft:story-archive, craft:story-delete, craft:status, craft:update-docs, craft:docs, craft:project, craft:review, craft:become, craft:ask, craft:workflow, craft:workflow-run, craft:workflow-design, craft:research, craft:research-verify, craft:adhoc, craft:mockup, craft:dial
 
 ### Implement Phase
 
@@ -365,6 +367,7 @@ project-root/
 │   │       ├── record.md      ← Durable anchor: status, reactions, polish ledger, materials, backlinks
 │   │       ├── assets/        ← Orchestrator-fetched fonts/icons (inlined into the page; travels with the folder)
 │   │       └── rounds/        ← Archived outgoing rounds (never rendered)
+│   ├── dials/                 ← Dial session records (created by /craft:dial, born closed - no lifecycle)
 │   ├── project.md             ← Project DNA
 │   ├── quality.yaml           ← Quality gates
 │   ├── settings.yaml          ← Craft settings
