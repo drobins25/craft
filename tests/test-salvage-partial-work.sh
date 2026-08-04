@@ -111,8 +111,10 @@ CHECKPOINT_REF="${SETUP##*|}"
 cd "$TEST_DIR"
 
 # Don't change anything
+set +e
 RESULT=$("$SCRIPTS_DIR/salvage-partial-work.sh" "$CHECKPOINT_REF" "login-form" 2 "$TEST_DIR")
 EXIT_CODE=$?
+set -e
 
 assert_eq "exits 0" "0" "$EXIT_CODE"
 assert_eq "stdout is nothing_to_salvage" "nothing_to_salvage" "$RESULT"

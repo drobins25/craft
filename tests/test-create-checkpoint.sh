@@ -96,8 +96,10 @@ echo ""
 begin_test "Idempotent — no changes still writes YAML with current HEAD"
 TEST_DIR=$(setup_test_project)
 
+set +e
 RESULT=$("$SCRIPTS_DIR/create-checkpoint.sh" "login-form" 1 ".craft/cycles/10-test-cycle" "$TEST_DIR")
 EXIT_CODE=$?
+set -e
 
 assert_eq "exits 0" "0" "$EXIT_CODE"
 CHECKPOINT_FILE="$RESULT"
