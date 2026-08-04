@@ -3,6 +3,7 @@ v1|craft-cold-start-index
 craft is installed; this project is NOT initialized (no .craft/ state). Most craft machinery is dormant until /craft:init. Route to what works now.
 =WORKS-NOW
 mock something up / see visual options|/craft:mockup - full funnel runs cold; persists under repo-root .craft/mockups/; its closing step offers init
+dial a live value on the running app|/craft:dial - runs cold against a running app; files no record; mentions init only at the close
 capture a thought|/craft:notebook - capture works cold, lands at repo-root .craft/notebook/
 deferral marker in user utterance ("later"/"don't let me forget"/"side note"/etc.)|inline-mention /craft:notebook (NOT AskUserQuestion); on accept capture silently
 how does craft work / which flow fits|/craft:guide (explains) | /craft:ask (expert consult) | /craft:riff (thinking partner) - all run cold

@@ -206,23 +206,26 @@ assert_contains "cold index emitted instead" "v1|craft-cold-start-index" "$RESUL
 rm -rf "$TEST_DIR"
 echo ""
 
-# Test 9: Orchestration index file — under 5KB
+# Test 9: Orchestration index file — size ceiling
 # Ceiling history: 3584 was set at the initial commit when the index was 3373 bytes.
 # Shipped routing (notebook, riff-as-skill, claims-audit) grew it to 4470 bytes of
 # load-bearing content; the ceiling was re-evaluated and raised to 5120 (current +
-# ~14% headroom). The budget still bounds per-prompt injection cost — the inject
-# hook cats the whole file into UserPromptSubmit output on every prompt.
-begin_test "Orchestration index file — under 5KB"
+# ~14% headroom). The dial-offer routing row grew it to 5257; raised to 5632 with
+# deliberately tighter (~7%) headroom, sized so one more offer-row-length addition
+# fits and anything larger forces this re-evaluation again. The budget still bounds
+# per-prompt injection cost — the inject hook cats the whole file into
+# UserPromptSubmit output on every prompt.
+begin_test "Orchestration index file — size ceiling"
 
 INDEX_FILE="$PLUGIN_ROOT/reference/orchestration-index.min"
 assert_file_exists "index file exists" "$INDEX_FILE"
 
 FILE_SIZE=$(wc -c < "$INDEX_FILE" | tr -d ' ')
-if [ "$FILE_SIZE" -lt 5120 ]; then
-  echo "  PASS: file is ${FILE_SIZE} bytes (< 5120)"
+if [ "$FILE_SIZE" -lt 5632 ]; then
+  echo "  PASS: file is ${FILE_SIZE} bytes (< 5632)"
   PASS=$((PASS + 1))
 else
-  echo "  FAIL: file is ${FILE_SIZE} bytes (>= 5120 limit)"
+  echo "  FAIL: file is ${FILE_SIZE} bytes (>= 5632 limit)"
   FAIL=$((FAIL + 1))
 fi
 

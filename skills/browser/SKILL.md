@@ -13,6 +13,8 @@ Interactive browser automation powered by `playwright-cli`. Launches a persisten
 
 Chrome DevTools MCP works but has limitations: no persistent agent session between tool calls, no interactive steering, and full accessibility trees streamed into context (~114k tokens per task). playwright-cli saves snapshots to disk as YAML (~27k tokens per task, ~4x cheaper) and supports named sessions that persist across agent turns.
 
+`/craft:dial` is the deliberate exception to this stance: that objection targets snapshot-heavy agent work, while dial runs in the main loop on `evaluate_script` plus at most two screenshots, and page state persists between its calls - so dial keeps Chrome DevTools MCP.
+
 This skill is **purely additive**. It does not replace or modify Chrome DevTools MCP, the walkthrough-analyzer, or any existing analyzer agent.
 
 ## Prerequisites
@@ -78,6 +80,8 @@ playwright-cli kill-all 2>/dev/null
 ```
 
 Only run `kill-all` if stale sessions are detected. For a clean state, this is a no-op.
+
+When the target page may have hosted a `/craft:dial` session, have the agent run the canonical dial clear on arrival (remove `craft-dial-style`, `craft-dial-panel`, every `[data-craft-dial-injected]` node, delete `documentElement.dataset.craftDial` - idempotent on a clean page, see `commands/references/dial-inject.md`) so screenshots never capture dial scaffolding.
 
 ### Step 5: Launch the Agent
 

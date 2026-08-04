@@ -101,6 +101,7 @@ After a full cycle of implementation, config files, entry points, and dependenci
 3. Start it fresh using the command from the brief (run in background via Bash)
 4. Wait for it to be ready (curl until 200)
 5. Navigate to the app URL
+6. Clear any leftover craft:dial injection - via `evaluate_script`, remove the `craft-dial-style` style element, the `craft-dial-panel` element, every `[data-craft-dial-injected]` node, and delete `documentElement.dataset.craftDial`; idempotent on a clean page, and a stale dial would make you report fake chrome as the product (see `commands/references/dial-inject.md`)
 
 ## Phase 1: Preflight Checklist (MANDATORY - 6 checks, never skip)
 

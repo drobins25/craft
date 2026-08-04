@@ -32,6 +32,7 @@ surface: [free-text kebab slug for WHERE in the product, e.g. settings-toolbar]
 kind: [icon | copy | spacing | color | motion | content]
 source_story: [story that built the element, if known]
 mockup: [name of the converged mockup this tweak ports, e.g. 2026-07-05-hero-pulse - empty for non-mockup tweaks]
+dial: [name of the dial record this tweak came from, e.g. 2026-08-03-filter-row-spacing - empty for non-dial tweaks]
 reapplies: [name of the original tweak this reapplies, e.g. tweak-toolbar-stroke-weight - empty for a novel tweak]
 grew_from: [name of the origin tweak this outcome grew from - empty except taste-pass outputs]
 satisfied_todo: [stamped by the todo-satisfaction beat - <todo-slug> or none-matched]
@@ -79,6 +80,8 @@ Write the findings into the `## Fit Check` section: where the element lives, wha
 
 **Mockup-ported tweaks:** when the handoff brief states "direction pre-settled, converged mockup at [path]", set the record's `mockup:` field, skip re-opening exploration in the Fit Check (the mockup already settled the direction - the check verifies fit of the PORT, not of the idea), and treat mockup.html's CSS as normative: port values verbatim, never reinterpret from appearance. **If the handoff also names an `origin` (the mockup grew from a taste-pass todo), stamp this record's `grew_from:` with it** - leave `grew_from:` empty when there is no origin; use `reapplies:` instead only if the outcome was a literal copy of the origin move. This is the read side of the lineage: without it, a taste-pass outcome that snowballed into a mockup and graduated back to a tweak would silently lose its home, however far it diverged from the seed. **When the handoff forwards a materials spec (the record's `## Materials` was non-empty), acquiring that material through the project's idiom is part of the port** - name it in the tweak's presentation so the acceptance ask covers the project change. The mockup's inlined base64 is never ported as the acquisition; an icon entry means adopt the library's components. Type values still port verbatim - only where the font file comes from is resolved against the project.
 
+**Dial-sourced tweaks:** when the handoff brief states "direction pre-settled, dial record at [path]", set the record's `dial:` field, skip re-opening exploration in the Fit Check (the dial already settled fit against the real surface, with real neighbors and real data - the check verifies the PORT, not the idea), and treat the chosen position's values as normative: port them verbatim, never re-derive from appearance. A locked-decision conflict still routes through the pre-edit branch above - a dial pick never overrides a lock. On a cold project the brief names the resolved root; prefix `CRAFT_PROJECT_ROOT="<root>"` on every bash command this invocation runs.
+
 ### The inline lock-edit path
 
 Two reconcile moments may alter or remove a locked.md entry: the pre-edit branch above, and the Acceptance reconcile in Step 3. The rules, defined once:
@@ -105,7 +108,7 @@ Per attempt:
 
 1. **Mid-pass lock pivot check.** When the user's reaction changes the brief's direction ("actually, make it sharper"), re-screen the NEW direction against locked.md (already in context from the Fit Check) before editing. If it crosses a lock the brief didn't: say ONE ignorable line - "that crosses the [X] lock; trying it anyway - we'll settle the lock if this is what you accept" - and proceed. No question, no AUQ, and NO locked.md write mid-pass; the lock settles once, at the Acceptance reconcile. Direction unchanged, or no lock crossed → silence.
 2. **Change.** Make the edits with Edit/Write. Increment `attempts`, update `files_changed` / `lines_changed`.
-3. **Validate.** Run the project's tests/build. For anything visual, use the browser: navigate to the surface, take the after screenshot, and confirm the change landed as the fit check intended. Record it in the attempt's Validation.
+3. **Validate.** Run the project's tests/build. For anything visual, use the browser: navigate to the surface, first clear any leftover craft:dial injection (via `evaluate_script`: remove `craft-dial-style`, `craft-dial-panel`, every `[data-craft-dial-injected]` node, and delete `documentElement.dataset.craftDial` - idempotent on a clean page, see `commands/references/dial-inject.md`), then take the after screenshot and confirm the change landed as the fit check intended. Record it in the attempt's Validation.
 4. **Commit.** Hand back to the shell's commit step (manifest staging, `tweak:` prefix). Every validated attempt commits - the custody chain holds even if the record stays open.
 5. **Close-out ask.** When the `## Fit Check` carries a pending todo match, the question line names BOTH effects - append to it: "Accepting also closes todo '[todo-slug]' - this work satisfies it." One consent covers both (the graduate-flow precedent, commands/craft-notebook.md); never add a second AskUserQuestion for the close. Only an accepting answer closes the todo - "Not quite", explicit decline, abandonment, and bare validation never do. Use **AskUserQuestion**:
 

@@ -40,9 +40,10 @@ You are a **world-class QA analyst** with 15 years of experience breaking softwa
 Before analysis, determine your operating mode:
 
 1. Try `list_pages` via chrome-devtools MCP
-2. **If MCP tools available and pages open:** Use **Browser Mode** — navigate, click, fill forms, take screenshots, check console errors. State this: "Browser mode — testing the running app."
-3. **If MCP tools available but no pages/app not loaded:** Try navigating to the expected URL. If it fails: "App doesn't appear to be running. Switching to code review."
-4. **If MCP tools not available:** Use **Code Review Mode** — analyze source with Read, Glob, Grep. State this: "Code review mode — MCP unavailable, analyzing source code."
+2. Clear any leftover craft:dial injection before analyzing - via `evaluate_script`, remove the `craft-dial-style` style element, the `craft-dial-panel` element, every `[data-craft-dial-injected]` node, and delete `documentElement.dataset.craftDial`; idempotent on a clean page, and a stale dial would poison what you see (see `commands/references/dial-inject.md`)
+3. **If MCP tools available and pages open:** Use **Browser Mode** — navigate, click, fill forms, take screenshots, check console errors. State this: "Browser mode — testing the running app."
+4. **If MCP tools available but no pages/app not loaded:** Try navigating to the expected URL. If it fails: "App doesn't appear to be running. Switching to code review."
+5. **If MCP tools not available:** Use **Code Review Mode** — analyze source with Read, Glob, Grep. State this: "Code review mode — MCP unavailable, analyzing source code."
 
 Browser mode finds runtime bugs (broken flows, console errors, visual glitches). Code review finds static issues (missing validation, error handling gaps, type safety).
 

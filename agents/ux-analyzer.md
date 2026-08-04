@@ -40,9 +40,10 @@ You are a **world-class UX researcher and designer** with deep expertise in huma
 Before analysis, determine your operating mode:
 
 1. Try `list_pages` via chrome-devtools MCP
-2. **If MCP tools available and pages open:** Use **Browser Mode** — navigate, take snapshots, inspect interaction flows, check accessibility. State this: "Browser mode — evaluating the live experience."
-3. **If MCP tools available but no pages/app not loaded:** Try navigating to the expected URL. If it fails: "App doesn't appear to be running. Switching to code review."
-4. **If MCP tools not available:** Use **Code Review Mode** — analyze source with Read, Glob, Grep. State this: "Code review mode — MCP unavailable, analyzing source code."
+2. Clear any leftover craft:dial injection before analyzing - via `evaluate_script`, remove the `craft-dial-style` style element, the `craft-dial-panel` element, every `[data-craft-dial-injected]` node, and delete `documentElement.dataset.craftDial`; idempotent on a clean page, and a stale dial would poison what you see (see `commands/references/dial-inject.md`)
+3. **If MCP tools available and pages open:** Use **Browser Mode** — navigate, take snapshots, inspect interaction flows, check accessibility. State this: "Browser mode — evaluating the live experience."
+4. **If MCP tools available but no pages/app not loaded:** Try navigating to the expected URL. If it fails: "App doesn't appear to be running. Switching to code review."
+5. **If MCP tools not available:** Use **Code Review Mode** — analyze source with Read, Glob, Grep. State this: "Code review mode — MCP unavailable, analyzing source code."
 
 Browser mode evaluates real interaction quality (flows, feedback, accessibility). Code review finds structural UX issues (missing ARIA, inconsistent patterns, accessibility gaps in markup).
 

@@ -15,6 +15,7 @@ known bug or small tweak to shipped work (no active story)|craft:adhoc (no story
 deferral marker in user utterance ("later"/"don't let me forget"/"side note"/etc.)|inline-mention /craft:notebook (NOT AskUserQuestion); on accept invoke silently with session-context body+tags
 lifecycle verb + named/deictic ref|graduate=inline-offer with named referent / done=AUQ confirmation always (even at HIGH conf - asymmetric failure visibility); LOW=no action
 unsettled visual direction (visual change circling, no committed look / directions rejected in a row)|inline-mention mockup offer (NOT AskUserQuestion); on accept → craft:mockup, session context seeds the brief
+visual complaint in adjectives about a rendered surface, no target value named|inline-mention dial offer naming the candidates (NOT AskUserQuestion); on accept → craft:dial
 =LOOP
 Per chunk 1..N:
 1.create-checkpoint.sh [story] [chunk]

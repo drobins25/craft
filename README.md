@@ -319,6 +319,7 @@ You rarely type these. Craft routes plain English to the right one - this table 
 | `/craft:research-verify` | Verify existing research findings against independent primary sources |
 | `/craft:adhoc` | Adhoc fix or tweak without story ceremony. Bugs record to `.craft/fixes/`, tweaks to `.craft/tweaks/` |
 | `/craft:mockup` | Live HTML mockup funnel - 3 options, converge by reacting, graduate to tweak/story/todo |
+| `/craft:dial` | Live value calibration in the running app - 2-4 lettered candidates injected on the real page, chosen by eye, nothing written to source |
 | `/craft:project` | Switch projects or cross-project dashboard |
 | `/craft:init` | One-time project setup |
 
@@ -562,6 +563,7 @@ After initialization, your project will have:
 ├── docs/                 # Documentation briefs (created by /craft:docs)
 ├── research/             # Ad-hoc research folders (created by /craft:research)
 ├── mockups/              # Mockup artifacts (created by /craft:mockup): [date]-[slug]/ with mockup.html + record.md
+├── dials/                # Dial session records (created by /craft:dial, born closed - no lifecycle)
 ├── project.md            # Project DNA
 ├── quality.yaml          # Quality gates
 ├── settings.yaml         # Craft settings

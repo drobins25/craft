@@ -475,6 +475,27 @@ flowchart TD
 
 ---
 
+## Dial Flow: `/craft:dial`
+
+Settles a visual question on a surface that already renders: 2-4 lettered candidates are injected into the running app (nothing written to source; a refresh discards everything), the user clicks through them against real data and reacts in chat, and the session files a `.craft/dials/` record whichever way it ends - including "current was right." The flow lives in `commands/references/dial-inline.md` with injection payloads in `commands/references/dial-inject.md`; no AskUserQuestion appears anywhere in it.
+
+```mermaid
+%%{init: {'theme': 'dark'}}%%
+flowchart TD
+    DIAL["/craft:dial [subject]"] --> LADDER{"Degradation rung?<br/>(a) no server → no offer<br/>(b) runnable → start folds into offer"}
+    LADDER --> OPEN2["Open surface in dial browser<br/>login beat: name it, wait"]
+    OPEN2 --> MEASURE["CLEAR stale → MEASURE<br/>derive candidates (tokens, else computed styles)"]
+    MEASURE --> INJECT["INJECT: lettered positions + panel<br/>'don't refresh until we're done'"]
+    INJECT --> LOOP["React loop: user clicks letters,<br/>reacts in chat; re-measure per toggle"]
+    LOOP --> CLOSE["Read offered/chose from live page<br/>→ teardown (every path) → file record"]
+    CLOSE -->|"Nothing"| KEEP["Keep-current close -<br/>an earned decision, outcome: nothing"]
+    CLOSE -->|"Tweak"| DTWEAK["craft:adhoc - direction pre-settled,<br/>chosen values normative"]
+    CLOSE -->|"Story"| DSTORY["story-new, dial record as source"]
+    CLOSE -->|"Todo"| DTODO["Notebook todo holds the pointer"]
+```
+
+---
+
 ## Planning Flow: `/craft:planning`
 
 The strategic roadmap layer above cycles and stories. Manages initiatives, concepts, and open questions, and matures concepts into cycle stories. The main flow below routes on whether a planning folder already exists; the Alignment Walkthrough (further down) is a reusable sub-procedure called from two points.
@@ -722,6 +743,7 @@ flowchart LR
 | `/craft:adhoc` | Adhoc fix or tweak without story ceremony. Bugs record to `.craft/fixes/`, tweaks to `.craft/tweaks/` |
 | `/craft:notebook` | Low-ceremony capture for ideas, todos, and notes (durable project facts) before they harden into stories |
 | `/craft:mockup` | Live HTML mockup funnel - 3 options, converge by reacting, graduate to tweak/story/todo |
+| `/craft:dial` | Live value calibration - 2-4 lettered candidates injected into the running app, chosen by eye against real data |
 | `/craft:riff` | Two-gear thinking partner - senses the moment, runs a tight calibration loop in the main loop or hands open exploration to the riff agent |
 | `/craft:planning` | Feature roadmap and planning - initiatives, concepts, open questions |
 | `/craft:project` | Switch projects or cross-project dashboard |
