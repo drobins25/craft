@@ -2,6 +2,10 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.2.0 - 2026-08-04
+
+- Added /craft:dial for the moment a live page is almost right ("the gaps are too loose", "that reads too quiet"): craft drops lettered options straight into your running app - A, B, C, D in a little grey panel on the page you were already looking at - and you click until one stops bugging you. "Oh I like B" is the whole review: the winner ports into code with tests updated and your exact words on record, everything else vanishes on refresh, and nothing touches your source while you're deciding. Keeping what you already have is a real answer too - craft remembers what you saw and passed on.
+
 ## 2.1.2 - 2026-08-03
 
 - Fixed story numbering handing out a number already in use: after a story was archived out of a cycle, the next story created or assigned there could land on an existing number, leaving two stories answering to "story N". New stories now always get a number higher than every existing one - gaps left by archived stories stay as gaps.
