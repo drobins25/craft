@@ -304,7 +304,7 @@ You rarely type these. Craft routes plain English to the right one - this table 
 | `/craft` | Main entry point - start here |
 | `/craft:status` | Dashboard view of progress |
 | `/craft:notebook` | Low-ceremony capture for ideas, todos, and notes (durable project facts). Graduate / mark done conversationally - no subcommands needed for lifecycle. |
-| `/craft:riff` | Two-gear thinking partner. Senses the moment - runs a tight calibration loop in the main loop, or hands open exploration to the riff agent. Notebook-grade restraint: ignorable offers, silence by default. |
+| `/craft:riff` | Calibrate thinking one question at a time - a main-loop conversation, one plain-prose question per turn, until the direction lands. Bare invocation opens from the oldest open notebook idea. |
 | `/craft:story-new` | Create story (lands in backlog) |
 | `/craft:story-implement` | Implement a story (interactive) |
 | `/craft:story-implement-auto` | Implement a story (autonomous) |
@@ -490,7 +490,7 @@ A future story adds `[[wikilink]]` syntax and a craft-wide graph helper that res
 | Agent | Role |
 |-------|------|
 | `muse` | Emotional job translator - finds why anyone will care before exploring how to build |
-| `riff` | Creative riff partner - reads the room and throws, pulls, or builds on your idea; never lectures. The wide-gear destination of the `/craft:riff` skill (open exploration); the skill itself senses when to engage and runs the tight calibration gear in the main loop. |
+| `riff` | Creative riff partner - reads the room and throws, pulls, or builds on your idea; never lectures. Reached via `/craft:ask` and direct consultation; the `/craft:riff` command is a separate main-loop conversation and never invokes it. |
 | `alchemist` | CSS interaction physicist - sees the browser as a physics engine |
 | `conductor` | AI orchestration architect - knows which patterns hold under real conditions |
 | `doc-writer` | Documentation diagnostician - crystallized from Stripe/Linear-quality practitioners |

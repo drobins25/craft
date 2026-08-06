@@ -90,19 +90,14 @@ assert_file_contains "refine-never-silently-converges rule intact" 'converging t
 assert_file_contains "refine convergence confirm is conversational" 'One converged take this round, or options again?' "$MOCKUP"
 assert_file_contains "muse option unmarked and listed last (Story 20)" 'the muse option stays unmarked, listed last' "$MOCKUP"
 
-RIFF_SKILL="$PLUGIN_ROOT/commands/craft-riff.md"
-
-begin_test "craft-riff names the second shared reference and keeps its GUARD"
-assert_file_contains "hunch-settling named in the skill-vs-agent map" 'reference/hunch-settling.md' "$RIFF_SKILL"
-assert_file_contains "distill-not-canonical contract stated" 'agents/riff.md` stays canonical' "$RIFF_SKILL"
-assert_file_contains "GUARD block survives" 'must NEVER re-document' "$RIFF_SKILL"
-
 DESIGN="$PLUGIN_ROOT/DESIGN.md"
 
 begin_test "DESIGN reference tree and riff section list both shared technique files"
 assert_file_contains "tree lists calibration-loop.md" 'calibration-loop.md' "$DESIGN"
 assert_file_contains "tree lists hunch-settling.md" 'hunch-settling.md' "$DESIGN"
 assert_file_contains "riff section names the mockup consumer" 'first consumer is the mockup funnel' "$DESIGN"
+assert_file_contains "riff section names the full hunch-settling path" 'reference/hunch-settling.md' "$DESIGN"
+assert_file_contains "distill-not-canonical contract lives here" 'agents/riff.md` stays canonical' "$DESIGN"
 
 STORY_FROM_MOCKUP="$PLUGIN_ROOT/commands/references/story-from-mockup.md"
 

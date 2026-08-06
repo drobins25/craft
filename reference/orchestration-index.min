@@ -15,6 +15,7 @@ known bug or small tweak to shipped work (no active story)|craft:adhoc (no story
 deferral marker in user utterance ("later"/"don't let me forget"/"side note"/etc.)|inline-mention /craft:notebook (NOT AskUserQuestion); on accept invoke silently with session-context body+tags
 lifecycle verb + named/deictic ref|graduate=inline-offer with named referent / done=AUQ confirmation always (even at HIGH conf - asymmetric failure visibility); LOW=no action
 unsettled visual direction (visual change circling, no committed look / directions rejected in a row)|inline-mention mockup offer (NOT AskUserQuestion); on accept → craft:mockup, session context seeds the brief
+2+ questions in one turn on an undecided direction (main loop only, never inside another flow's gate)|append ignorable riff offer; on accept → craft:riff
 visual complaint in adjectives about a rendered surface, no target value named|inline-mention dial offer naming the candidates (NOT AskUserQuestion); on accept → craft:dial
 =LOOP
 Per chunk 1..N:
@@ -31,7 +32,6 @@ refine-chunk→surgical fix→HAND BACK TO story-implement
 cycle-design→content-spark(per story)→creative-spark(opt)→design-vibe→plan-chunks MODE=batch
 story-new→content-spark→creative-spark(opt)→plan-chunks
 adhoc→classify|bug:investigate→confidence→edit→validate|tweak:fit-check→edit→validate→AUQ(record open until user accepts)|unsure:ask user
-notebook→capture | notebook→capture→done (conversational, AUQ always) | notebook→capture→graduate(conversational)→story-new (pre-fills spark; idea flagged graduated / todo closed done+graduated_to - graduate accept is the one consent, no done-AUQ)
 =RULES
 !implement chunks directly—ALWAYS invoke implementer via Task
 !validate directly—invoke chunk-validator via Task (validate-chunk skill is manual-only)
@@ -48,6 +48,7 @@ notebook→capture | notebook→capture→done (conversational, AUQ always) | no
 +clean up breadcrumb on ALL exit paths
 !stop after chunk/story completes—continue to next chunk or next story
 !conflate notebook todos with TaskCreate—different lifetimes (notebook=persistent across sessions, TaskCreate=ephemeral, /craft:adhoc=act-now bug/tweak)
+!stack inline offers—max one per turn
 =SCRIPTS
 start-cycle.sh [cycle]|activate,set ACTIVE_CYCLE
 complete-cycle.sh|archive,clear ACTIVE_CYCLE

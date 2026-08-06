@@ -744,7 +744,7 @@ flowchart LR
 | `/craft:notebook` | Low-ceremony capture for ideas, todos, and notes (durable project facts) before they harden into stories |
 | `/craft:mockup` | Live HTML mockup funnel - 3 options, converge by reacting, graduate to tweak/story/todo |
 | `/craft:dial` | Live value calibration - 2-4 lettered candidates injected into the running app, chosen by eye against real data |
-| `/craft:riff` | Two-gear thinking partner - senses the moment, runs a tight calibration loop in the main loop or hands open exploration to the riff agent |
+| `/craft:riff` | One-question-at-a-time thinking conversation in the main loop; bare invocation opens from the oldest open notebook idea |
 | `/craft:planning` | Feature roadmap and planning - initiatives, concepts, open questions |
 | `/craft:project` | Switch projects or cross-project dashboard |
 | `/craft:browser` | Interactive browser session via playwright-cli (a skill invoked as a command) |

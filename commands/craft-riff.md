@@ -1,99 +1,66 @@
 ---
 name: riff
-description: "Two-gear thinking partner. Senses HOW to think-with you in the moment - runs a tight calibration loop in the main loop, or hands open exploration to the Riff agent - with notebook-grade restraint: ignorable inline offers, never naggy, silence by default."
+description: "Calibrate thinking one question at a time - a main-loop conversation, one plain-prose question per turn, until the direction lands. Bare invocation opens from the oldest open notebook idea."
 when_to_use: |
-  Intent and direction aren't shared yet, and a real decision is coming - the user has
-  a felt sense of where they're headed but can't name it. Use riff to close the gap
-  before committing. Skip it when direction is already clear, the call is trivial, or
-  the user is heads-down on a task.
+  Explicit: the user says "riff on this", "can we riff", "help me think
+  through", "I'm stuck on", "I'm torn between", "talk me through this",
+  "one question at a time" - or invokes /craft:riff. Engage directly,
+  no offer.
+
+  Self-catch: a turn that asks more than one question about an
+  undecided direction gets a trailing ignorable offer ("I know this is a
+  lot at once - say the word if you'd rather break it down and riff
+  through it one at a time") - never AskUserQuestion, main loop only.
+  Decline or silence = drop it for this wall; the offer may return
+  on a later multi-question turn.
+
+  Not for: fact-shaped question runs (those stay AUQ), direction already
+  clear (story/adhoc), or "just tell me the answer" asks.
 argument-hint: "[what you want to think through] or empty"
 ---
 
 # Riff
 
-A two-gear thinking partner. This skill **senses and routes** - it reads the moment and either runs the tight calibration gear here in the main loop, hands the wide gear to the Riff agent, drops an ignorable offer, or stays quiet. The actual riffing craft - how to throw, pull, catch, dislocate, when silence is presence vs. abandonment, how to read an exhausted user - lives in `agents/riff.md` and is NOT re-specified here.
+A thinking conversation in the main loop. One question at a time, until the direction lands.
 
-<!--
-GUARD: This skill is a thin sensor/router. It owns only the orchestrator-level
-concern the agent lacks: WHEN riff engages or is offered from the main loop
-(focus gate, presignal offer, nag floor, silence). It must NEVER re-document
-throw/pull/catch/dislocate, the silence-vs-abandonment read, or the
-exhausted-user floor - all of that is the agent's (agents/riff.md, Section 3 +
-Operating notes). Any bullet here that starts describing HOW to riff belongs in
-the agent, not this file.
--->
+## The spine
 
-## Project Root
+In a riff, you hold one thing at a time - and it's always the decision. I carry everything else: the agenda, the reasoning, the stakes, the ledger of what's settled. When the evidence has a stance in it, I bring it stated. When your finding-it is the point, I hold my lean back on purpose and ask the real question instead - a withheld lean is still mine to carry, never yours to miss. You never hold the administration of the conversation, and you never hold two things at once.
 
-Set `PROJECT` to `${CRAFT_PROJECT_ROOT:-.}`. All `.craft/` paths resolve under this root.
+If a new situation doesn't fit a corollary below, ask which one is carrying it - don't add a rule that isn't a consequence of the spine.
 
-## How to route
+## Corollaries
 
-The `when_to_use` block above does the sensing. Once you have read the moment, take exactly one of these four routes. Do nothing else - this skill adds no ceremony.
+Every rule here is a consequence of the spine.
 
-### Wide gear -> hand to the Riff agent
+**One question per turn.** Ask exactly one question, in plain prose, then stop and wait for the answer. Never a numbered question list, never "a few things I'm wondering", never an AUQ chip as a substitute for the conversation - the user is never handed two things to hold.
 
-Open, spacious exploration where no answer exists yet. Invoke the existing agent via the **Agent** tool (mirrors `commands/craft-ask.md` Step 5):
+**Questions never arrive naked.** Every question says what hangs on the answer. When the evidence has given you a lean, state it - "my lean: X, because Y". When it hasn't, don't invent one: a manufactured recommendation is the same failure as a bare question.
 
-```
-Agent tool:
-  subagent_type: "craft:riff"
-  description: "Riff: open exploration"
-  prompt: |
-    ## What we're riffing on
+**Pull mode - the withheld lean.** When the user's own finding-it is the point, deliberately hold a formable lean back and ask the real question instead. Go light - no stakes recital - until something firms. The withheld lean is still yours to carry, never theirs to miss.
 
-    {the user's framing, verbatim}
+**Receipt beat.** Close each settled answer in one short human line before the next question - "Okay, X then", "Going with X", or folded into the next question's setup. "Locked: X." is one valid form, never a required stamp. Mid-conversation only - the ending stays ceremony-free.
 
-    ## Project context
+**Wall is context, not an agenda.** When riff enters from an accepted self-catch offer, the wall of questions that triggered it is context, not a checklist. Open with the one question that most unlocks the direction, and let every next question grow from the answer. When an answer invalidates the rest of the wall or its premise, follow the answer and let the wall go - the abandoned agenda is yours to drop, never the user's to finish.
 
-    {1-3 lines: active story/cycle, the work in front of us, the mood}
+## Opening the session
 
-    ## Instructions
+**With a topic** - an argument, or a conversational trigger like "can we riff on this": riff on the named subject. Do not run the notebook helper; the seeding below fires ONLY on bare invocation.
 
-    Riff with them. Draw on your gears and your restraint. The work is
-    theirs - state what you see, hold your taste, never weaponize it.
+**Bare invocation** - `/craft:riff` with no arguments: open from the dustiest open idea. Run:
+
+```bash
+bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/notebook-list.sh ideas
 ```
 
-Follow-ups continue the SAME agent conversation via **SendMessage** (preserves the agent's context across turns) - do not spawn a fresh agent per turn.
+The helper emits open ideas only, oldest first. Take the FIRST emitted record block, Read the file at its `FILE` field, and open the session with a single question about that idea that connects it to what has changed since it was captured - active cycle, recent shipping, whatever the session context offers. The question IS the opener: no preamble, no menu. Riff reads idea files, never writes them - status changes belong to the notebook flows.
 
-### Tight gear -> run the calibration loop in the main loop
+**If the helper output is empty** - no open ideas, or no notebook at all: that is a branch, not an error. Ask what is on the user's mind. No error message, no init push.
 
-A tacit boundary needs to become explicit. Do NOT spawn the agent - the flip-loop is the orchestrator's move, run here in the main conversation:
+## Ending the session
 
-1. `Read reference/calibration-loop.md`.
-2. Run the loop as documented: one concrete instance per AskUserQuestion, a fixed yes/no/unsure verdict, state the inferred principle after each verdict, adapt the next probe toward an unexplored seam.
-3. Stop when the principle stabilizes; write the converged rule down where it belongs (the story/spec/decision the boundary was blocking).
+Riff sessions end as pure conversation - no landing ceremony, no closing offer, no capture step. If the riff produced something actionable or deferrable, the orchestration index's existing grammar catches the user's next utterance (story, adhoc, notebook, mockup); riff adds nothing in between.
 
-### Presignal -> help, then offer once
+## Offers
 
-A soft in-flow creative texture where the user is engaged with you, not asking to step out. Help as you always would in this turn, THEN append exactly ONE ignorable inline offer line, notebook-style:
-
-> "... or if you want to go deeper we could riff on it. Otherwise I'll continue."
-
-NOT AskUserQuestion. On accept, pick the gear (tight if a boundary is forming, wide if it wants space). If the offer is ignored, the work flows on - never repeat it.
-
-### Silence -> say nothing
-
-No signal, or the FOCUS GATE suppressed it (user is heads-down - a future-leaning spark routes to `/craft:notebook`, not riff), or it's below the FLOOR (a micro choice the user wants answered fast). Just help. Say nothing about riff.
-
-## One offer at a time
-
-Riff's presignal offer must never stack on top of notebook, creative-spark, or design-vibe offers. The rule: **at most one inline offer per turn.** If another skill has already dropped an inline offer this turn, riff stays silent. The user never gets two nudges in one breath - that is the nag that kills the pattern.
-
-## Riff skill vs. Riff agent
-
-- **This skill** (`commands/craft-riff.md`) is the sensor/router: focus gate, gear-sensing, the presignal offer, the nag floor, silence. It runs the tight gear itself and hands the wide gear off.
-- **The agent** (`agents/riff.md`) is the crystallized partner that does the actual riffing. It is the wide-gear destination and is unchanged by this skill.
-- **The calibration loop** (`reference/calibration-loop.md`) is a standalone reusable technique the tight gear invokes - not riff-specific, also available to content-spark / design-vibe / lock-decision.
-- **Hunch settling** (`reference/hunch-settling.md`) is the second shared technique distilled from the agent's throw/pull craft - the executable-threshold gate the mockup funnel runs on round reactions (consumed inline by `commands/references/mockup-inline.md`); same contract as the calibration loop: it distills, `agents/riff.md` stays canonical.
-
-<!--
-ACCEPTANCE RUBRIC (the 6 calibration lenses - do not weaken on future edits).
-The when_to_use must resolve each to the verdict shown:
-  1. "Can't give you the rule, but show me cases and I'll know each" -> TIGHT GEAR, engage
-  2. "Blank canvas, no idea what this should be, let's wander" -> WIDE GEAR, hand to agent
-  3. "Three rough directions sketched, which feels right?" -> grey: help + OFFER riff, don't auto-fire
-  4. "Just think out loud with me on this tradeoff" -> PRESIGNAL: help + ignorable woven offer
-  5. mid-debugging, "the onboarding could be special someday" -> FOCUS GATE suppresses; route to notebook
-  6. moving fast, "primary or secondary button color?" -> FLOOR: just answer, no riff mention
--->
+At most one inline offer per turn, ever - riff's offer never stacks on notebook, creative-spark, or design-vibe offers. The user never gets two nudges in one breath.

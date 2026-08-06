@@ -46,7 +46,7 @@ plugins/craft/
 │   ├── craft-dial.md          ← Live value calibration shell (candidates injected into the running app)
 │   ├── craft-mockup.md        ← Live mockup funnel shell (diverge→refine→polish, solidify at acceptance)
 │   ├── craft-notebook.md      ← Low-ceremony capture (ideas/todos/notes); conversational graduate/done
-│   ├── craft-riff.md          ← Two-gear thinking partner (thin sensor/router); tight gear in-loop, wide gear → riff agent
+│   ├── craft-riff.md          ← One-question-at-a-time thinking conversation; bare invocation seeds from the oldest open notebook idea
 │   ├── craft-planning.md
 │   ├── craft-status.md
 │   ├── craft-project.md
@@ -109,7 +109,7 @@ plugins/craft/
 │   ├── story-full.md          ← Full story template (with chunks)
 │   └── story-roadmap.md       ← Roadmap-only story template
 ├── reference/                 ← Orchestration-critical (injected by hooks, drives routing)
-│   ├── calibration-loop.md    ← Shared technique: boundary elicitation (riff tight gear +)
+│   ├── calibration-loop.md    ← Shared technique: boundary elicitation (creative-spark +)
 │   ├── decision-tree.md
 │   ├── hunch-settling.md      ← Shared technique: executable-threshold gate (mockup funnel +)
 │   └── orchestration-index.min
@@ -451,16 +451,14 @@ The lifecycle deliberately keeps every state fast: capture is one line, graduate
 
 ## Riff: skill and agent
 
-Riff exists as a **skill** and an **agent** that work as a pair, not as one replacing the other.
+Riff exists as a **skill** and an **agent** that serve different rooms.
 
-- **The riff skill** (`commands/craft-riff.md`) is a thin sensor/router. It carries a `when_to_use` that does the gear-sensing from the main loop: a FOCUS GATE on top (heads-down user -> a future-leaning spark routes to `/craft:notebook`, not riff), four reads (tight gear, wide gear, presignal offer, silence), and a nag FLOOR on the bottom. It re-documents none of the riffing craft - it only decides WHEN riff engages or is offered. It runs the tight gear itself and hands the wide gear off.
-- **The riff agent** (`agents/riff.md`) is the crystallized partner that does the actual riffing (the throw/pull/catch/dislocate gears, the silence-vs-abandonment read, the exhausted-user restraint). It is the wide-gear destination, invoked via the Agent tool (`subagent_type: "craft:riff"`) and via `/craft:ask`. Skills and agents are separate registries, so the `craft:riff` skill and `craft:riff` agent coexist without collision.
+- **The riff skill** (`commands/craft-riff.md`) is a main-loop conversation: one plain-prose question per turn, each stating what hangs on the answer, until the direction lands. No agent dispatch, no AskUserQuestion - the session never leaves the main loop. Bare `/craft:riff` opens from the oldest open notebook idea (via `notebook-list.sh ideas`), reconnecting it to what has changed since capture; with a topic, riff addresses that topic directly and the seeding never fires. Sessions end as pure conversation - no landing ceremony; the orchestration index's existing capture grammar (story/adhoc/notebook/mockup) is the net.
+- **The agent** (`agents/riff.md`) is the crystallized deep-consultation partner, reached via `/craft:ask` and direct Agent invocation. The skill never invokes it - `agents/riff.md` stays canonical for the riffing craft it documents. Skills and agents are separate registries, so the `craft:riff` skill and `craft:riff` agent coexist without collision.
 
-The skill mirrors the notebook trigger discipline exactly: ignorable inline offers (never AskUserQuestion), bounded triggers, silence as the default, and at most one inline offer per turn so riff never stacks nudges on notebook / creative-spark / design-vibe.
+The skill mirrors the notebook trigger discipline: bounded triggers, silence as the default, and at most one inline offer per turn so riff never stacks nudges on notebook / creative-spark / design-vibe. The self-catch (a turn that piles 2+ questions onto an undecided direction) is emitted by the orchestration index - the layer that assembles every turn - as one trailing ignorable offer line, never AskUserQuestion; on accept, riff is invoked visibly and opens with the one question that most unlocks the direction.
 
-The skill's **tight gear** runs the **calibration loop** (`reference/calibration-loop.md`) - a standalone, reusable boundary-elicitation technique (the "optometrist flip test") that converts a tacit "I know it when I see it" into an encodable rule. It is deliberately written skill-agnostic so content-spark, design-vibe, and lock-decision can point to it too.
-
-A second shared technique, **hunch settling** (`reference/hunch-settling.md`), distills the agent's throw/pull craft into an executable-threshold gate for reaction-driven revision loops: would two different builders make the same first move from this brief? Its first consumer is the mockup funnel (`commands/references/mockup-inline.md`), which Reads it inline and settles a below-threshold reaction conversationally before briefing the alchemist - the first cross-skill consumption of riff machinery, chain-safe because it runs in the main loop with no agent spawn and no Skill-tool call.
+Two standalone techniques distilled from the agent's craft live on in `reference/`. The **calibration loop** (`reference/calibration-loop.md`) is a reusable boundary-elicitation technique (the "optometrist flip test") that converts a tacit "I know it when I see it" into an encodable rule; creative-spark consumes it, and content-spark, design-vibe, and lock-decision can point to it too. **Hunch settling** (`reference/hunch-settling.md`) distills the throw/pull craft into an executable-threshold gate for reaction-driven revision loops: would two different builders make the same first move from this brief? Its first consumer is the mockup funnel (`commands/references/mockup-inline.md`), which Reads it inline and settles a below-threshold reaction conversationally before briefing the alchemist - chain-safe because it runs in the main loop with no agent spawn and no Skill-tool call. Both files distill; `agents/riff.md` stays canonical.
 
 ---
 
