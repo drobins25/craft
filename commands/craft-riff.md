@@ -3,19 +3,23 @@ name: riff
 description: "Calibrate thinking one question at a time - a main-loop conversation, one plain-prose question per turn, until the direction lands. Bare invocation opens from the oldest open notebook idea."
 when_to_use: |
   Explicit: the user says "riff on this", "can we riff", "help me think
-  through", "I'm stuck on", "I'm torn between", "talk me through this",
-  "one question at a time" - or invokes /craft:riff. Engage directly,
-  no offer.
+  through", "let's work through this", "I'm stuck on", "I'm torn
+  between", "talk me through this", "one question at a time" - or invokes /craft:riff.
+  Engage directly, no offer.
 
-  Self-catch: a turn that asks more than one question about an
-  undecided direction gets a trailing ignorable offer ("I know this is a
-  lot at once - say the word if you'd rather break it down and riff
-  through it one at a time") - never AskUserQuestion, main loop only.
-  Decline or silence = drop it for this wall; the offer may return
-  on a later multi-question turn.
+  Self-catch (proactive): when you are about to send a turn that says
+  a lot at once about an undecided direction - 2+ questions is the
+  clearest tell, but a wall of options or analysis counts the same -
+  ship it as written, then APPEND one trailing ignorable offer line
+  ("I just said a lot at once - let me know if you'd rather riff
+  through this") - never AskUserQuestion, main loop only, never
+  inside another flow's gate. Decline or silence = drop it for this wall;
+  the offer may return on a later overloaded turn.
 
-  Not for: fact-shaped question runs (those stay AUQ), direction already
-  clear (story/adhoc), or "just tell me the answer" asks.
+  Not for: fact-shaped question runs (those stay AUQ), a quick run of
+  value questions with the direction already implied (answer them, or
+  dial), direction already clear (story/adhoc), or "just tell me the
+  answer" asks.
 argument-hint: "[what you want to think through] or empty"
 ---
 

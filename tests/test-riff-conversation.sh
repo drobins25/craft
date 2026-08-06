@@ -22,10 +22,15 @@ assert_contains_literal "locked description present character-for-character" 'de
 
 begin_test "frontmatter ships the locked when_to_use triggers and anti-triggers"
 assert_contains_literal "explicit trigger vocabulary present" '"riff on this", "can we riff", "help me think' "$RIFF_CONTENT"
+assert_contains_literal "work-through vocabulary present" '"let'"'"'s work through this"' "$RIFF_CONTENT"
 assert_contains_literal "one-question-at-a-time is a first-class trigger" '"one question at a time" - or invokes /craft:riff' "$RIFF_CONTENT"
-assert_contains_literal "self-catch offer line present" "say the word if you'd rather break it down and riff" "$RIFF_CONTENT"
+assert_contains_literal "self-catch names the sender's own imminent turn" 'when you are about to send' "$RIFF_CONTENT"
+assert_contains_literal "trigger is overload, not question count" 'a wall of options or analysis counts the same' "$RIFF_CONTENT"
+assert_contains_literal "questions ship as written" 'ship it as written' "$RIFF_CONTENT"
+assert_contains_literal "self-catch offer line present" "let me know if you'd rather riff" "$RIFF_CONTENT"
 assert_contains_literal "per-wall decline semantics present" 'Decline or silence = drop it for this wall' "$RIFF_CONTENT"
 assert_contains_literal "anti-triggers present" 'Not for: fact-shaped question runs (those stay AUQ)' "$RIFF_CONTENT"
+assert_contains_literal "value-question runs carved out" 'value questions with the direction already implied' "$RIFF_CONTENT"
 
 begin_test "registration keys survive"
 assert_file_contains "name key intact" '^name: riff$' "$RIFF"
@@ -94,7 +99,7 @@ INDEX="$PLUGIN_ROOT/reference/orchestration-index.min"
 INDEX_CONTENT="$(cat "$INDEX")"
 
 begin_test "index carries the riff self-catch routing row"
-assert_contains_literal "routing row present verbatim" "2+ questions in one turn on an undecided direction (main loop only, never inside another flow's gate)|append ignorable riff offer; on accept → craft:riff" "$INDEX_CONTENT"
+assert_contains_literal "routing row present verbatim" "about to send a turn that says a lot at once on an undecided direction (2+ questions the clearest tell; main loop only, never inside another flow's gate)|append ignorable riff offer; on accept → craft:riff" "$INDEX_CONTENT"
 
 begin_test "riff row sits inside the offer-row block"
 MOCKUP_ROW_LINE="$(grep -n 'craft:mockup, session context seeds the brief' "$INDEX" | head -1 | cut -d: -f1)"
