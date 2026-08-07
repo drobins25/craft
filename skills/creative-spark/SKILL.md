@@ -1,6 +1,6 @@
 ---
 name: creative-spark
-description: This skill should be used when the user asks to "brainstorm", "explore options", "get creative", "what if we...", or selects "Let's get creative" during story or cycle creation. Also appropriate when the user describes a vague feature idea without clear direction. Generates 2-3 creative options with trade-offs, visual direction for UI stories, and wireframes.
+description: This skill should be used when the user asks to "brainstorm", "explore options", "get creative", "what if we...", or selects "Let's get creative" during story or cycle creation. NOT for a bare vague feature idea where generating options would mean inventing the premise first - that routes to /craft:riff (riff first, options after). Generates 2-3 creative options with trade-offs, visual direction for UI stories, and wireframes.
 version: 1.5.0
 allowed-tools: ["Read", "Glob", "Grep", "Task"]
 ---
@@ -14,7 +14,7 @@ You are entering the **Creative Phase** - the ideation engine of the Craft harne
 - User is starting a new story or feature
 - User says "let's brainstorm", "what if", "options for"
 - User needs design direction
-- User is stuck and needs fresh perspectives
+- User asked for options and needs fresh perspectives
 
 ## Orchestrator Context
 

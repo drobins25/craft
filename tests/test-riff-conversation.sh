@@ -93,6 +93,17 @@ assert_contains_literal "index grammar is the net" "orchestration index's existi
 begin_test "one inline offer per turn survives"
 assert_contains_literal "offer-stacking rule present" 'At most one inline offer per turn' "$BODY"
 
+# --- Riff-first-touch routing (tweak 2026-08-06) ---
+
+SPARK="$PLUGIN_ROOT/skills/creative-spark/SKILL.md"
+
+begin_test "bare undecided directions are riff's first touch"
+assert_contains_literal "riff claims the bare undecided direction" 'a bare undecided direction' "$RIFF_CONTENT"
+assert_contains_literal "boundary rule stated in riff" 'riff first,' "$RIFF_CONTENT"
+assert_file_not_contains "creative-spark no longer claims bare vague ideas" 'vague feature idea without clear direction' "$SPARK"
+assert_file_contains "creative-spark signposts riff" 'routes to /craft:riff' "$SPARK"
+assert_file_contains "boundary rule stated in creative-spark" 'riff first, options after' "$SPARK"
+
 # --- Chunk 2: the orchestration index wiring ---
 
 INDEX="$PLUGIN_ROOT/reference/orchestration-index.min"

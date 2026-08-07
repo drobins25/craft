@@ -5,7 +5,9 @@ when_to_use: |
   Explicit: the user says "riff on this", "can we riff", "help me think
   through", "let's work through this", "I'm stuck on", "I'm torn
   between", "talk me through this", "one question at a time" - or invokes /craft:riff.
-  Engage directly, no offer.
+  Also: a bare undecided direction ("let's design X" where the premise
+  would have to be invented before options could exist) - riff first,
+  options after. Engage directly, no offer.
 
   Self-catch (proactive): when you are about to send a turn that says
   a lot at once about an undecided direction - 2+ questions is the
