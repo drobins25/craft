@@ -2,6 +2,13 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.3.0 - 2026-08-06
+
+- Changed /craft:riff into a real conversation: one plain question at a time, in chat, until the direction lands. Every question tells you what hangs on the answer, and when the evidence has earned a lean you get it stated - "my lean: X, because Y" - never a bare question, never a numbered list, never a widget. Each answer gets acknowledged before the next question comes, and when your answer kills the remaining agenda, the agenda dies - you're never asked to finish a list that stopped mattering. Sessions end like conversations, not ceremonies: no wrap-up prompt, no closing menu.
+- Added a crafty opener: bare /craft:riff with no topic picks up the oldest open idea in your notebook and asks one question that reconnects it to what's changed since you wrote it down - the missing bridge between capturing an idea and it becoming a story. Bring a topic and riff works that instead; no notebook, no problem - it just asks what's on your mind.
+- Added a self-catch for question overload: when Claude dumps a lot at once on a direction you haven't settled - a wall of questions, options, or analysis - the wall now ends with one ignorable line: "I just said a lot at once - let me know if you'd rather riff through this." Answering normally is declining; nothing nags.
+- Changed what a vague feature idea gets you: "let's design a social media feature" now opens a conversation that draws out what you're picturing, instead of three speculative options invented from nothing. Ask for ideas and you still get ideas - options come on request, or once the direction has firmed enough to generate against.
+
 ## 2.2.0 - 2026-08-04
 
 - Added /craft:dial for the moment a live page is almost right ("the gaps are too loose", "that reads too quiet"): craft drops lettered options straight into your running app - A, B, C, D in a little grey panel on the page you were already looking at - and you click until one stops bugging you. "Oh I like B" is the whole review: the winner ports into code with tests updated and your exact words on record, everything else vanishes on refresh, and nothing touches your source while you're deciding. Keeping what you already have is a real answer too - craft remembers what you saw and passed on.
