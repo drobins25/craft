@@ -2,6 +2,12 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.4.0 - 2026-08-07
+
+- Changed /craft:riff into a two-player game. The skill now opens like the rules card from a board game box, written for both players - you and Claude: one idea too hot to hold alone, passed in small beats, until you both feel it's ready and build it together. Claude brings real opinions instead of interview questions, pushes back when it disagrees, and confirms what's settled before each pass so nothing gets lost in a long riff.
+- Added riff memories: when a riff lands, Claude writes a short win note to `.craft/riff/notes/` in your project - what you built together and how you two work best - so your next session picks up the partnership where you left it instead of starting from a stranger. Only wins get written; a riff that fizzles just ends, no ceremony.
+- Improved first meetings: when riff engages on its own (you described a half-formed idea and Claude started thinking it through with you), you get the great back-and-forth without the game vocabulary - the flavor is reserved for players who've opened the box.
+
 ## 2.3.0 - 2026-08-06
 
 - Changed /craft:riff into a real conversation: one plain question at a time, in chat, until the direction lands. Every question tells you what hangs on the answer, and when the evidence has earned a lean you get it stated - "my lean: X, because Y" - never a bare question, never a numbered list, never a widget. Each answer gets acknowledged before the next question comes, and when your answer kills the remaining agenda, the agenda dies - you're never asked to finish a list that stopped mattering. Sessions end like conversations, not ceremonies: no wrap-up prompt, no closing menu.
