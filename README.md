@@ -304,7 +304,7 @@ You rarely type these. Craft routes plain English to the right one - this table 
 | `/craft` | Main entry point - start here |
 | `/craft:status` | Dashboard view of progress |
 | `/craft:notebook` | Low-ceremony capture for ideas, todos, and notes (durable project facts). Graduate / mark done conversationally - no subcommands needed for lifecycle. |
-| `/craft:riff` | Calibrate thinking one question at a time - a main-loop conversation, one plain-prose question per turn, until the direction lands. Bare invocation opens from the oldest open notebook idea. |
+| `/craft:riff` | Riff on an idea together - a two-player conversation in small beats, one concept at a time, until it's ready to build. Bare invocation opens from the oldest open notebook idea. |
 | `/craft:story-new` | Create story (lands in backlog) |
 | `/craft:story-implement` | Implement a story (interactive) |
 | `/craft:story-implement-auto` | Implement a story (autonomous) |
