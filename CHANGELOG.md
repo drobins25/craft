@@ -2,6 +2,12 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.4.1 - 2026-08-09
+
+- Changed how a riff ends: in plain language, from both seats. Claude asks the closing question in words anyone gets ("I think we've got it - do you?"), and your answer counts in any words that mean "let's build it" - no ritual phrase required. The game's vocabulary stays where it belongs: in the box, for players who've opened it.
+- Changed the victory shout to your session's own word: finish designing neon styles together and the game breaks on "Go NEON!" Every riff now ends on the word the two of you kept passing - a shout only your session could have produced. Win notes in `.craft/riff/notes/` are named after that word too, so the trophy shelf reads like the story of what you built.
+- Fixed the game implying a bag of potatoes: one idea, one potato, passed until it's ready - and now the rules say so.
+
 ## 2.4.0 - 2026-08-07
 
 - Changed /craft:riff into a two-player game. The skill now opens like the rules card from a board game box, written for both players - you and Claude: one idea too hot to hold alone, passed in small beats, until you both feel it's ready and build it together. Claude brings real opinions instead of interview questions, pushes back when it disagrees, and confirms what's settled before each pass so nothing gets lost in a long riff.
