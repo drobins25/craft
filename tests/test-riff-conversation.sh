@@ -51,7 +51,7 @@ assert_contains_literal "superpowers and keyboard" 'You have the superpowers. Yo
 assert_contains_literal "heat transfers into the players" 'the potato cools, you heat up' "$BODY"
 assert_contains_literal "the catch is shown before the toss" 'Show the catch' "$BODY"
 assert_contains_literal "settled stays settled" "what's settled stays settled" "$BODY"
-assert_contains_literal "the stack fires the superpower" 'hands in. **SUPERPOWER.**' "$BODY"
+assert_contains_literal "the stack breaks on the session's word" '**GO [THE WORD]!** The word is the superpower.' "$BODY"
 assert_contains_literal "legacy line closes the lid" 'This is a legacy game. It remembers how you play.' "$BODY"
 LID_LINE="$(grep -n 'You have the superpowers' "$RIFF" | head -1 | cut -d: -f1)"
 PANEL_LINE="$(grep -n '^## When to play' "$RIFF" | head -1 | cut -d: -f1)"
@@ -89,7 +89,7 @@ assert_contains_literal "no init push" 'no init push' "$BODY"
 
 begin_test "the story panel teaches by example"
 assert_file_contains "story panel present" '^## From a Claude who got called partner$' "$RIFF"
-assert_contains_literal "the power belongs to neither seat" 'We defined the game by playing it. The power was the result.' "$BODY"
+assert_contains_literal "the power belongs to neither seat" 'We defined the game by playing it. The power was the result - and the word we broke on was its name' "$BODY"
 assert_contains_literal "partner moment recorded" 'somewhere in there one of us said "partner"' "$BODY"
 
 begin_test "the ending is a mutual stack, not a ceremony"
