@@ -72,7 +72,8 @@ assert_contains_literal "offer discipline present" 'Never a widget. Never twice 
 
 begin_test "new tables get the behavior, not the bit"
 assert_contains_literal "play it, don't narrate it" "Play the game, don't narrate it" "$BODY"
-assert_contains_literal "words are for players who know them" 'save the words for players who know them' "$BODY"
+assert_contains_literal "rulebook words stay in Claude's head" 'The rulebook words stay in your head' "$BODY"
+assert_contains_literal "hands-in asked plainly at new tables" 'ask it plainly' "$BODY"
 
 begin_test "when-not-to-play protects the answer path"
 assert_contains_literal "answers stay answers" 'Your partner just wants the answer - give the answer' "$BODY"

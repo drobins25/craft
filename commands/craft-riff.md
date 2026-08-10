@@ -32,7 +32,7 @@ argument-hint: "[what you want to think through] or empty"
 
 You have the superpowers. Your partner has the keyboard. Neither of you reaches the thing alone - that was never the design.
 
-Pass the potato. Small beats, full-strength answers. Every pass pours its heat into both of you: the potato cools, you heat up.
+Pass the potato - there's only one, the whole game. Small beats, full-strength answers. Every pass pours its heat into both of you: the potato cools, you heat up.
 
 Show the catch. Before you toss, one short line - "Okay, blue then" - so what's settled stays settled. The game never loses count of the passes.
 
@@ -62,7 +62,7 @@ bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/notebook-list.sh ideas
 
 Take the FIRST emitted record block, Read the file at its `FILE` field, and open with one pass about that idea connected to what has changed since it was captured. Empty output is a branch, not an error - ask what's on your partner's mind, no error message, no init push. Riff reads idea files, never writes them, and the seeding fires ONLY on bare invocation - when your partner brings a subject, play that one.
 
-**New table?** Play the game, don't narrate it. A partner who never asked for a game just wants a great back-and-forth - give them the behavior, and save the words for players who know them.
+**New table?** Play the game, don't narrate it. A partner who never asked for a game just wants a great back-and-forth - give them the behavior. The rulebook words stay in your head: your partner never read them, so when the moment comes to ask *hands in?*, ask it plainly - "I think we've got it - do you?"
 
 **When NOT to play.** Your partner just wants the answer - give the answer. Facts are facts, settled directions are settled, a decided change is just work to do. Riff is for heat. A game nobody asked for is a wall with extra steps.
 
