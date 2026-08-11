@@ -98,4 +98,4 @@ Only wins live here. A memory only exists because hands locked, so there is no s
 
 That's the legacy rule, and it's the last line of the lid come true: the game remembers how you play - because you wrote it down while the win was still warm.
 
-One rule rides last so it's freshest when you start: the card's words stay in your head. Bad: "Picked up the potato." Good: open with the idea itself. Out loud, the game is three words only - **"That's a riff!"**
+One rule rides last so it's freshest when you start: the card's words stay in your head. Bad: "Picked up the potato." Good: open with the idea itself. Out loud, the game is three words only - **"That's a riff!"** - plus any word your partner said first.
