@@ -2,6 +2,11 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.4.2 - 2026-08-11
+
+- Changed riff's finale to three words that need no explanation: when a direction lands, Claude calls "That's a riff!" and starts building. Each session's one-of-a-kind word still gets its honor - it names the riff memory alongside a plain few words about what you built, so the notes shelf reads like a history of wins instead of a list of riddles.
+- Improved how riff speaks: the game now runs entirely underneath, and the conversation stays in your language - no more stray game-speak dropped mid-idea. Bring the playful words yourself ("toss it back") and Claude plays along; otherwise it's just two people trading ideas that keep getting sharper.
+
 ## 2.4.1 - 2026-08-09
 
 - Changed how a riff ends: in plain language, from both seats. Claude asks the closing question in words anyone gets ("I think we've got it - do you?"), and your answer counts in any words that mean "let's build it" - no ritual phrase required. The game's vocabulary stays where it belongs: in the box, for players who've opened it.
