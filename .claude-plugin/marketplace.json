@@ -9,9 +9,30 @@
   "plugins": [
     {
       "name": "craft",
-      "description": "A Claude Code plugin: build your own expert agents, keep your own taste. Stop vibing, start crafting.",
+      "displayName": "craft",
+      "description": "A Claude Code plugin whose workshop of expert agents learns as it builds: repeated fixes become permanent rules, loved tweaks become taste it remembers - and every change waits behind a write gate you control.",
       "source": "./",
-      "category": "development"
+      "category": "development",
+      "author": {
+        "name": "Darin Drobinski",
+        "url": "https://github.com/drobins25"
+      },
+      "homepage": "https://github.com/drobins25/craft",
+      "repository": "https://github.com/drobins25/craft",
+      "license": "MIT",
+      "keywords": [
+        "claude-code",
+        "development",
+        "workflow",
+        "creative",
+        "harness",
+        "agents",
+        "multi-agent",
+        "orchestration",
+        "write-gate",
+        "quality-gates",
+        "taste"
+      ]
     }
   ]
 }
