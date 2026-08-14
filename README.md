@@ -4,7 +4,7 @@
 
 > **Stop Vibing. Start Crafting.**
 
-Claude Code plugin: guided + controlled development orchestration harness with built-in workflow + state management, for designing + building durable, production-ready software through the entire product lifecycle - new projects or existing codebases.
+A Claude Code plugin whose workshop of expert agents learns as it builds: repeated fixes become permanent rules, loved tweaks become taste it remembers - and every change waits behind a write gate you control.
 
 Your codebase is read-only by default. Changes never land as a side effect of asking a question - every write goes through a channel you opened: a planned story, an investigated fix, a live tweak, or an approved one-off.
 

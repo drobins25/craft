@@ -1,7 +1,7 @@
 {
   "name": "craft",
   "version": "2.4.2",
-  "description": "A Claude Code plugin with a workshop where you build your own expert agents - and it locks in the taste you keep showing. Stop vibing, start crafting.",
+  "description": "A Claude Code plugin whose workshop of expert agents learns as it builds: repeated fixes become permanent rules, loved tweaks become taste it remembers - and every change waits behind a write gate you control.",
   "author": {
     "name": "Darin Drobinski"
   },
