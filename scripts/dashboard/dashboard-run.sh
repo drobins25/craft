@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# dashboard-run.sh - the single entry seam for the dashboard graph builder.
+# Everything reaches the builder only through this wrapper. It probes its
+# preconditions and, on any failure, records a degraded build status and
+# exits 0 so the dashboard never blocks a craft flow. Stale-but-valid beats
+# absent: no degrade path ever touches graph.js or the record mirrors.
+
+set -u
+
+SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BUILDER="$SELF_DIR/build.py"
+
+ROOT=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --root)
+      ROOT="${2:-}"
+      shift 2 || shift
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
+
+if [ -z "$ROOT" ]; then
+  if [ -n "${CRAFT_PROJECT_ROOT:-}" ]; then
+    ROOT="$CRAFT_PROJECT_ROOT"
+  else
+    PROJECT_ROOT=""
+    # shellcheck disable=SC1091
+    source "$SELF_DIR/../../hooks/scripts/find-workshop.sh" 2>/dev/null || true
+    ROOT="${PROJECT_ROOT:-}"
+  fi
+fi
+
+STATUS_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || printf 'unknown')"
+
+# Pure bash on purpose: the staleness note must be reachable on a machine
+# with no python3 at all. Never creates .craft/ - only dashboard/ inside an
+# existing .craft/ - and degrades quietly when it cannot write.
+write_status() {
+  status="$1"
+  reason="$2"
+  [ -n "$ROOT" ] && [ -d "$ROOT/.craft" ] || return 0
+  mkdir -p "$ROOT/.craft/dashboard" 2>/dev/null || return 0
+  printf 'window.CRAFT_BUILD = {"status":"%s","reason":"%s","at":"%s"};\n' \
+    "$status" "$reason" "$STATUS_AT" \
+    > "$ROOT/.craft/dashboard/build-status.js" 2>/dev/null || true
+}
+
+degrade() {
+  write_status "degraded" "$1"
+  printf '{"status":"degraded","reason":"%s"}\n' "$1"
+  exit 0
+}
+
+[ -n "$ROOT" ] && [ -d "$ROOT" ] || degrade "root-missing"
+[ -d "$ROOT/.craft" ] || degrade "craft-missing"
+command -v python3 >/dev/null 2>&1 || degrade "python-missing"
+[ -f "$BUILDER" ] || degrade "builder-missing"
+
+# Single-flight: two transition scripts firing close together must never
+# interleave into a graph/mirrors pair that was not one coherent build.
+# Advisory mkdir lock; a stale lock from a dead holder is broken after a
+# bounded age.
+LOCK_DIR="$ROOT/.craft/dashboard/.build-lock"
+mkdir -p "$ROOT/.craft/dashboard" 2>/dev/null || degrade "craft-missing"
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+  if [ -n "$(find "$LOCK_DIR" -maxdepth 0 -mmin +2 2>/dev/null)" ]; then
+    rm -rf "$LOCK_DIR" 2>/dev/null
+    mkdir "$LOCK_DIR" 2>/dev/null || degrade "build-skipped-concurrent"
+  else
+    degrade "build-skipped-concurrent"
+  fi
+fi
+trap 'rm -rf "$LOCK_DIR" 2>/dev/null' EXIT
+
+out="$(python3 "$BUILDER" --root "$ROOT" 2>/dev/null)"
+RC=$?
+
+if [ "$RC" -ne 0 ]; then
+  degrade "builder-error"
+fi
+
+write_status "ok" "ok"
+printf '%s\n' "$out"
+exit 0

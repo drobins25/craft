@@ -1,0 +1,10 @@
+name: sample-cycle
+title: "Sample Cycle"
+status: active
+created: 2026-01-01
+updated: 2026-01-10
+target: A neutral fixture cycle for parser tests.
+source_concept: ['planning/sample-concept.md']
+
+goals:
+  - Exercise the cycle parser
