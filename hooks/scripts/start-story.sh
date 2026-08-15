@@ -105,4 +105,8 @@ fi
 EVENTS_DIR="$CYCLE_DIR/.events"
 "$SCRIPT_DIR/append-event.sh" "$EVENTS_DIR" "story_started" "$STORY_NAME" chunk_total="$TOTAL_CHUNKS" || true
 
+# Refresh the dashboard graph data. Silenced so callers still read this
+# script's own final line; guarded so a missing wrapper never fails a flow.
+bash "$SCRIPT_DIR/../../scripts/dashboard/dashboard-run.sh" --root "${PROJECT_ROOT:-.}" >/dev/null 2>&1 || true
+
 echo "Story started: $STORY_NAME (chunks: $TOTAL_CHUNKS)"

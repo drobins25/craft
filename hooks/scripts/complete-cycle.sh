@@ -82,6 +82,10 @@ if [ -d "$CHECKPOINT_DIR" ]; then
   rmdir "$CHECKPOINT_DIR" 2>/dev/null || true
 fi
 
+# Refresh the dashboard graph data. Silenced so callers still read this
+# script's own final line; guarded so a missing wrapper never fails a flow.
+bash "$SCRIPT_DIR/../../scripts/dashboard/dashboard-run.sh" --root "${PROJECT_ROOT:-.}" >/dev/null 2>&1 || true
+
 # Display human-readable title
 cycle_title=""
 if [ -f "$CYCLE_DIR/cycle.yaml" ]; then

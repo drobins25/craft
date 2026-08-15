@@ -304,4 +304,77 @@ assert_eq "no file outside dashboard/ was added or removed" "$BEFORE" "$AFTER"
 rm -rf "$ROOT"
 echo ""
 
+# --- Test 13: first build seeds the self-ignoring .gitignore ---
+begin_test "first build seeds .craft/dashboard/.gitignore containing *"
+
+ROOT=$(make_fixture_root)
+set +e
+OUT=$(bash "$WRAPPER" --root "$ROOT" 2>&1)
+RC=$?
+set -e
+
+assert_exit_code "wrapper exits 0" "0" "$RC"
+assert_file_exists ".gitignore seeded" "$ROOT/.craft/dashboard/.gitignore"
+assert_eq ".gitignore content is a single star" "*" "$(cat "$ROOT/.craft/dashboard/.gitignore")"
+
+rm -rf "$ROOT"
+echo ""
+
+# --- Test 14: a deleted .gitignore is never recreated ---
+begin_test "a .gitignore deleted after the first build is never recreated"
+
+ROOT=$(make_fixture_root)
+set +e
+OUT=$(bash "$WRAPPER" --root "$ROOT" 2>&1)
+RC=$?
+set -e
+rm -f "$ROOT/.craft/dashboard/.gitignore"
+
+set +e
+OUT=$(bash "$WRAPPER" --root "$ROOT" 2>&1)
+RC=$?
+set -e
+
+assert_exit_code "second build exits 0" "0" "$RC"
+assert_file_not_exists "deleted .gitignore stays deleted" "$ROOT/.craft/dashboard/.gitignore"
+assert_contains "second build still ok" '"status": "ok"' "$OUT"
+
+rm -rf "$ROOT"
+echo ""
+
+# --- Test 15: a pre-existing dashboard folder is never seeded ---
+begin_test "a dashboard folder that already existed is never seeded"
+
+ROOT=$(make_fixture_root)
+mkdir -p "$ROOT/.craft/dashboard"
+
+set +e
+OUT=$(bash "$WRAPPER" --root "$ROOT" 2>&1)
+RC=$?
+set -e
+
+assert_exit_code "wrapper exits 0" "0" "$RC"
+assert_file_not_exists "pre-existing folder not seeded" "$ROOT/.craft/dashboard/.gitignore"
+
+rm -rf "$ROOT"
+echo ""
+
+# --- Test 16: degraded build on a fresh folder still seeds ---
+begin_test "degraded build with no python3 still seeds on a fresh folder"
+
+ROOT=$(make_fixture_root)
+STUB_PATH=$(make_no_python_path)
+
+set +e
+OUT=$(PATH="$STUB_PATH" bash "$WRAPPER" --root "$ROOT" 2>&1)
+RC=$?
+set -e
+
+assert_exit_code "wrapper exits 0" "0" "$RC"
+assert_file_exists ".gitignore seeded on degraded path" "$ROOT/.craft/dashboard/.gitignore"
+assert_file_contains "status is degraded" '"status":"degraded"' "$ROOT/.craft/dashboard/build-status.js"
+
+rm -rf "$ROOT" "$STUB_PATH"
+echo ""
+
 finish_tests "test-dashboard-wrapper"

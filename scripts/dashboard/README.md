@@ -52,6 +52,11 @@ All output lands in `<root>/.craft/dashboard/`, loadable from `file://` via
     byte-identical output and the second build writes zero files.
 - **`records/{id}.js`** (one per record) assigns
   `window.CRAFT_RECORDS["{id}"]` = the record's full markdown as a string.
+- **`.gitignore`** (one line: `*`) is seeded by the wrapper on the run that
+  CREATES the folder - the pytest/ruff convention for regenerable output, so
+  the timestamped build-status.js never dirties a project that commits
+  `.craft/`. Deleting it opts the folder back into commits permanently; the
+  wrapper never recreates it for an existing folder.
 - **`build-status.js`** assigns `window.CRAFT_BUILD`:
   `{status: "ok"|"degraded", reason, at}`. Written by the WRAPPER in pure
   bash on every invocation - including on a machine with no python3 - so a

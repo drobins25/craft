@@ -4,6 +4,8 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(dirname $(dirname $(dirname "$0")))}"
 TEMPLATES_DIR="$PLUGIN_ROOT/templates"
 
@@ -82,5 +84,9 @@ if [ -f "$template" ]; then
   sed "s|{{STORY_NAME}}|$STORY_NAME|g; s|{{STORY_TITLE}}|$SAFE_TITLE|g; s|{{DATE}}|$DATE|g; s|{{CYCLE_NAME}}|${CYCLE:-}|g; s|{{PROJECT_NAME}}||g; s|{{STORY_DESCRIPTION}}|TBD|g; s|{{CRITERION_1}}|TBD|g; s|{{CRITERION_2}}|TBD|g; s|{{CRITERION_3}}|TBD|g" \
     "$template" > "$story_file"
 fi
+
+# Refresh the dashboard graph data. Silenced so callers still read this
+# script's own final line; guarded so a missing wrapper never fails a flow.
+bash "$SCRIPT_DIR/../../scripts/dashboard/dashboard-run.sh" --root "$ROOT" >/dev/null 2>&1 || true
 
 echo "$story_file"

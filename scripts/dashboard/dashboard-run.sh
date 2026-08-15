@@ -36,6 +36,28 @@ fi
 
 STATUS_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || printf 'unknown')"
 
+# Probed once, before any mkdir in this file: whether the output folder
+# already existed at entry. The .gitignore seed below is scoped to the run
+# that CREATES the folder, so a user who deletes the seeded file has opted
+# the folder back into commits permanently - it is never recreated.
+DASH_DIR="$ROOT/.craft/dashboard"
+DASH_DIR_EXISTED=0
+if [ -n "$ROOT" ] && [ -d "$DASH_DIR" ]; then
+  DASH_DIR_EXISTED=1
+fi
+
+# Creates the output folder and, only when this run is its creator, seeds a
+# one-line .gitignore ('*') so the timestamp-churning build-status.js never
+# dirties a project that commits .craft/. The seed write can never fail the
+# caller.
+ensure_dash_dir() {
+  mkdir -p "$DASH_DIR" 2>/dev/null || return 1
+  if [ "$DASH_DIR_EXISTED" = "0" ] && [ ! -f "$DASH_DIR/.gitignore" ]; then
+    printf '*\n' > "$DASH_DIR/.gitignore" 2>/dev/null || true
+  fi
+  return 0
+}
+
 # Pure bash on purpose: the staleness note must be reachable on a machine
 # with no python3 at all. Never creates .craft/ - only dashboard/ inside an
 # existing .craft/ - and degrades quietly when it cannot write.
@@ -43,7 +65,7 @@ write_status() {
   status="$1"
   reason="$2"
   [ -n "$ROOT" ] && [ -d "$ROOT/.craft" ] || return 0
-  mkdir -p "$ROOT/.craft/dashboard" 2>/dev/null || return 0
+  ensure_dash_dir || return 0
   printf 'window.CRAFT_BUILD = {"status":"%s","reason":"%s","at":"%s"};\n' \
     "$status" "$reason" "$STATUS_AT" \
     > "$ROOT/.craft/dashboard/build-status.js" 2>/dev/null || true
@@ -65,7 +87,7 @@ command -v python3 >/dev/null 2>&1 || degrade "python-missing"
 # Advisory mkdir lock; a stale lock from a dead holder is broken after a
 # bounded age.
 LOCK_DIR="$ROOT/.craft/dashboard/.build-lock"
-mkdir -p "$ROOT/.craft/dashboard" 2>/dev/null || degrade "craft-missing"
+ensure_dash_dir || degrade "craft-missing"
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then
   if [ -n "$(find "$LOCK_DIR" -maxdepth 0 -mmin +2 2>/dev/null)" ]; then
     rm -rf "$LOCK_DIR" 2>/dev/null
