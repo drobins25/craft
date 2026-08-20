@@ -1,4 +1,4 @@
-![Craft - a Claude Code plugin. Claude proposes. You decide. Craft builds. Stop Vibing. Start Crafting. Your codebase is read-only until a tweak, a fix, or a story opens it. Claude proposes a researched plan, you decide, and every code change leaves a paper trail in your project's .craft directory. And your taste compounds - say "Love it!" once, and craft builds with it next time, without being asked.](docs/media/hero.svg)
+![Craft - a Claude Code plugin. Claude proposes. You decide. Craft builds. Stop Vibing. Start Crafting. Your codebase is read-only until a tweak, a fix, or a story opens it. Claude proposes a researched plan, you decide, and every code change leaves a paper trail in your project's .craft directory. And your taste compounds - say "Love it!" once, and craft builds with it next time, without being asked.](https://raw.githubusercontent.com/drobins25/craft/assets/hero.svg)
 
 # Craft [![version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fdrobins25%2Fcraft%2Fmain%2F.claude-plugin%2Fplugin.json&query=%24.version&label=version&color=blue)](CHANGELOG.md)
 
@@ -26,7 +26,7 @@ Then start Claude Code and run `/craft` - [full install notes](#install).
 
 **It steals your best ideas back.** You say "that's it!" after working through a tweak, and craft remembers. It waits, then brings that same taste back on a completely different feature - elevated. Keep going, and you'll catch yourself asking, "how did I do this?"
 
-![Craft building its own repo page live - a terminal conversation on the left drives an adhoc tweak, while on the right the Craft Open Source interface assembles itself in response.](docs/media/craft-caught-in-the-act.gif)
+![Craft building its own repo page live - a terminal conversation on the left drives an adhoc tweak, while on the right the Craft Open Source interface assembles itself in response.](https://raw.githubusercontent.com/drobins25/craft/assets/craft-caught-in-the-act.gif)
 
 *Craft building its own repo page, live.*
 
