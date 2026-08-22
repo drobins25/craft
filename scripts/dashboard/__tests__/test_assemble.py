@@ -236,7 +236,7 @@ class TestEmptyCorpus(unittest.TestCase):
         self.assertIsNone(graph["stats"]["birthday"])
         self.assertEqual(graph["stats"]["days_of_craft"], 0)
         self.assertIsNone(graph["stats"]["keystone"])
-        self.assertEqual(graph["tokens"], {})
+        self.assertNotIn("tokens", graph)
 
 
 if __name__ == "__main__":

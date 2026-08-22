@@ -11,7 +11,6 @@ from . import paths
 from . import registry
 from . import resolve
 from . import stats as stats_mod
-from . import tokens as tokens_mod
 
 EDGE_KINDS = {
     "belongs_to",
@@ -78,7 +77,6 @@ def build(root):
         "edges": edges,
         "annotations": annotations,
         "stats": stats_mod.compute(nodes_sorted, edges),
-        "tokens": _fold_tokens(root),
         "build": {"warnings": warnings_sorted, "unresolved": unresolved},
     }
     written, removed = emit.write_all(root, graph, texts)
@@ -191,11 +189,3 @@ def _clean_annotations(annotations):
         unique[key]
         for key in sorted(unique, key=lambda k: (k[0], k[1], k[2]))
     ]
-
-
-def _fold_tokens(root):
-    try:
-        text = paths.read_under_craft(root, "design/tokens.yaml")
-    except (OSError, paths.BoundaryError):
-        return {}
-    return tokens_mod.fold_text(text)

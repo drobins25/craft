@@ -2,8 +2,8 @@
 
 Parses every record in a project's `.craft/` and emits the graph data the
 Craft Dashboard page renders: nodes for every record, edges from the lineage
-fields the flows already stamp, stats, and the project's design tokens.
-Python 3.8+ stdlib only - no dependencies, no network, no AI tokens.
+fields the flows already stamp, and stats.
+Python 3.9+ stdlib only - no dependencies, no network, no AI tokens.
 
 ## Invocation contract (the single seam)
 
@@ -31,7 +31,7 @@ All output lands in `<root>/.craft/graph/`, loadable from `file://` via
 `<script src>` (no fetch needed):
 
 - **`graph.js`** assigns `window.CRAFT_GRAPH`:
-  `{version, nodes, edges, annotations, stats, tokens, build}`.
+  `{version, nodes, edges, annotations, stats, build}`.
   - `version` (integer, currently 1) exists for the page template to gate
     on. On a mismatch, handling - defensive read or prompting a rebuild -
     is the TEMPLATE's job, never this builder's.
@@ -47,8 +47,6 @@ All output lands in `<root>/.craft/graph/`, loadable from `file://` via
   - `annotations` hold every reference-shaped value that did NOT become an
     edge, with a reason (`sentinel`, `unresolved`, `out-of-scope-type`,
     `prose`). Nothing is silently dropped.
-  - `tokens` is a flat dotted-key fold of `.craft/design/tokens.yaml`
-    (empty object when absent - never assume visual keys exist).
   - `graph.js` carries NO timestamp: an unchanged corpus produces
     byte-identical output and the second build writes zero files.
 - **`records/{id}.js`** (one per record) assigns
@@ -68,7 +66,7 @@ All output lands in `<root>/.craft/graph/`, loadable from `file://` via
 
 - `build.py` - CLI entry (`--root`)
 - `src/` - frontmatter reader, identity, resolver, registry, one parser per
-  record type, assembler, stats, tokens fold, emitters
+  record type, assembler, stats, emitters
 - `__tests__/` - python unittest suites (run via `tests/test-dashboard.sh`)
 - `__fixtures__/corpus/` - neutral-placeholder fixture corpus (no `.craft`
   directory name inside - this repo gitignores that name at any depth)
