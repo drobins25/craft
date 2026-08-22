@@ -122,7 +122,7 @@ plugins/craft/
 │   └── workflow-reference.md
 ├── scripts/                   ← Self-contained toolchains outside hooks/
 │   ├── map/                   ← Living Map structural generator (Node; seam: map-run.sh)
-│   └── dashboard/             ← Dashboard graph data builder (python stdlib; seam: dashboard-run.sh)
+│   └── dashboard/             ← Dashboard graph data builder (python stdlib; seam: dashboard-run.sh; output: .craft/graph/)
 ├── tests/                     ← Bash test suite (30+ bash tests)
 │   ├── run-all.sh
 │   ├── test_helper.sh

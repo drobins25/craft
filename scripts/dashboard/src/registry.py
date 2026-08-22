@@ -20,6 +20,7 @@ from . import parse_planning
 from . import parse_riff
 from . import parse_story
 from . import parse_tweak
+from . import summary as summary_mod
 
 
 _RULES = [
@@ -75,7 +76,9 @@ def discover(root):
     craft = os.path.join(root, ".craft")
     found = []
     for dirpath, dirnames, filenames in os.walk(craft):
-        dirnames[:] = sorted(d for d in dirnames if d != "dashboard")
+        dirnames[:] = sorted(
+            d for d in dirnames if d not in ("graph", "dashboard")
+        )
         for filename in filenames:
             rel = os.path.relpath(
                 os.path.join(dirpath, filename), craft
@@ -100,9 +103,21 @@ def parse_file(record_type, craft_rel, text, path=None):
         fields, body = frontmatter.parse(text)
     parser = PARSERS[record_type]
     try:
-        return parser(path, craft_rel, fields, body)
+        node, links, notes = parser(path, craft_rel, fields, body)
     except Exception as exc:  # noqa: BLE001 - the never-crash contract
         return _minimal_node(record_type, craft_rel, exc), [], []
+    _attach_summary(node, record_type, fields, body)
+    return node, links, notes
+
+
+def _attach_summary(node, record_type, fields, body):
+    """Never lets a summary-extraction bug take down the whole build."""
+    try:
+        value = summary_mod.extract(record_type, fields, body)
+    except Exception:  # noqa: BLE001 - the never-crash contract
+        return
+    if value:
+        node["summary"] = value
 
 
 def _minimal_node(record_type, craft_rel, exc):

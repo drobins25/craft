@@ -74,8 +74,8 @@ set -e
 assert_exit_code "start-story exits 0" "0" "$RC"
 LAST_LINE=$(echo "$OUT" | tail -1)
 assert_eq "last stdout line unchanged" "Story started: 1-trigger-story (chunks: 3)" "$LAST_LINE"
-assert_file_exists "graph.js rebuilt" "$TEST_DIR/.craft/dashboard/graph.js"
-assert_file_contains "build-status reports ok" '"status":"ok"' "$TEST_DIR/.craft/dashboard/build-status.js"
+assert_file_exists "graph.js rebuilt" "$TEST_DIR/.craft/graph/graph.js"
+assert_file_contains "build-status reports ok" '"status":"ok"' "$TEST_DIR/.craft/graph/build-status.js"
 
 cleanup_test_dir
 echo ""
@@ -93,7 +93,7 @@ set -e
 assert_exit_code "delete-story exits 0" "0" "$RC"
 LAST_LINE=$(echo "$OUT" | tail -1)
 assert_eq "last stdout line unchanged" "Story deleted: 1-doomed-story" "$LAST_LINE"
-assert_file_exists "graph.js rebuilt" "$TEST_DIR/.craft/dashboard/graph.js"
+assert_file_exists "graph.js rebuilt" "$TEST_DIR/.craft/graph/graph.js"
 
 cleanup_test_dir
 echo ""
@@ -117,7 +117,7 @@ set -e
 assert_exit_code "start-story exits 0 without python3" "0" "$RC"
 LAST_LINE=$(echo "$OUT" | tail -1)
 assert_eq "last stdout line unchanged without python3" "Story started: 1-degraded-story (chunks: 2)" "$LAST_LINE"
-assert_file_contains "build-status degraded, not absent" '"reason":"python-missing"' "$TEST_DIR/.craft/dashboard/build-status.js"
+assert_file_contains "build-status degraded, not absent" '"reason":"python-missing"' "$TEST_DIR/.craft/graph/build-status.js"
 
 rm -rf "$STUB"
 cleanup_test_dir
@@ -146,7 +146,7 @@ set -e
 assert_exit_code "graduate-mark exits 0" "0" "$RC"
 LAST_LINE=$(echo "$OUT" | tail -1)
 assert_eq "relative path spelling echoed unchanged" ".craft/notebook/ideas/2026-02-01-sample-idea.md" "$LAST_LINE"
-assert_file_exists "graph rebuilt into the record's own project" "$TEST_DIR/.craft/dashboard/graph.js"
+assert_file_exists "graph rebuilt into the record's own project" "$TEST_DIR/.craft/graph/graph.js"
 
 cleanup_test_dir
 echo ""
@@ -174,7 +174,7 @@ set -e
 assert_exit_code "notebook-done exits 0" "0" "$RC"
 LAST_LINE=$(echo "$OUT" | tail -1)
 assert_eq "done/ destination echoed" ".craft/notebook/todos/done/2026-02-02-sample-todo.md" "$LAST_LINE"
-assert_file_exists "graph rebuilt" "$TEST_DIR/.craft/dashboard/graph.js"
+assert_file_exists "graph rebuilt" "$TEST_DIR/.craft/graph/graph.js"
 
 cleanup_test_dir
 echo ""
@@ -192,7 +192,7 @@ set -e
 assert_exit_code "create-cycle exits 0" "0" "$RC"
 LAST_LINE=$(echo "$OUT" | tail -1)
 assert_eq "cycle dir echoed unchanged" "$TEST_DIR/.craft/cycles/1-sample-cycle" "$LAST_LINE"
-assert_file_contains "build-status reports ok" '"status":"ok"' "$TEST_DIR/.craft/dashboard/build-status.js"
+assert_file_contains "build-status reports ok" '"status":"ok"' "$TEST_DIR/.craft/graph/build-status.js"
 
 cleanup_test_dir
 echo ""
@@ -210,7 +210,7 @@ set -e
 assert_exit_code "update-story-status exits 0" "0" "$RC"
 LAST_LINE=$(echo "$OUT" | tail -1)
 assert_eq "status sentence unchanged" "Story status updated to 'ready': $STORY" "$LAST_LINE"
-assert_file_exists "graph rebuilt into the story's own project" "$TEST_DIR/.craft/dashboard/graph.js"
+assert_file_exists "graph rebuilt into the story's own project" "$TEST_DIR/.craft/graph/graph.js"
 
 cleanup_test_dir
 echo ""
@@ -231,11 +231,11 @@ assert_exit_code "cold capture exits 0" "0" "$RC"
 LAST_LINE=$(echo "$OUT" | tail -1)
 assert_contains "last line is still the captured file path" "notebook/ideas/" "$LAST_LINE"
 # Capture's cold path creates .craft/notebook/ itself, so the wrapper must
-# have built inside it - a missing dashboard here means the trigger never
+# have built inside it - a missing graph dir here means the trigger never
 # fired or the wrapper degraded on a healthy root.
 assert_dir_exists "capture created its .craft" "$BARE/.craft"
-assert_dir_exists "wrapper built inside capture's own .craft" "$BARE/.craft/dashboard"
-assert_file_exists "seeded .gitignore rode along" "$BARE/.craft/dashboard/.gitignore"
+assert_dir_exists "wrapper built inside capture's own .craft" "$BARE/.craft/graph"
+assert_file_exists "seeded .gitignore rode along" "$BARE/.craft/graph/.gitignore"
 
 rm -rf "$BARE"
 echo ""

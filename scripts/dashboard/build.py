@@ -16,7 +16,7 @@ from src import assemble
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="build.py",
-        description="Build .craft/dashboard/ graph data from .craft/ records.",
+        description="Build .craft/graph/ graph data from .craft/ records.",
     )
     parser.add_argument(
         "--root", default=".", help="project root containing .craft/"

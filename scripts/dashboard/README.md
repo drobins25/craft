@@ -23,11 +23,11 @@ bash <plugin-root>/scripts/dashboard/dashboard-run.sh --root "$PROJECT_ROOT"
 - Success stdout: `{"status":"ok","nodes":N,"edges":N,"annotations":N,"warnings":N,"written":N}`.
 
 The builder reads nothing outside `<root>/.craft/` and writes nothing
-outside `<root>/.craft/dashboard/` (enforced, tested).
+outside `<root>/.craft/graph/` (enforced, tested).
 
 ## Output contract (what the page loads)
 
-All output lands in `<root>/.craft/dashboard/`, loadable from `file://` via
+All output lands in `<root>/.craft/graph/`, loadable from `file://` via
 `<script src>` (no fetch needed):
 
 - **`graph.js`** assigns `window.CRAFT_GRAPH`:
@@ -38,7 +38,8 @@ All output lands in `<root>/.craft/dashboard/`, loadable from `file://` via
   - `nodes` are sorted by `(date, id)` ascending - replay in creation order
     reads node order directly. Envelope: `id, type, title, date, status,
     tags, surface` (+ `chunks` on stories, `subtype` on notebook records,
-    `kind` on dials).
+    `kind` on dials, optional `summary` on any type with an extractable
+    source section - absent, never empty or null, when the record has none).
   - `edges` are `{source, target, kind}`, sorted by `(kind, source,
     target)`. Kinds: `belongs_to, blocked_by, blocks, graduated_to,
     grew_from, reapplies, satisfied_todo, source_story, source_cycle,

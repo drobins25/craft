@@ -1,6 +1,6 @@
 """Filesystem boundary enforcement for the dashboard builder.
 
-Reads stay inside <root>/.craft/; writes stay inside <root>/.craft/dashboard/.
+Reads stay inside <root>/.craft/; writes stay inside <root>/.craft/graph/.
 Paths are realpath-resolved BEFORE the prefix comparison, so a symlink under
 .craft/ pointing outside the project raises rather than leaking external file
 content into a record mirror.
@@ -50,17 +50,17 @@ def read_under_craft(root, path):
         return f.read()
 
 
-def write_under_dashboard(root, path, data):
-    """Write a file under .craft/dashboard/, idempotently and atomically.
+def write_under_graph(root, path, data):
+    """Write a file under .craft/graph/, idempotently and atomically.
 
     Compares existing bytes first and skips identical content (returns
     False), so an unchanged corpus produces zero writes. Real writes go
     through temp-file-plus-rename so a crash never leaves a truncated file.
     Returns True when bytes were written.
     """
-    dashboard = os.path.join(os.path.realpath(root), ".craft", "dashboard")
-    resolved = _resolve(dashboard, path)
-    _ensure_under(resolved, dashboard, "write")
+    graph = os.path.join(os.path.realpath(root), ".craft", "graph")
+    resolved = _resolve(graph, path)
+    _ensure_under(resolved, graph, "write")
     _ACCESS_LOG.append(("write", resolved))
     if isinstance(data, str):
         data = data.encode("utf-8")
@@ -76,11 +76,11 @@ def write_under_dashboard(root, path, data):
     return True
 
 
-def remove_under_dashboard(root, path):
-    """Remove a file under .craft/dashboard/, boundary-checked and logged."""
-    dashboard = os.path.join(os.path.realpath(root), ".craft", "dashboard")
-    resolved = _resolve(dashboard, path)
-    _ensure_under(resolved, dashboard, "remove")
+def remove_under_graph(root, path):
+    """Remove a file under .craft/graph/, boundary-checked and logged."""
+    graph = os.path.join(os.path.realpath(root), ".craft", "graph")
+    resolved = _resolve(graph, path)
+    _ensure_under(resolved, graph, "remove")
     _ACCESS_LOG.append(("remove", resolved))
     if os.path.exists(resolved):
         os.remove(resolved)

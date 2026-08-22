@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="craft-template-version" content="1">
+<title>Craft Browser</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #000;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  canvas { display: block; }
+
+  #stage .hint {
+    position: absolute;
+    left: 20px;
+    bottom: 18px;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    pointer-events: none;
+    z-index: 5;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color: rgba(220, 224, 232, 0.34);
+  }
+
+  #stage #controls {
+    position: absolute;
+    top: 20px;
+    right: 22px;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+    pointer-events: none;
+  }
+  #stage #controls .notice { display: none; color: rgba(220, 224, 232, 0.34); }
+  #stage #controls .notice.visible { display: inline; }
+  #stage #controls button {
+    pointer-events: auto;
+    font-family: inherit;
+    font-size: inherit;
+    color: rgba(220, 224, 232, 0.34);
+    background: transparent;
+    border: 1px solid rgba(210, 215, 225, 0.16);
+    border-radius: 4px;
+    padding: 6px 10px;
+    cursor: pointer;
+  }
+  #stage #controls button:hover { color: rgba(220, 224, 232, 0.9); border-color: rgba(210, 215, 225, 0.3); }
+
+  #stage #panel {
+    position: absolute;
+    top: 62px;
+    right: 22px;
+    width: 320px;
+    max-height: calc(100vh - 90px);
+    display: flex;
+    flex-direction: column;
+    background: rgba(16, 16, 19, 0.93);
+    border: 1px solid rgba(210, 215, 225, 0.16);
+    border-radius: 6px;
+    padding: 16px 18px;
+    font-family: system-ui, -apple-system, sans-serif;
+    color: #e8eaef;
+    opacity: 0;
+    transform: translateX(8px);
+    transition: opacity 0.22s ease, transform 0.22s ease;
+    pointer-events: none;
+    z-index: 6;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  }
+  #stage #panel.visible { opacity: 1; transform: translateX(0); pointer-events: auto; }
+  #stage #panel .p-type {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #9fd8ff;
+    margin-bottom: 6px;
+    flex: none;
+  }
+  #stage #panel .p-title {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.35;
+    margin-bottom: 10px;
+    color: #fbfbfd;
+    flex: none;
+  }
+  #stage #panel .p-meta {
+    font-size: 12px;
+    color: #a7acb8;
+    margin-bottom: 12px;
+    flex: none;
+  }
+  #stage #panel .p-summary {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #c6cad4;
+    margin-bottom: 12px;
+    flex: none;
+  }
+  #stage #panel .p-rel-label {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #767b87;
+    margin-bottom: 6px;
+    flex: none;
+  }
+  #stage #panel .p-rels {
+    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  #stage #panel .p-rel-item {
+    font-size: 12.5px;
+    color: #c7cbd4;
+    padding: 4px 0;
+    border-top: 1px solid rgba(210, 215, 225, 0.08);
+  }
+  #stage #panel .p-rel-item:first-of-type { border-top: none; }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <canvas id="canvas"></canvas>
+  <div id="controls">
+    <span class="notice"></span>
+    <button id="replay-btn">↺ Replay entrance</button>
+    <button id="refresh-btn">⟳ Refresh</button>
+  </div>
+  <div id="panel">
+    <div class="p-type"></div>
+    <div class="p-title"></div>
+    <div class="p-meta"></div>
+    <div class="p-summary"></div>
+    <div class="p-rels"></div>
+  </div>
+  <div class="hint">drag a node to pin · drag empty space to pan · scroll to zoom · click to lock</div>
+</div>
+
+<script src="graph/build-status.js"></script>
+<script src="graph/graph.js"></script>
+<script>
+'use strict';
+
+/* This page opens from file:// - every local file is its own opaque origin
+   there, so the Fetch API and ES modules fail silently. Classic sibling
+   <script src> tags are the only load path that works, hence the two
+   tags above rather than any import. */
+const TAU = Math.PI * 2;
+const GRAPH = (window.CRAFT_GRAPH && window.CRAFT_GRAPH.nodes) ? window.CRAFT_GRAPH : { nodes: [], edges: [] };
+
+// The page cannot read .craft/'s mtime, so elapsed time since the last build
+// carries no information about whether the graph is current - only these
+// three receipts do.
+const EXPECTED_DATA_VERSION = 1;
+
+function computeNotice(build, graph) {
+  if (!graph || !graph.nodes || !graph.nodes.length) {
+    return 'No graph data yet. Run any craft flow, then press Refresh.';
+  }
+  if (graph.version !== EXPECTED_DATA_VERSION) {
+    return 'This data was written by a different version of craft. Refresh to try again.';
+  }
+  if (build && build.status !== 'ok') {
+    return "The last rebuild didn't finish. Refresh once it has run again.";
+  }
+  return null;
+}
+
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function truncateTitle(title, max) {
+  const s = title || '(untitled)';
+  return s.length > max ? s.slice(0, max - 1).trimEnd() + '…' : s;
+}
+
+function cloneNodes() {
+  return GRAPH.nodes.map((n, i) => ({
+    id: n.id,
+    type: n.type,
+    label: n.title || n.id,
+    short: truncateTitle(n.title, 24),
+    date: n.date,
+    status: n.status,
+    chunks: n.chunks,
+    summary: n.summary,
+    x: 0, y: 0, vx: 0, vy: 0,
+    mass: 1,
+    phase: i * 1.3197 + 0.4,
+  }));
+}
+
+function buildEdges(nodes) {
+  const byId = new Map(nodes.map(n => [n.id, n]));
+  const out = [];
+  let i = 0;
+  for (const e of GRAPH.edges) {
+    const s = byId.get(e.source), t = byId.get(e.target);
+    if (!s || !t) continue; // defensive: skip any dangling reference
+    out.push({ source: s, target: t, kind: e.kind, pulsePhase: (i * 0.3719) % 1 });
+    i++;
+  }
+  return out;
+}
+
+function buildAdjacency(nodes, edges) {
+  const adj = new Map(nodes.map(n => [n.id, []]));
+  edges.forEach(e => {
+    adj.get(e.source.id).push({ other: e.target, kind: e.kind, dir: 'out' });
+    adj.get(e.target.id).push({ other: e.source, kind: e.kind, dir: 'in' });
+  });
+  return adj;
+}
+
+/* Cycles are cluster anchors placed evenly around a ring in a fixed
+   reference box; every other node joins its cycle's cluster via the
+   first belongs_to edge pointing at a cycle, phyllotaxis-scattered around
+   that cluster's anchor with the spiral radius scaled by member count.
+   Anything with no belongs_to a cycle has nowhere to belong and forms
+   the outer dust ring. */
+const GOLDEN_ANGLE = 2.399963229728653;
+function computeRealLayout(nodes, edges) {
+  const cycles = nodes.filter(n => n.type === 'cycle');
+  const memberOf = new Map(); // nodeId -> cycleId, first belongs_to wins
+  for (const e of edges) {
+    if (e.kind !== 'belongs_to') continue;
+    if (e.target.type === 'cycle' && !memberOf.has(e.source.id)) memberOf.set(e.source.id, e.target.id);
+  }
+  const clusterMembers = new Map(cycles.map(c => [c.id, []]));
+  for (const n of nodes) {
+    if (n.type === 'cycle') continue;
+    const cid = memberOf.get(n.id);
+    if (cid && clusterMembers.has(cid)) clusterMembers.get(cid).push(n);
+  }
+  const orphans = nodes.filter(n => n.type !== 'cycle' && !memberOf.has(n.id));
+
+  const ordered = [...cycles].sort((a, b) => (clusterMembers.get(b.id) || []).length - (clusterMembers.get(a.id) || []).length);
+  const RING_R = 380;
+  ordered.forEach((c, i) => {
+    const angle = (i / ordered.length) * TAU;
+    c.homeRefX = Math.cos(angle) * RING_R;
+    c.homeRefY = Math.sin(angle) * RING_R;
+  });
+  ordered.forEach((c) => {
+    const members = clusterMembers.get(c.id) || [];
+    const spiralScale = 14 + Math.sqrt(members.length) * 9;
+    members.forEach((m, j) => {
+      const angle = j * GOLDEN_ANGLE;
+      const rad = spiralScale * Math.sqrt(j + 0.5);
+      m.homeRefX = c.homeRefX + Math.cos(angle) * rad;
+      m.homeRefY = c.homeRefY + Math.sin(angle) * rad;
+    });
+  });
+  const DUST_R0 = RING_R + 260;
+  orphans.forEach((n, i) => {
+    const angle = i * GOLDEN_ANGLE;
+    const rad = DUST_R0 + Math.sqrt(i) * 18;
+    n.homeRefX = Math.cos(angle) * rad;
+    n.homeRefY = Math.sin(angle) * rad;
+  });
+}
+
+// computeRealLayout lays the constellation out in a unitless reference box;
+// computeHomes measures that box and scales it per-axis so the settled
+// graph fills FIT_W_FRAC x FIT_H_FRAC of the actual viewport, any size.
+const FIT_W_FRAC = 0.80;
+const FIT_H_FRAC = 0.74;
+function computeHomes(nodes, w, h) {
+  if (nodes.length === 0) return; // no data yet - nothing to fit, nothing to poison with NaN
+  const xs = nodes.map(n => n.homeRefX), ys = nodes.map(n => n.homeRefY);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const cx0 = (minX + maxX) / 2, cy0 = (minY + maxY) / 2;
+  const scaleX = (w * FIT_W_FRAC) / (maxX - minX || 1);
+  const scaleY = (h * FIT_H_FRAC) / (maxY - minY || 1);
+  for (const n of nodes) {
+    n.homeX = w / 2 + (n.homeRefX - cx0) * scaleX;
+    n.homeY = h / 2 + (n.homeRefY - cy0) * scaleY;
+  }
+}
+
+class Sim {
+  constructor(opts) {
+    this.nodes = cloneNodes();
+    this.edges = buildEdges(this.nodes);
+    computeRealLayout(this.nodes, this.edges);
+    this.idx = new Map(this.nodes.map((n, i) => [n.id, i]));
+    this.adj = buildAdjacency(this.nodes, this.edges);
+    this.opts = opts;
+    this.alpha = 0;
+    this.alphaTarget = 0;
+    this.alphaDecay = opts.alphaDecay != null ? opts.alphaDecay : 0.06;
+  }
+  resizeHome(w, h) { computeHomes(this.nodes, w, h); }
+  hasFixed() { for (const n of this.nodes) if (n.fx != null) return true; return false; }
+  isAtRest() {
+    let maxSp2 = 0;
+    for (const nd of this.nodes) { const s2 = nd.vx * nd.vx + nd.vy * nd.vy; if (s2 > maxSp2) maxSp2 = s2; }
+    return this.alpha < 0.0006 && maxSp2 < 0.002 && !this.hasFixed();
+  }
+  step(dt) {
+    const alphaRetain = Math.pow(1 - this.alphaDecay, dt * 60);
+    this.alpha = this.alphaTarget + (this.alpha - this.alphaTarget) * alphaRetain;
+    const nodes = this.nodes, n = nodes.length;
+    // True-stillness fast path: once settled, skip the O(n^2) force pass
+    // entirely rather than compute forces that round to nothing.
+    if (this.isAtRest()) return;
+
+    const { repulse, springK, springLength, gravity, maxSpeed, damping } = this.opts;
+    const fx = new Float64Array(n), fy = new Float64Array(n);
+    const forceScale = this.alpha;
+
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        const a = nodes[i], b = nodes[j];
+        let dx = a.x - b.x, dy = a.y - b.y;
+        let d = Math.sqrt(dx * dx + dy * dy); if (d < 0.001) d = 0.001;
+        const ux = dx / d, uy = dy / d;
+        const dd = Math.max(d, 4);
+        const f = (repulse / (dd * dd)) * forceScale;
+        fx[i] += ux * f; fy[i] += uy * f;
+        fx[j] -= ux * f; fy[j] -= uy * f;
+      }
+    }
+    for (const e of this.edges) {
+      const ai = this.idx.get(e.source.id), bi = this.idx.get(e.target.id);
+      const a = nodes[ai], b = nodes[bi];
+      let dx = b.x - a.x, dy = b.y - a.y;
+      let d = Math.sqrt(dx * dx + dy * dy); if (d < 0.001) d = 0.001;
+      const f = springK * (d - springLength) * forceScale;
+      const ux = dx / d, uy = dy / d;
+      fx[ai] += ux * f; fy[ai] += uy * f;
+      fx[bi] -= ux * f; fy[bi] -= uy * f;
+    }
+    for (let i = 0; i < n; i++) {
+      const node = nodes[i];
+      fx[i] += (node.homeX - node.x) * gravity * forceScale;
+      fy[i] += (node.homeY - node.y) * gravity * forceScale;
+    }
+    const dampingStep = Math.pow(damping, dt * 60);
+    for (let i = 0; i < n; i++) {
+      const node = nodes[i];
+      if (node.fx != null) { node.x = node.fx; node.y = node.fy; node.vx = 0; node.vy = 0; continue; }
+      node.vx = (node.vx + (fx[i] / node.mass) * dt) * dampingStep;
+      node.vy = (node.vy + (fy[i] / node.mass) * dt) * dampingStep;
+      const sp = Math.hypot(node.vx, node.vy);
+      if (sp > maxSpeed) { const s = maxSpeed / sp; node.vx *= s; node.vy *= s; }
+      node.x += node.vx * dt;
+      node.y += node.vy * dt;
+    }
+  }
+}
+
+function seedCompactCloud(nodes, cx, cy, scale) {
+  nodes.forEach((n, i) => {
+    const hx = n.homeX != null ? n.homeX : cx, hy = n.homeY != null ? n.homeY : cy;
+    const jitter = (i % 2 === 0 ? 1 : -1) * (3 + (i * 7) % 9);
+    n.x = cx + (hx - cx) * scale + jitter;
+    n.y = cy + (hy - cy) * scale - jitter * 0.6;
+    n.vx = 0; n.vy = 0;
+  });
+}
+
+function makeCanvasCtx(canvas) {
+  const ctx = canvas.getContext('2d');
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = window.innerWidth, h = window.innerHeight;
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  return { ctx, resize };
+}
+
+function hitTestNode(nodes, wx, wy) {
+  let best = null, bestScore = Infinity;
+  for (const n of nodes) {
+    const d = Math.hypot(n.x - wx, n.y - wy);
+    if (d <= n.hw + 6 && d < bestScore) { best = n; bestScore = d; }
+  }
+  return best;
+}
+
+class Camera {
+  constructor() { this.scale = 1; this.x = 0; this.y = 0; }
+  toWorld(sx, sy, w, h) { return { x: (sx - w / 2) / this.scale + this.x, y: (sy - h / 2) / this.scale + this.y }; }
+  zoomAt(sx, sy, w, h, factor) {
+    const before = this.toWorld(sx, sy, w, h);
+    this.scale = clamp(this.scale * factor, 0.2, 6);
+    const after = this.toWorld(sx, sy, w, h);
+    this.x += before.x - after.x;
+    this.y += before.y - after.y;
+  }
+}
+
+function hsl2rgb(h, s, l) {
+  s /= 100; l /= 100;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+  const m = l - c / 2;
+  let r = 0, g = 0, b = 0;
+  if (h < 60) { r = c; g = x; b = 0; }
+  else if (h < 120) { r = x; g = c; b = 0; }
+  else if (h < 180) { r = 0; g = c; b = x; }
+  else if (h < 240) { r = 0; g = x; b = c; }
+  else if (h < 300) { r = x; g = 0; b = c; }
+  else { r = c; g = 0; b = x; }
+  return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
+}
+const TYPE_HSL = {
+  cycle: [40, 60, 58],      // amber-gold - the container
+  story: [16, 72, 60],      // ember-coral - craft's own accent
+  fix: [352, 66, 58],       // rose-red - alert/resolved
+  tweak: [178, 46, 54],     // teal-cyan - minor/quiet
+  planning: [210, 50, 58],  // blue - not built yet
+  notebook: [258, 40, 56],  // violet - quiet dust-ring texture
+  riff: [325, 58, 64],      // magenta - rare, allowed to stand out
+  dial: [302, 42, 63],      // orchid
+  mockup: [135, 45, 56],    // tree green
+};
+const TYPE_RGB = {};
+for (const k in TYPE_HSL) TYPE_RGB[k] = hsl2rgb(TYPE_HSL[k][0], TYPE_HSL[k][1], TYPE_HSL[k][2]);
+const GROUND = '#121214';
+// Neutral hue for a record type this page has never seen, so a future
+// type degrades gracefully instead of throwing on the first draw frame.
+const FALLBACK_TYPE = '__unknown__';
+const FALLBACK_RGB = hsl2rgb(0, 0, 55);
+
+const SIZE_BUCKETS = [
+  { key: 'dust', maxR: 11, bakeR: 12 },
+  { key: 'small', maxR: 19, bakeR: 20 },
+  { key: 'medium', maxR: 29, bakeR: 30 },
+  { key: 'hub', maxR: Infinity, bakeR: 42 },
+];
+function bucketFor(r) {
+  for (const b of SIZE_BUCKETS) if (r <= b.maxR) return b.key;
+  return 'hub';
+}
+
+function bakeRadialGlow(rgb, size) {
+  size = size || 96;
+  const c = document.createElement('canvas'); c.width = size; c.height = size;
+  const g = c.getContext('2d');
+  const cs = `${rgb[0]},${rgb[1]},${rgb[2]}`;
+  const grad = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  grad.addColorStop(0, `rgba(${cs},0.8)`);
+  grad.addColorStop(0.45, `rgba(${cs},0.26)`);
+  grad.addColorStop(1, `rgba(${cs},0)`);
+  g.fillStyle = grad; g.beginPath(); g.arc(size / 2, size / 2, size / 2, 0, TAU); g.fill();
+  return c;
+}
+
+// Flat circle baked at an explicit radius (bakeR) so rim width can be
+// proportioned to that size bucket rather than one universal stretch ratio.
+// No canvas blur-shadow property anywhere in this bakery or the per-frame
+// draw path - sprites are baked once per (hue x size bucket) and reused
+// every frame instead.
+function bakeFlatCircle(rgb, bakeR, rimAlpha, rimBoost) {
+  const pad = 6;
+  const SZ = bakeR * 2 + pad * 2;
+  const c = document.createElement('canvas'); c.width = SZ; c.height = SZ;
+  const g = c.getContext('2d');
+  g.beginPath(); g.arc(SZ / 2, SZ / 2, bakeR, 0, TAU);
+  g.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},1)`; g.fill();
+  g.lineWidth = clamp(bakeR * 0.09, 1.3, 3);
+  const rb = rimBoost || 40;
+  g.strokeStyle = `rgba(${Math.min(255, rgb[0] + rb)},${Math.min(255, rgb[1] + rb)},${Math.min(255, rgb[2] + rb)},${rimAlpha})`;
+  g.stroke();
+  return c;
+}
+
+function bakeBackground(w, h) {
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, w); c.height = Math.max(1, h);
+  const bctx = c.getContext('2d');
+  bctx.fillStyle = GROUND;
+  bctx.fillRect(0, 0, w, h);
+  const vg = bctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.22, w / 2, h / 2, Math.max(w, h) * 0.75);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.4)');
+  bctx.fillStyle = vg; bctx.fillRect(0, 0, w, h);
+  return c;
+}
+function entranceGlobalAlpha(entranceStart) {
+  if (!entranceStart) return 0;
+  return clamp((performance.now() - entranceStart) / 1000 / 0.38, 0, 1);
+}
+function drawLabelHalo(ctx, text, x, y, fillStyle) {
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = 'rgba(8,8,10,0.85)';
+  ctx.strokeText(text, x, y);
+  ctx.fillStyle = fillStyle;
+  ctx.fillText(text, x, y);
+}
+
+const DEG_CAP = 40;
+const MIN_R = 6, MAX_R = 40;
+// A trackpad zoom stream fires many wheel events per second; a shorter
+// window would stutter the loop stopping and restarting between them.
+const CALM_MS = 900;
+// window.NS and window.LT are page globals on purpose - the browser skill's
+// evaluate_script reaches them directly to try alternate values live.
+window.NS = window.NS || { cycleScale: 0.65 };
+window.LT = window.LT || { degreeAlwaysOn: Infinity, hubZoom: 2.2, dustZoom: 4.6, ramp: 0.8 };
+
+// Progressive label reveal: labelAlpha = f(camera.scale, nodeRadius). Bigger
+// radius means a lower reveal threshold (arrives first); alpha ramps
+// linearly over LABEL_RAMP zoom-units around that threshold, never a hard
+// pop. Labels render at a constant screen size regardless of zoom.
+const LABEL_HUB_ZOOM = 0.6;   // large nodes: basically always revealed
+const LABEL_DUST_ZOOM = 3.4;  // smallest nodes: require real zoom-in
+const LABEL_RAMP = 0.9;       // zoom-units over which alpha fades 0->1
+
+class GraphView {
+  constructor(canvas, panel) {
+    this.canvas = canvas;
+    this.panel = panel;
+    const { ctx, resize: resizeCanvas } = makeCanvasCtx(canvas);
+    this.ctx = ctx;
+    this._resizeCanvas = resizeCanvas;
+    this.camera = new Camera();
+    this.mouse = { x: -9999, y: -9999 };
+    this.hoverNode = null;
+    this.selectedNode = null;
+    this.dragNode = null;
+    this.dragCandidate = null;
+    this.dragging = false;
+    this.downScreen = null;
+    this.panning = false;
+    this.panStartScreen = null;
+    this.panStartCam = null;
+    this._labelWidthCache = new Map();
+    // Both anchor on the first PAINTED frame (set inside tick), not here -
+    // on a cold load the gap between this line and first paint can be large
+    // enough to burn the entrance, or a whole clamped simulation step, dark.
+    this.lastT = 0;
+    this.entranceStart = 0;
+    this.simT = 0;
+    this.frameCount = 0;
+    this.interactionActive = false;
+    this.lastInputAt = 0;
+    this.rafId = null;
+
+    this.sim = new Sim({ repulse: 60000, springK: 2.5, springLength: 110, damping: 0.90, gravity: 18, maxSpeed: 6000, alphaDecay: 0.06 });
+    this.sim.nodes.forEach(n => this.shapeNode(n));
+    this.bakeAssets();
+    this.attachInteraction();
+    this.tick = this.tick.bind(this);
+    this.resize();
+    this.replay();
+  }
+
+  shapeNode(n) {
+    n.shape = 'circle';
+    const degree = this.sim.adj.get(n.id).length;
+    n.degree = degree;
+    const t = Math.sqrt(Math.min(degree, DEG_CAP) / DEG_CAP);
+    n.hw = n.hh = (MIN_R + (MAX_R - MIN_R) * t) * (n.type === 'cycle' ? window.NS.cycleScale : 1);
+    n.mass = 0.5 + t * 2.2;
+    n.bucket = bucketFor(n.hw);
+  }
+
+  bakeAssets() {
+    this.fill = {};
+    this.hoverGlow = {};
+    const bake = (key, rgb) => {
+      this.fill[key] = {};
+      for (const b of SIZE_BUCKETS) this.fill[key][b.key] = bakeFlatCircle(rgb, b.bakeR, 0.85, 55);
+      this.hoverGlow[key] = bakeRadialGlow(rgb, 100);
+    };
+    for (const t in TYPE_RGB) bake(t, TYPE_RGB[t]);
+    bake(FALLBACK_TYPE, FALLBACK_RGB);
+  }
+
+  // A record type this page has no hue for still resolves - to the baked
+  // fallback sprite set - rather than throwing on the first draw frame.
+  spriteFor(type, bucket) { return (this.fill[type] || this.fill[FALLBACK_TYPE])[bucket]; }
+  glowFor(type) { return this.hoverGlow[type] || this.hoverGlow[FALLBACK_TYPE]; }
+
+  fillPanel(n) {
+    const KIND_OUT = { belongs_to: 'Part of', blocked_by: 'Blocked by', blocks: 'Blocks', references: 'References', source_cycle: 'Came from cycle', source_story: 'Came from story', graduated_to: 'Graduated into', reapplies: 'Re-applies' };
+    const KIND_IN = { belongs_to: 'Contains', blocked_by: 'Blocks', blocks: 'Blocked by', references: 'Referenced by', source_cycle: 'Source of', source_story: 'Source of', graduated_to: 'Grew from', reapplies: 'Re-applied by' };
+    const STATUS = { complete: 'Completed', active: 'In progress', planning: 'Planning', ready: 'Ready', pending: 'Pending' };
+    const TYPE_NAME = { story: 'Story', cycle: 'Cycle', fix: 'Fix', tweak: 'Tweak', notebook: 'Notebook', planning: 'Planning', riff: 'Riff', dial: 'Dial', mockup: 'Mockup' };
+    const fmtDate = d => { if (!d) return ''; const dt = new Date(d + 'T00:00:00'); return isNaN(dt) ? d : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); };
+    const bits = [TYPE_NAME[n.type] || n.type];
+    if (n.status) bits.push(STATUS[n.status] || n.status);
+    if (n.date) bits.push(fmtDate(n.date));
+    this.panel.querySelector('.p-type').textContent = bits.join(' · ');
+    this.panel.querySelector('.p-title').textContent = n.label;
+    this.panel.querySelector('.p-meta').textContent = n.degree + ' connection' + (n.degree === 1 ? '' : 's');
+    const summaryEl = this.panel.querySelector('.p-summary');
+    summaryEl.textContent = n.summary || '';
+    summaryEl.style.display = n.summary ? '' : 'none';
+    const relsEl = this.panel.querySelector('.p-rels');
+    relsEl.innerHTML = '';
+    if (n.chunks && n.chunks.list && n.chunks.list.length) {
+      const h = document.createElement('div'); h.className = 'p-rel-label';
+      h.textContent = 'The work (' + n.chunks.complete + '/' + n.chunks.total + ' done)';
+      relsEl.appendChild(h);
+      n.chunks.list.forEach(c => { const div = document.createElement('div'); div.className = 'p-rel-item'; div.textContent = c.number + '. ' + c.title; relsEl.appendChild(div); });
+    }
+    const rels = this.sim.adj.get(n.id);
+    if (rels.length) {
+      const label = document.createElement('div'); label.className = 'p-rel-label'; label.textContent = 'Connections'; relsEl.appendChild(label);
+      rels.forEach(rel => {
+        const div = document.createElement('div');
+        div.className = 'p-rel-item';
+        const verb = rel.dir === 'out' ? (KIND_OUT[rel.kind] || rel.kind) : (KIND_IN[rel.kind] || rel.kind);
+        div.textContent = verb + ': ' + rel.other.short;
+        relsEl.appendChild(div);
+      });
+    }
+  }
+
+  resize() {
+    this._resizeCanvas();
+    this.sim.resizeHome(window.innerWidth, window.innerHeight);
+    this.camera.x = window.innerWidth / 2;
+    this.camera.y = window.innerHeight / 2;
+    this.bg = bakeBackground(window.innerWidth, window.innerHeight);
+    this.requestRender();
+  }
+
+  replay() {
+    const w = window.innerWidth, h = window.innerHeight;
+    this.sim.resizeHome(w, h);
+    seedCompactCloud(this.sim.nodes, w / 2, h / 2, 0.13);
+    this.sim.alpha = 1;
+    this.sim.alphaTarget = 0;
+    this.selectedNode = null;
+    this.hoverNode = null;
+    this.dragNode = null;
+    this.dragCandidate = null;
+    if (this.panel) this.panel.classList.remove('visible');
+    this.entranceStart = 0;
+    this.requestRender();
+  }
+
+  attachInteraction() {
+    const canvas = this.canvas;
+    canvas.addEventListener('mousedown', (ev) => {
+      this.requestRender();
+      const w = window.innerWidth, h = window.innerHeight;
+      const wp = this.camera.toWorld(ev.clientX, ev.clientY, w, h);
+      this.dragCandidate = hitTestNode(this.sim.nodes, wp.x, wp.y);
+      this.downScreen = { x: ev.clientX, y: ev.clientY };
+      this.dragging = false;
+      this.panning = false;
+      if (!this.dragCandidate) {
+        this.panStartScreen = { x: ev.clientX, y: ev.clientY };
+        this.panStartCam = { x: this.camera.x, y: this.camera.y };
+      }
+    });
+    canvas.addEventListener('mousemove', (ev) => {
+      // Unconditional: with a stopped loop, hover state can change on any
+      // move, and detecting "did it actually change" costs more than a
+      // spare frame request does.
+      this.requestRender();
+      const w = window.innerWidth, h = window.innerHeight;
+      this.mouse.x = ev.clientX; this.mouse.y = ev.clientY;
+      const wp = this.camera.toWorld(ev.clientX, ev.clientY, w, h);
+      if (this.dragCandidate) {
+        if (!this.dragging) {
+          const dx = ev.clientX - this.downScreen.x, dy = ev.clientY - this.downScreen.y;
+          if (Math.hypot(dx, dy) > 4) {
+            this.dragging = true;
+            this.dragNode = this.dragCandidate;
+            this.dragNode.fx = this.dragNode.x; this.dragNode.fy = this.dragNode.y;
+            this.sim.alphaTarget = 0.3;
+            this.sim.alpha = Math.max(this.sim.alpha, 0.4);
+          }
+        }
+        if (this.dragging && this.dragNode) { this.dragNode.fx = wp.x; this.dragNode.fy = wp.y; }
+      } else if (this.panStartScreen) {
+        // Background drag-to-pan - 1:1 with the cursor, no inertia, sharing
+        // the same camera.x/y the wheel-zoom reads/writes so the two compose.
+        const dx = ev.clientX - this.panStartScreen.x, dy = ev.clientY - this.panStartScreen.y;
+        if (!this.panning && Math.hypot(dx, dy) > 3) {
+          this.panning = true;
+          canvas.style.cursor = 'grabbing';
+        }
+        if (this.panning) {
+          this.camera.x = this.panStartCam.x - dx / this.camera.scale;
+          this.camera.y = this.panStartCam.y - dy / this.camera.scale;
+        }
+      } else {
+        this.hoverNode = hitTestNode(this.sim.nodes, wp.x, wp.y);
+        canvas.style.cursor = this.hoverNode ? 'pointer' : 'default';
+      }
+    });
+    const release = () => {
+      this.requestRender();
+      if (this.dragging && this.dragNode) {
+        this.dragNode.fx = null; this.dragNode.fy = null;
+        this.sim.alphaTarget = 0;
+      } else if (this.panning) {
+        // pan release - camera state just stays where it is, nothing to undo
+      } else if (this.dragCandidate) {
+        const hit = this.dragCandidate;
+        this.selectedNode = (hit === this.selectedNode) ? null : hit;
+        if (this.selectedNode) this.fillPanel(this.selectedNode);
+        if (this.panel) this.panel.classList.toggle('visible', !!this.selectedNode);
+      } else if (this.panel && this.panStartScreen) {
+        // a real empty-space click (never moved past the pan threshold) = deselect
+        this.selectedNode = null;
+        this.panel.classList.remove('visible');
+      }
+      this.dragCandidate = null; this.dragging = false; this.dragNode = null;
+      this.panStartScreen = null; this.panStartCam = null;
+      if (this.panning) { this.panning = false; canvas.style.cursor = 'default'; }
+    };
+    // Listen on window, not just canvas: a pan or drag that ends with the
+    // cursor released outside the canvas must still clear cleanly.
+    window.addEventListener('mouseup', release);
+    canvas.addEventListener('mouseleave', () => { this.requestRender(); this.mouse.x = -9999; this.mouse.y = -9999; this.hoverNode = null; });
+    canvas.addEventListener('wheel', (ev) => {
+      ev.preventDefault();
+      this.requestRender();
+      const w = window.innerWidth, h = window.innerHeight;
+      // Proportional zoom: scale follows actual scroll distance, so trackpad
+      // streams accumulate gently. deltaMode 1 = line-scroll mice; ctrlKey = pinch.
+      const px = ev.deltaY * (ev.deltaMode === 1 ? 50 : 1);
+      const factor = Math.pow(2, -px * (ev.ctrlKey ? 0.02 : 0.002));
+      this.camera.zoomAt(ev.clientX, ev.clientY, w, h, factor);
+    }, { passive: false });
+  }
+
+  draw() {
+    const ctx = this.ctx, sim = this.sim, w = window.innerWidth, h = window.innerHeight;
+    ctx.drawImage(this.bg, 0, 0, w, h);
+    const ea = entranceGlobalAlpha(this.entranceStart);
+    ctx.save();
+    ctx.translate(w / 2, h / 2); ctx.scale(this.camera.scale, this.camera.scale); ctx.translate(-this.camera.x, -this.camera.y);
+
+    const active = this.selectedNode || this.hoverNode;
+    const connectedIds = active ? new Set(sim.adj.get(active.id).map(e => e.other.id)) : null;
+
+    // Label candidates are gathered here (screen position projected under
+    // the world transform) but drawn in a separate screen-space pass below,
+    // so label text stays a constant size at every zoom level.
+    const labelCandidates = [];
+    for (const n of sim.nodes) {
+      const alwaysOn = n === active || n === this.dragNode || n.degree >= window.LT.degreeAlwaysOn;
+      let alpha = 1;
+      if (!alwaysOn) {
+        const t = (n.hw - MIN_R) / (MAX_R - MIN_R);
+        const threshold = lerp(window.LT.dustZoom, window.LT.hubZoom, t);
+        alpha = clamp((this.camera.scale - (threshold - window.LT.ramp)) / window.LT.ramp, 0, 1);
+        if (alpha <= 0.01) continue; // not a candidate at all this frame
+      }
+      const sx = (n.x - this.camera.x) * this.camera.scale + w / 2;
+      const sy = (n.y - this.camera.y) * this.camera.scale + h / 2;
+      if (sx < -80 || sx > w + 80 || sy < -60 || sy > h + 60) continue; // off-screen
+      labelCandidates.push({ n, alwaysOn, alpha, sx, sy });
+    }
+    // Always-on first, then most prominent (bigger radius) first.
+    labelCandidates.sort((a, b) => (b.alwaysOn - a.alwaysOn) || (b.n.hw - a.n.hw));
+
+    for (const e of sim.edges) {
+      const isConn = !!(active && (e.source.id === active.id || e.target.id === active.id));
+      ctx.beginPath(); ctx.moveTo(e.source.x, e.source.y); ctx.lineTo(e.target.x, e.target.y);
+      ctx.strokeStyle = isConn ? 'rgba(220,225,235,0.6)' : (active ? 'rgba(180,185,195,0.04)' : 'rgba(180,185,195,0.13)');
+      ctx.lineWidth = isConn ? 1.6 : 1;
+      ctx.globalAlpha = ea;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    for (const n of sim.nodes) {
+      const dim = active && n !== active && !(connectedIds && connectedIds.has(n.id)) ? 0.3 : 1;
+      const isActive = n === active;
+      if (isActive) {
+        const gs = n.hw * 4.4;
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.7 * ea;
+        ctx.drawImage(this.glowFor(n.type), n.x - gs / 2, n.y - gs / 2, gs, gs);
+        ctx.globalCompositeOperation = 'source-over';
+      }
+      ctx.globalAlpha = dim * ea;
+      const d2 = n.hw * 2;
+      ctx.drawImage(this.spriteFor(n.type, n.bucket), n.x - n.hw, n.y - n.hh, d2, d2);
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore(); // back to screen space - DPR-scaled, no camera transform
+
+    // Screen-space label pass - constant 11px size at every zoom. Suppression
+    // uses each candidate's real measured text bounds against an AABB of
+    // already-placed higher-priority labels, not a fixed grid.
+    ctx.font = '11px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const placed = [];
+    for (const cand of labelCandidates) {
+      const n = cand.n;
+      let tw = this._labelWidthCache.get(n.id);
+      if (tw == null) { tw = ctx.measureText(n.short).width; this._labelWidthCache.set(n.id, tw); }
+      const labelY = cand.sy + n.hw * this.camera.scale + 13;
+      const halfW = tw / 2 + 3, halfH = 8;
+      const rect = { x1: cand.sx - halfW, y1: labelY - halfH, x2: cand.sx + halfW, y2: labelY + halfH };
+      let overlaps = false;
+      for (const p of placed) {
+        if (rect.x1 < p.x2 && rect.x2 > p.x1 && rect.y1 < p.y2 && rect.y2 > p.y1) { overlaps = true; break; }
+      }
+      if (overlaps && !cand.alwaysOn) continue; // always-on always draws; others yield to a higher-priority neighbor
+      placed.push(rect);
+
+      const dim = active && n !== active && !(connectedIds && connectedIds.has(n.id)) ? 0.3 : 1;
+      const isActive = n === active;
+      ctx.font = (isActive ? '600 ' : '400 ') + '11px system-ui, -apple-system, sans-serif';
+      const labelAlpha = cand.alpha * dim * ea;
+      const col = isActive ? `rgba(255,255,255,${ea})` : `rgba(222,226,232,${0.78 * labelAlpha})`;
+      drawLabelHalo(ctx, n.short, cand.sx, labelY, col);
+    }
+  }
+
+  requestRender() {
+    this.lastInputAt = performance.now();
+    this.interactionActive = true;
+    if (!this.rafId) this.rafId = requestAnimationFrame(this.tick);
+  }
+
+  tick(now) {
+    this.rafId = null;
+    if (!this.entranceStart) this.entranceStart = now;
+    if (!this.lastT) this.lastT = now;
+    const dt = Math.min((now - this.lastT) / 1000, 0.05);
+    this.lastT = now;
+    this.simT += dt;
+    this.sim.step(dt);
+    this.draw(now);
+    this.frameCount++;
+
+    const entranceActive = entranceGlobalAlpha(this.entranceStart) < 1;
+    if (this.interactionActive && !this.dragging && !this.panning && (now - this.lastInputAt) > CALM_MS) {
+      this.interactionActive = false;
+    }
+    const still = entranceActive || !this.sim.isAtRest() || this.dragging || this.panning || this.interactionActive;
+    if (still) this.rafId = requestAnimationFrame(this.tick);
+  }
+}
+
+window.GraphInstance = new GraphView(document.getElementById('canvas'), document.getElementById('panel'));
+
+document.getElementById('replay-btn').addEventListener('click', () => {
+  window.GraphInstance.replay();
+});
+document.getElementById('refresh-btn').addEventListener('click', () => {
+  location.reload();
+});
+window.addEventListener('resize', () => {
+  window.GraphInstance.resize();
+});
+
+const noticeMessage = computeNotice(window.CRAFT_BUILD, GRAPH);
+if (noticeMessage) {
+  const noticeEl = document.querySelector('#controls .notice');
+  noticeEl.textContent = noticeMessage;
+  noticeEl.classList.add('visible');
+}
+</script>
+</body>
+</html>

@@ -24,7 +24,7 @@ class EmitTestCase(unittest.TestCase):
 
     def _read(self, rel):
         with open(
-            os.path.join(self.root, ".craft", "dashboard", rel),
+            os.path.join(self.root, ".craft", "graph", rel),
             encoding="utf-8",
         ) as f:
             return f.read()
@@ -67,7 +67,7 @@ class TestOrphanSweep(EmitTestCase):
         removed = emit.sweep_orphans(self.root, {"story--keep"})
         self.assertEqual(removed, 1)
         records = os.listdir(
-            os.path.join(self.root, ".craft", "dashboard", "records")
+            os.path.join(self.root, ".craft", "graph", "records")
         )
         self.assertEqual(records, ["story--keep.js"])
 
@@ -75,14 +75,39 @@ class TestOrphanSweep(EmitTestCase):
 class TestCrashSafety(EmitTestCase):
     def test_stale_temp_file_does_not_corrupt_existing_graph(self):
         emit.write_graph(self.root, {"version": 1, "nodes": []})
-        dashboard = os.path.join(self.root, ".craft", "dashboard")
-        stale = os.path.join(dashboard, "graph.js.tmp")
+        graph_dir = os.path.join(self.root, ".craft", "graph")
+        stale = os.path.join(graph_dir, "graph.js.tmp")
         with open(stale, "w", encoding="utf-8") as f:
             f.write("truncat")
         emit.write_graph(self.root, {"version": 1, "nodes": ["changed"]})
         text = self._read("graph.js")
         self.assertIn("changed", text)
         self.assertTrue(text.endswith(";\n"))
+
+
+class TestWriteAll(EmitTestCase):
+    def test_write_all_lands_graph_and_mirrors(self):
+        graph = {"version": 1, "nodes": []}
+        texts = {"story--sample": "record body\n"}
+        written, removed = emit.write_all(self.root, graph, texts)
+        self.assertEqual(written, 2)
+        self.assertEqual(removed, 0)
+        self.assertTrue(
+            os.path.isfile(
+                os.path.join(self.root, ".craft", "graph", "graph.js")
+            )
+        )
+        self.assertTrue(
+            os.path.isfile(
+                os.path.join(
+                    self.root,
+                    ".craft",
+                    "graph",
+                    "records",
+                    "story--sample.js",
+                )
+            )
+        )
 
 
 if __name__ == "__main__":

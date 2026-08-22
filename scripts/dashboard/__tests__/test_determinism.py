@@ -14,13 +14,13 @@ from src import assemble
 
 
 def _snapshot(root):
-    dashboard = os.path.join(root, ".craft", "dashboard")
+    graph_dir = os.path.join(root, ".craft", "graph")
     files = {}
-    for dirpath, _, filenames in os.walk(dashboard):
+    for dirpath, _, filenames in os.walk(graph_dir):
         for fn in filenames:
             full = os.path.join(dirpath, fn)
             with open(full, "rb") as f:
-                files[os.path.relpath(full, dashboard)] = f.read()
+                files[os.path.relpath(full, graph_dir)] = f.read()
     return files
 
 

@@ -191,18 +191,18 @@ class TestBuildOnCorpus(unittest.TestCase):
             edges,
         )
 
-    def test_boundary_holds_no_read_outside_craft_no_write_outside_dashboard(
+    def test_boundary_holds_no_read_outside_craft_no_write_outside_graph(
         self,
     ):
         real_root = os.path.realpath(self.root)
         craft = os.path.join(real_root, ".craft")
-        dashboard = os.path.join(craft, "dashboard")
+        graph = os.path.join(craft, "graph")
         for kind, accessed in paths.access_log():
             if kind == "read":
                 self.assertTrue(accessed.startswith(craft + os.sep), accessed)
             else:
                 self.assertTrue(
-                    accessed.startswith(dashboard + os.sep), accessed
+                    accessed.startswith(graph + os.sep), accessed
                 )
 
     def test_public_nodes_carry_no_internal_keys(self):

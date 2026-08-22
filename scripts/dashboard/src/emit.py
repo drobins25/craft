@@ -22,7 +22,7 @@ def sanitize_json(obj):
 
 def write_graph(root, graph):
     text = "window.CRAFT_GRAPH = %s;\n" % sanitize_json(graph)
-    return paths.write_under_dashboard(root, "graph.js", text)
+    return paths.write_under_graph(root, "graph.js", text)
 
 
 def write_mirror(root, node_id, record_text):
@@ -31,7 +31,7 @@ def write_mirror(root, node_id, record_text):
         "window.CRAFT_RECORDS[%s] = %s;\n"
         % (sanitize_json(node_id), sanitize_json(record_text))
     )
-    return paths.write_under_dashboard(
+    return paths.write_under_graph(
         root, os.path.join("records", node_id + ".js"), text
     )
 
@@ -39,7 +39,7 @@ def write_mirror(root, node_id, record_text):
 def sweep_orphans(root, keep_ids):
     """Remove records/*.js mirrors whose record no longer exists."""
     records_dir = os.path.join(
-        os.path.realpath(root), ".craft", "dashboard", "records"
+        os.path.realpath(root), ".craft", "graph", "records"
     )
     removed = 0
     if not os.path.isdir(records_dir):
@@ -48,7 +48,7 @@ def sweep_orphans(root, keep_ids):
         if not filename.endswith(".js"):
             continue
         if filename[: -len(".js")] not in keep_ids:
-            paths.remove_under_dashboard(
+            paths.remove_under_graph(
                 root, os.path.join("records", filename)
             )
             removed += 1

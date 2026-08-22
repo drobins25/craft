@@ -42,40 +42,50 @@ class PathsTestCase(unittest.TestCase):
         with self.assertRaises(paths.BoundaryError):
             paths.read_under_craft(self.root, "link.md")
 
-    def test_write_inside_dashboard(self):
-        wrote = paths.write_under_dashboard(self.root, "graph.js", "data")
+    def test_write_inside_graph(self):
+        wrote = paths.write_under_graph(self.root, "graph.js", "data")
         self.assertTrue(wrote)
-        target = os.path.join(self.root, ".craft", "dashboard", "graph.js")
+        target = os.path.join(self.root, ".craft", "graph", "graph.js")
         with open(target, "r", encoding="utf-8") as f:
             self.assertEqual(f.read(), "data")
 
-    def test_write_rejects_path_outside_dashboard(self):
+    def test_write_rejects_path_outside_graph(self):
         with self.assertRaises(paths.BoundaryError):
-            paths.write_under_dashboard(self.root, "../graph.js", "data")
+            paths.write_under_graph(self.root, "../graph.js", "data")
+
+    def test_write_rejects_symlink_escape(self):
+        outside = os.path.join(self.root, "outside.txt")
+        with open(outside, "w", encoding="utf-8") as f:
+            f.write("secret\n")
+        paths.write_under_graph(self.root, "graph.js", "data")
+        link = os.path.join(self.root, ".craft", "graph", "escape.js")
+        os.symlink(outside, link)
+        with self.assertRaises(paths.BoundaryError):
+            paths.write_under_graph(self.root, "escape.js", "changed")
 
     def test_identical_write_is_skipped(self):
-        self.assertTrue(paths.write_under_dashboard(self.root, "graph.js", "data"))
-        self.assertFalse(paths.write_under_dashboard(self.root, "graph.js", "data"))
+        self.assertTrue(paths.write_under_graph(self.root, "graph.js", "data"))
+        self.assertFalse(paths.write_under_graph(self.root, "graph.js", "data"))
 
     def test_changed_write_lands(self):
-        paths.write_under_dashboard(self.root, "graph.js", "one")
-        self.assertTrue(paths.write_under_dashboard(self.root, "graph.js", "two"))
+        paths.write_under_graph(self.root, "graph.js", "one")
+        self.assertTrue(paths.write_under_graph(self.root, "graph.js", "two"))
 
     def test_access_log_records_reads_and_writes(self):
         paths.read_under_craft(self.root, "record.md")
-        paths.write_under_dashboard(self.root, "graph.js", "data")
+        paths.write_under_graph(self.root, "graph.js", "data")
         kinds = [kind for kind, _ in paths.access_log()]
         self.assertEqual(kinds, ["read", "write"])
 
-    def test_write_creates_dashboard_directory(self):
+    def test_write_creates_graph_directory(self):
         self.assertFalse(
-            os.path.isdir(os.path.join(self.root, ".craft", "dashboard"))
+            os.path.isdir(os.path.join(self.root, ".craft", "graph"))
         )
-        paths.write_under_dashboard(self.root, "records/sample.js", "data")
+        paths.write_under_graph(self.root, "records/sample.js", "data")
         self.assertTrue(
             os.path.isfile(
                 os.path.join(
-                    self.root, ".craft", "dashboard", "records", "sample.js"
+                    self.root, ".craft", "graph", "records", "sample.js"
                 )
             )
         )

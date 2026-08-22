@@ -39,8 +39,8 @@ make_no_python_path() {
 begin_test "no python3: exits 0, status python-missing, graph.js untouched"
 
 ROOT=$(make_fixture_root)
-mkdir -p "$ROOT/.craft/dashboard"
-echo "pre-existing graph" > "$ROOT/.craft/dashboard/graph.js"
+mkdir -p "$ROOT/.craft/graph"
+echo "pre-existing graph" > "$ROOT/.craft/graph/graph.js"
 STUB_PATH=$(make_no_python_path)
 
 set +e
@@ -50,10 +50,10 @@ set -e
 
 assert_exit_code "wrapper exits 0" "0" "$RC"
 assert_contains "stdout reports python-missing" "python-missing" "$OUT"
-assert_file_exists "build-status.js written" "$ROOT/.craft/dashboard/build-status.js"
-assert_file_contains "status is degraded" '"status":"degraded"' "$ROOT/.craft/dashboard/build-status.js"
-assert_file_contains "reason is python-missing" '"reason":"python-missing"' "$ROOT/.craft/dashboard/build-status.js"
-assert_eq "graph.js untouched" "pre-existing graph" "$(cat "$ROOT/.craft/dashboard/graph.js")"
+assert_file_exists "build-status.js written" "$ROOT/.craft/graph/build-status.js"
+assert_file_contains "status is degraded" '"status":"degraded"' "$ROOT/.craft/graph/build-status.js"
+assert_file_contains "reason is python-missing" '"reason":"python-missing"' "$ROOT/.craft/graph/build-status.js"
+assert_eq "graph.js untouched" "pre-existing graph" "$(cat "$ROOT/.craft/graph/graph.js")"
 
 rm -rf "$ROOT" "$STUB_PATH"
 echo ""
@@ -62,8 +62,8 @@ echo ""
 begin_test "builder raises: exits 0, status builder-error, graph.js untouched"
 
 ROOT=$(make_fixture_root)
-mkdir -p "$ROOT/.craft/dashboard"
-echo "pre-existing graph" > "$ROOT/.craft/dashboard/graph.js"
+mkdir -p "$ROOT/.craft/graph"
+echo "pre-existing graph" > "$ROOT/.craft/graph/graph.js"
 FAKE_BIN=$(mktemp -d)
 printf '#!/bin/bash\nexit 3\n' > "$FAKE_BIN/python3"
 chmod +x "$FAKE_BIN/python3"
@@ -75,8 +75,8 @@ set -e
 
 assert_exit_code "wrapper exits 0" "0" "$RC"
 assert_contains "stdout reports builder-error" "builder-error" "$OUT"
-assert_file_contains "reason is builder-error" '"reason":"builder-error"' "$ROOT/.craft/dashboard/build-status.js"
-assert_eq "graph.js untouched" "pre-existing graph" "$(cat "$ROOT/.craft/dashboard/graph.js")"
+assert_file_contains "reason is builder-error" '"reason":"builder-error"' "$ROOT/.craft/graph/build-status.js"
+assert_eq "graph.js untouched" "pre-existing graph" "$(cat "$ROOT/.craft/graph/graph.js")"
 
 rm -rf "$ROOT" "$FAKE_BIN"
 echo ""
@@ -95,7 +95,7 @@ set -e
 
 assert_exit_code "wrapper exits 0" "0" "$RC"
 assert_contains "stdout reports builder-missing" "builder-missing" "$OUT"
-assert_file_contains "reason is builder-missing" '"reason":"builder-missing"' "$ROOT/.craft/dashboard/build-status.js"
+assert_file_contains "reason is builder-missing" '"reason":"builder-missing"' "$ROOT/.craft/graph/build-status.js"
 
 rm -rf "$ROOT" "$LONELY"
 echo ""
@@ -139,7 +139,7 @@ set -e
 
 assert_exit_code "wrapper exits 0" "0" "$RC"
 assert_contains "healthy build reports ok" '"status": "ok"' "$OUT"
-assert_file_exists "graph.js written" "$ROOT/.craft/dashboard/graph.js"
+assert_file_exists "graph.js written" "$ROOT/.craft/graph/graph.js"
 
 rm -rf "$ROOT"
 echo ""
@@ -163,10 +163,10 @@ rm -rf "$ROOT"
 echo ""
 
 # --- Test 8: healthy build writes graph, records, ok status ---
-begin_test "healthy build: status ok, graph.js and records/ present, dashboard dir created"
+begin_test "healthy build: status ok, graph.js and records/ present, graph dir created"
 
 ROOT=$(make_fixture_root)
-assert_dir_not_exists "dashboard dir absent before build" "$ROOT/.craft/dashboard"
+assert_dir_not_exists "graph dir absent before build" "$ROOT/.craft/graph"
 
 set +e
 OUT=$(bash "$WRAPPER" --root "$ROOT" 2>&1)
@@ -174,9 +174,9 @@ RC=$?
 set -e
 
 assert_exit_code "wrapper exits 0" "0" "$RC"
-assert_file_exists "graph.js present" "$ROOT/.craft/dashboard/graph.js"
-assert_dir_exists "records/ present" "$ROOT/.craft/dashboard/records"
-assert_file_contains "status ok" '"status":"ok"' "$ROOT/.craft/dashboard/build-status.js"
+assert_file_exists "graph.js present" "$ROOT/.craft/graph/graph.js"
+assert_dir_exists "records/ present" "$ROOT/.craft/graph/records"
+assert_file_contains "status ok" '"status":"ok"' "$ROOT/.craft/graph/build-status.js"
 
 rm -rf "$ROOT"
 echo ""
@@ -185,8 +185,8 @@ echo ""
 begin_test "concurrent invocation: build-skipped-concurrent, graph untouched"
 
 ROOT=$(make_fixture_root)
-mkdir -p "$ROOT/.craft/dashboard/.build-lock"
-echo "pre-existing graph" > "$ROOT/.craft/dashboard/graph.js"
+mkdir -p "$ROOT/.craft/graph/.build-lock"
+echo "pre-existing graph" > "$ROOT/.craft/graph/graph.js"
 
 set +e
 OUT=$(bash "$WRAPPER" --root "$ROOT" 2>&1)
@@ -195,8 +195,8 @@ set -e
 
 assert_exit_code "wrapper exits 0" "0" "$RC"
 assert_contains "stdout reports build-skipped-concurrent" "build-skipped-concurrent" "$OUT"
-assert_eq "graph.js untouched" "pre-existing graph" "$(cat "$ROOT/.craft/dashboard/graph.js")"
-assert_dir_exists "foreign lock left in place" "$ROOT/.craft/dashboard/.build-lock"
+assert_eq "graph.js untouched" "pre-existing graph" "$(cat "$ROOT/.craft/graph/graph.js")"
+assert_dir_exists "foreign lock left in place" "$ROOT/.craft/graph/.build-lock"
 
 rm -rf "$ROOT"
 echo ""
@@ -205,8 +205,8 @@ echo ""
 begin_test "stale lock is broken and the build proceeds"
 
 ROOT=$(make_fixture_root)
-mkdir -p "$ROOT/.craft/dashboard/.build-lock"
-touch -t 202001010000 "$ROOT/.craft/dashboard/.build-lock"
+mkdir -p "$ROOT/.craft/graph/.build-lock"
+touch -t 202001010000 "$ROOT/.craft/graph/.build-lock"
 
 set +e
 OUT=$(bash "$WRAPPER" --root "$ROOT" 2>&1)
@@ -215,7 +215,7 @@ set -e
 
 assert_exit_code "wrapper exits 0" "0" "$RC"
 assert_contains "build ran despite stale lock" '"status": "ok"' "$OUT"
-assert_file_exists "graph.js written" "$ROOT/.craft/dashboard/graph.js"
+assert_file_exists "graph.js written" "$ROOT/.craft/graph/graph.js"
 
 rm -rf "$ROOT"
 echo ""
@@ -287,25 +287,25 @@ else
 fi
 echo ""
 
-# --- Test 12: wrapper writes nothing outside .craft/dashboard ---
-begin_test "wrapper writes nothing outside .craft/dashboard"
+# --- Test 12: wrapper writes nothing outside .craft/graph ---
+begin_test "wrapper writes nothing outside .craft/graph"
 
 ROOT=$(make_fixture_root)
-BEFORE=$(find "$ROOT/.craft" -not -path "*/dashboard*" -type f | sort)
+BEFORE=$(find "$ROOT/.craft" -not -path "*/graph*" -type f | sort)
 
 set +e
 OUT=$(bash "$WRAPPER" --root "$ROOT" 2>&1)
 RC=$?
 set -e
 
-AFTER=$(find "$ROOT/.craft" -not -path "*/dashboard*" -type f | sort)
-assert_eq "no file outside dashboard/ was added or removed" "$BEFORE" "$AFTER"
+AFTER=$(find "$ROOT/.craft" -not -path "*/graph*" -type f | sort)
+assert_eq "no file outside graph/ was added or removed" "$BEFORE" "$AFTER"
 
 rm -rf "$ROOT"
 echo ""
 
 # --- Test 13: first build seeds the self-ignoring .gitignore ---
-begin_test "first build seeds .craft/dashboard/.gitignore containing *"
+begin_test "first build seeds .craft/graph/.gitignore containing *"
 
 ROOT=$(make_fixture_root)
 set +e
@@ -314,8 +314,8 @@ RC=$?
 set -e
 
 assert_exit_code "wrapper exits 0" "0" "$RC"
-assert_file_exists ".gitignore seeded" "$ROOT/.craft/dashboard/.gitignore"
-assert_eq ".gitignore content is a single star" "*" "$(cat "$ROOT/.craft/dashboard/.gitignore")"
+assert_file_exists ".gitignore seeded" "$ROOT/.craft/graph/.gitignore"
+assert_eq ".gitignore content is a single star" "*" "$(cat "$ROOT/.craft/graph/.gitignore")"
 
 rm -rf "$ROOT"
 echo ""
@@ -328,7 +328,7 @@ set +e
 OUT=$(bash "$WRAPPER" --root "$ROOT" 2>&1)
 RC=$?
 set -e
-rm -f "$ROOT/.craft/dashboard/.gitignore"
+rm -f "$ROOT/.craft/graph/.gitignore"
 
 set +e
 OUT=$(bash "$WRAPPER" --root "$ROOT" 2>&1)
@@ -336,17 +336,17 @@ RC=$?
 set -e
 
 assert_exit_code "second build exits 0" "0" "$RC"
-assert_file_not_exists "deleted .gitignore stays deleted" "$ROOT/.craft/dashboard/.gitignore"
+assert_file_not_exists "deleted .gitignore stays deleted" "$ROOT/.craft/graph/.gitignore"
 assert_contains "second build still ok" '"status": "ok"' "$OUT"
 
 rm -rf "$ROOT"
 echo ""
 
-# --- Test 15: a pre-existing dashboard folder is never seeded ---
-begin_test "a dashboard folder that already existed is never seeded"
+# --- Test 15: a pre-existing graph folder is never seeded ---
+begin_test "a graph folder that already existed is never seeded"
 
 ROOT=$(make_fixture_root)
-mkdir -p "$ROOT/.craft/dashboard"
+mkdir -p "$ROOT/.craft/graph"
 
 set +e
 OUT=$(bash "$WRAPPER" --root "$ROOT" 2>&1)
@@ -354,7 +354,7 @@ RC=$?
 set -e
 
 assert_exit_code "wrapper exits 0" "0" "$RC"
-assert_file_not_exists "pre-existing folder not seeded" "$ROOT/.craft/dashboard/.gitignore"
+assert_file_not_exists "pre-existing folder not seeded" "$ROOT/.craft/graph/.gitignore"
 
 rm -rf "$ROOT"
 echo ""
@@ -371,8 +371,8 @@ RC=$?
 set -e
 
 assert_exit_code "wrapper exits 0" "0" "$RC"
-assert_file_exists ".gitignore seeded on degraded path" "$ROOT/.craft/dashboard/.gitignore"
-assert_file_contains "status is degraded" '"status":"degraded"' "$ROOT/.craft/dashboard/build-status.js"
+assert_file_exists ".gitignore seeded on degraded path" "$ROOT/.craft/graph/.gitignore"
+assert_file_contains "status is degraded" '"status":"degraded"' "$ROOT/.craft/graph/build-status.js"
 
 rm -rf "$ROOT" "$STUB_PATH"
 echo ""
