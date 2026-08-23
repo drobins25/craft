@@ -16,7 +16,6 @@ from . import sentinels
 
 _CHUNK_RE = re.compile(r"^### Chunk (\d+): (.+)$", re.M)
 _NUM_PREFIX_RE = re.compile(r"^\d+-")
-_PAREN_RE = re.compile(r"\(([^)]*)\)")
 
 
 def parse(path, craft_rel, fields, body):
@@ -45,16 +44,14 @@ def parse(path, craft_rel, fields, body):
 
     parts = craft_rel.split("/")
     if parts[0] == "cycles" and len(parts) >= 2:
-        links.append(resolve.raw_link(nid, "belongs_to", parts[1], "path"))
+        links.append(resolve.raw_link(nid, "story", "path", parts[1]))
     elif fields.get("cycle"):
-        links.append(
-            resolve.raw_link(nid, "belongs_to", fields["cycle"], "cycle")
-        )
+        links.append(resolve.raw_link(nid, "story", "cycle", fields["cycle"]))
 
-    for field, kind in (("mockup", "mockup"), ("grew_from", "grew_from")):
+    for field in ("mockup", "grew_from"):
         value = fields.get(field)
         if value:
-            links.append(resolve.raw_link(nid, kind, value, field))
+            links.append(resolve.raw_link(nid, "story", field, value))
 
     _parse_dependencies(nid, stripped, links, annotations)
     _parse_reference_materials(nid, stripped, links, annotations)
@@ -109,7 +106,10 @@ def _to_int(value):
 
 _DEP_MARKER_RE = re.compile(r"^\*\*(Blocked by|Blocks):\*\*[ \t]*(.*)$")
 _DEP_BULLET_RE = re.compile(r"^\s*- (.*)$")
-_DEP_KINDS = {"Blocked by": "blocked_by", "Blocks": "blocks"}
+# Marker text -> the vocabulary FIELD it declares. The kind itself (both
+# markers resolve to the "blocks" kind, one of them inverted) comes from
+# vocabulary.kind_for via raw_link - this parser no longer names a kind.
+_DEP_FIELDS = {"Blocked by": "blocked_by", "Blocks": "blocks"}
 
 
 def _parse_dependencies(nid, stripped, links, annotations):
@@ -125,16 +125,16 @@ def _parse_dependencies(nid, stripped, links, annotations):
         if not m:
             i += 1
             continue
-        kind = _DEP_KINDS[m.group(1)]
+        field = _DEP_FIELDS[m.group(1)]
         value = m.group(2).strip()
         if value:
             if sentinels.is_sentinel(value):
                 annotations.append(
-                    resolve.annotation(nid, kind, value, "sentinel")
+                    resolve.annotation(nid, field, value, "sentinel")
                 )
             else:
                 for part in value.split(","):
-                    _dep_target(nid, kind, part, links, annotations)
+                    _dep_target(nid, field, part, links, annotations)
             i += 1
             continue
         j = i + 1
@@ -142,47 +142,26 @@ def _parse_dependencies(nid, stripped, links, annotations):
             bullet = _DEP_BULLET_RE.match(lines[j])
             if not bullet:
                 break
-            _dep_target(nid, kind, bullet.group(1), links, annotations)
+            _dep_target(nid, field, bullet.group(1), links, annotations)
             j += 1
         i = max(j, i + 1)
 
 
-def _dep_target(nid, kind, text, links, annotations):
+def _dep_target(nid, field, text, links, annotations):
     """One dependency target -> a raw link, an annotation, or both.
 
     Handles `(none)`-style sentinels, parenthetical rationales, and
-    `slug - prose` suffixes. A slug never contains whitespace; anything
-    still holding spaces after decoration-stripping is prose, not a
-    reference."""
+    `slug - prose` suffixes by delegating to resolve.prose_guarded_link -
+    the same slug-or-prose grammar every mixed frontmatter link field uses,
+    so this parser is not a second hand-kept copy of the rule."""
     original = text.strip()
     if not original:
         return
-    inner = original
-    wrapped = re.fullmatch(r"\((.*)\)", inner)
-    if wrapped:
-        inner = wrapped.group(1).strip()
-    if sentinels.is_sentinel(inner):
-        annotations.append(resolve.annotation(nid, kind, original, "sentinel"))
-        return
-    decorated = False
-    slug = inner
-    if _PAREN_RE.search(slug):
-        decorated = True
-        slug = _PAREN_RE.sub("", slug).strip()
-    if " - " in slug:
-        decorated = True
-        slug = slug.split(" - ", 1)[0].strip()
-    if decorated:
-        annotations.append(resolve.annotation(nid, kind, original, "prose"))
-    if not slug or sentinels.is_sentinel(slug):
-        return
-    if " " in slug:
-        if not decorated:
-            annotations.append(
-                resolve.annotation(nid, kind, original, "prose")
-            )
-        return
-    links.append(resolve.raw_link(nid, kind, slug, kind))
+    link, note = resolve.prose_guarded_link(nid, "story", field, original)
+    if link is not None:
+        links.append(link)
+    if note is not None:
+        annotations.append(note)
 
 
 def _parse_reference_materials(nid, stripped, links, annotations):
@@ -202,7 +181,7 @@ def _parse_reference_materials(nid, stripped, links, annotations):
         rel = body_mod.craft_relative(raw)
         if rel:
             links.append(
-                resolve.raw_link(nid, "references", rel, "reference_materials")
+                resolve.raw_link(nid, "story", "reference_materials", rel)
             )
         else:
             annotations.append(
@@ -216,11 +195,9 @@ def _parse_body_references(nid, stripped, links):
     for raw_path in body_mod.craft_paths(stripped):
         rel = body_mod.craft_relative(raw_path)
         if rel:
-            links.append(resolve.raw_link(nid, "references", rel, "body_path"))
+            links.append(resolve.raw_link(nid, "story", "body_path", rel))
     for inner in body_mod.wikilinks(stripped):
-        links.append(
-            resolve.raw_link(nid, "references", inner, "body_wikilink")
-        )
+        links.append(resolve.raw_link(nid, "story", "body_wikilink", inner))
 
 
 def _parse_binding_table(nid, stripped, annotations):

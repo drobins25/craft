@@ -52,6 +52,14 @@ class TestSentinels(unittest.TestCase):
         for value in ["widget-panel", "3-widget-panel", "nonesuch-feature"]:
             self.assertFalse(sentinels.is_sentinel(value), value)
 
+    def test_negative_declarations_with_trailing_punctuation_are_refused(self):
+        for value in ["None.", "none.", "Nothing", "Null.", "Nope.", "No."]:
+            self.assertTrue(sentinels.is_sentinel(value), value)
+
+    def test_trailing_punctuation_stripping_does_not_eat_real_slugs(self):
+        for value in ["nonesuch-feature.", "notable-story."]:
+            self.assertFalse(sentinels.is_sentinel(value), value)
+
 
 class TestResolve(unittest.TestCase):
     def setUp(self):
@@ -141,6 +149,147 @@ class TestResolve(unittest.TestCase):
         self.assertIsNone(resolve.resolve(self.index, "widget-pan"))
 
 
+class TestContainerRule(unittest.TestCase):
+    def setUp(self):
+        self.index = resolve.build_index(NODES)
+
+    def test_folder_prefix_of_registered_paths_is_a_container(self):
+        self.assertIsNone(resolve.resolve(self.index, "tweaks"))
+        self.assertEqual(
+            resolve.failure_reason("tweaks", self.index), "container"
+        )
+
+    def test_container_check_derives_from_the_alias_index_not_the_filesystem(
+        self,
+    ):
+        # A nonexistent root is proof enough that no path is ever opened -
+        # the check only ever consults the in-memory node paths.
+        index = resolve.build_index(NODES)
+        self.assertEqual(
+            resolve.failure_reason(
+                "cycles/7-sample-cycle/stories", index
+            ),
+            "container",
+        )
+
+    def test_non_prefix_unknown_value_stays_unresolved(self):
+        self.assertEqual(
+            resolve.failure_reason("no-such-record", self.index),
+            "unresolved",
+        )
+
+    def test_a_registered_alias_resolves_exactly_rather_than_as_a_container(
+        self,
+    ):
+        # "widget-panel" is both a registered alias AND a literal directory
+        # prefix of a second, unrelated node's path - the exact match must
+        # win, never the prefix test.
+        nodes = [
+            {
+                "id": "story--widget-panel",
+                "type": "story",
+                "date": "2026-01-01",
+                "_path": "widget-panel.md",
+                "_name": "widget-panel",
+            },
+            {
+                "id": "story--widget-panel--notes",
+                "type": "story",
+                "date": "2026-01-02",
+                "_path": "widget-panel/notes.md",
+                "_name": "notes",
+            },
+        ]
+        index = resolve.build_index(nodes)
+        self.assertEqual(
+            resolve.resolve(index, "widget-panel"), "story--widget-panel"
+        )
+
+
+class TestNotARecord(unittest.TestCase):
+    def test_value_under_a_not_records_directory_is_not_a_record(self):
+        self.assertTrue(resolve.is_not_a_record("design/tokens.yaml"))
+        self.assertTrue(resolve.is_not_a_record("research/some-doc.md"))
+
+    def test_value_under_a_real_record_directory_is_not_flagged(self):
+        self.assertFalse(resolve.is_not_a_record("tweaks/tweak-widget.md"))
+
+    def test_root_level_not_records_filename_has_no_directory_to_match_on(self):
+        # settings.yaml sits directly at .craft/ root - its "first path
+        # segment" is the whole value, and the same NOT_RECORDS lookup
+        # covers it without a second code path.
+        self.assertTrue(resolve.is_not_a_record("settings.yaml"))
+        self.assertTrue(resolve.is_not_a_record("project.md"))
+        self.assertFalse(resolve.is_not_a_record("widget-panel.md"))
+
+    def test_failure_reason_only_checks_not_a_record_for_path_fields(self):
+        self.assertEqual(
+            resolve.failure_reason("design/tokens.yaml", field="body_path"),
+            "not-a-record",
+        )
+        self.assertEqual(
+            resolve.failure_reason(
+                "design/tokens.yaml", field="reference_materials"
+            ),
+            "not-a-record",
+        )
+        # A dependency-style field never gets this treatment, even if a
+        # slug happens to collide with a NOT_RECORDS directory name.
+        self.assertEqual(
+            resolve.failure_reason("design", field="blocked_by"),
+            "unresolved",
+        )
+        self.assertEqual(
+            resolve.failure_reason("design", field=None), "unresolved"
+        )
+
+
+class TestProseGuardedLink(unittest.TestCase):
+    def test_clean_slug_yields_a_link_and_no_annotation(self):
+        link, note = resolve.prose_guarded_link(
+            "fix--x", "fix", "source_story", "widget-panel"
+        )
+        self.assertEqual(link["raw_value"], "widget-panel")
+        self.assertIsNone(note)
+
+    def test_decorated_slug_yields_a_link_and_a_prose_annotation(self):
+        link, note = resolve.prose_guarded_link(
+            "fix--x",
+            "fix",
+            "source_story",
+            "widget-panel (needs the store first)",
+        )
+        self.assertEqual(link["raw_value"], "widget-panel")
+        self.assertEqual(note["reason"], "prose")
+        self.assertEqual(
+            note["value"], "widget-panel (needs the store first)"
+        )
+
+    def test_prose_with_no_surviving_slug_yields_no_link(self):
+        link, note = resolve.prose_guarded_link(
+            "fix--x",
+            "fix",
+            "source_story",
+            "alignment-gate-auq-fixes (story 16, cycle 11) plus more",
+        )
+        self.assertIsNone(link)
+        self.assertEqual(note["reason"], "prose")
+
+    def test_negative_declaration_with_parenthetical_yields_sentinel(self):
+        link, note = resolve.prose_guarded_link(
+            "fix--x", "fix", "source_story", "none (design pattern shift)"
+        )
+        self.assertIsNone(link)
+        self.assertEqual(note["reason"], "sentinel")
+
+    def test_bare_sentinel_yields_sentinel_with_no_decoration_stripping(self):
+        link, note = resolve.prose_guarded_link(
+            "fix--x", "fix", "source_story", "none-matched"
+        )
+        self.assertIsNone(link)
+        self.assertEqual(note["reason"], "sentinel")
+
+
 class TestExtractTargets(unittest.TestCase):
     def test_slug_with_parenthetical_prose_resolves(self):
         targets = resolve.extract_targets(
@@ -170,6 +319,12 @@ class TestExtractTargets(unittest.TestCase):
 
     def test_bare_sentinel_yields_no_targets(self):
         self.assertEqual(resolve.extract_targets("none"), [])
+
+    def test_comma_split_prose_fragment_is_dropped_not_yielded(self):
+        targets = resolve.extract_targets(
+            "3-widget-panel, this part is prose and never a slug"
+        )
+        self.assertEqual(targets, ["3-widget-panel"])
 
 
 if __name__ == "__main__":

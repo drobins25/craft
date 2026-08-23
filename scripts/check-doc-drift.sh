@@ -172,6 +172,20 @@ if upstream="$(git rev-parse --abbrev-ref '@{u}' 2>/dev/null)"; then
   fi
 fi
 
+# 10. Record-vocabulary field parity (Decision 12): the four reference docs
+#     that document craft's record-linking fields in prose must agree with
+#     src/vocabulary.py in both directions. Shared logic, not restated here
+#     - two copies of a drift rule is the drift this check exists to catch.
+#     Sourced lazily (only this section needs it) and namespaced so it
+#     cannot collide with this file's own `findings`/`add`.
+if [ -f "$ROOT/tests/check-vocabulary-prose-drift.sh" ]; then
+  # shellcheck source=/dev/null
+  source "$ROOT/tests/check-vocabulary-prose-drift.sh"
+  if ! check_vocabulary_prose_drift; then
+    for f in "${VOCAB_PROSE_FINDINGS[@]}"; do add "$f"; done
+  fi
+fi
+
 # =========================================================================
 # Tier C - DEFERRED (not v1). Intentionally not enforced yet:
 #   - analysis-type parity: assert pending/*.yaml types == the types named in

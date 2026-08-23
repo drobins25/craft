@@ -11,22 +11,12 @@ from . import paths
 from . import registry
 from . import resolve
 from . import stats as stats_mod
+from . import vocabulary
 
-EDGE_KINDS = {
-    "belongs_to",
-    "blocked_by",
-    "blocks",
-    "graduated_to",
-    "grew_from",
-    "reapplies",
-    "satisfied_todo",
-    "source_story",
-    "source_cycle",
-    "mockup",
-    "dial",
-    "origin",
-    "references",
-}
+# The closed set of relationship kinds a build may emit - sourced from the
+# definition so a thirteenth kind (blocked_by, normalized away by field
+# inversion) can never sneak back in as a separate hand-kept literal.
+EDGE_KINDS = frozenset(vocabulary.KINDS)
 
 _MULTI_TARGET_KINDS = {"graduated_to"}
 
@@ -78,6 +68,7 @@ def build(root):
         "annotations": annotations,
         "stats": stats_mod.compute(nodes_sorted, edges),
         "build": {"warnings": warnings_sorted, "unresolved": unresolved},
+        "vocabulary": vocabulary.display_block(),
     }
     written, removed = emit.write_all(root, graph, texts)
     return {"graph": graph, "written": written, "removed": removed}
@@ -102,13 +93,17 @@ def link_pass(nodes, raw_links):
         field = link["field"]
         raw = str(link["raw_value"])
         expect = link.get("expect")
+        invert = link.get("invert", False)
 
         if kind in _MULTI_TARGET_KINDS:
             candidates = resolve.extract_targets(raw)
             if not candidates:
                 notes.append(
                     resolve.annotation(
-                        source_id, field, raw, resolve.failure_reason(raw)
+                        source_id,
+                        field,
+                        raw,
+                        resolve.failure_reason(raw, index, field),
                     )
                 )
                 continue
@@ -127,7 +122,7 @@ def link_pass(nodes, raw_links):
                         source_id,
                         field,
                         candidate,
-                        resolve.failure_reason(candidate),
+                        resolve.failure_reason(candidate, index, field),
                     )
                 )
             elif target == source_id:
@@ -136,6 +131,12 @@ def link_pass(nodes, raw_links):
                         source_id, field, candidate, "out-of-scope-type"
                     )
                 )
+            elif invert:
+                # The field's writer is the inbound end of the relationship
+                # (a story's Blocked by marker names its blocker) - flip
+                # after resolution, once the target is a real node id, per
+                # this module's own ordering law above.
+                edge_set.add((kind, target, source_id))
             else:
                 edge_set.add((kind, source_id, target))
 

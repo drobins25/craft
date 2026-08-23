@@ -9,7 +9,14 @@ graph.js daily on an untouched corpus and break byte-identical rebuilds.
 import datetime
 from collections import Counter
 
-LINEAGE_KINDS = ("graduated_to", "grew_from", "reapplies", "satisfied_todo")
+from . import vocabulary
+
+# Kinds counted toward the "born from" stat - derived from the definition's
+# lineage flag so a new lineage kind is one flag in vocabulary.py, not a
+# second hand-kept tuple here.
+LINEAGE_KINDS = tuple(
+    kind for kind in vocabulary.KINDS if vocabulary.KINDS[kind]["lineage"]
+)
 
 
 def compute(nodes, edges):

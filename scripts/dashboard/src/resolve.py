@@ -12,6 +12,7 @@ import os
 import re
 
 from . import sentinels
+from . import vocabulary
 
 
 _NUM_PREFIX_RE = re.compile(r"^\d+-")
@@ -20,28 +21,40 @@ _PAREN_RE = re.compile(r"\([^)]*\)")
 _ENUM_SPLIT_RE = re.compile(r"\(\d+\)")
 
 
-def raw_link(source_id, kind, raw_value, field, expect=None):
+def raw_link(source_id, record_type, field, raw_value):
     """A parser-emitted, not-yet-resolved reference.
 
-    expect optionally narrows the node types this field may point at (the
-    narrowest set the field's grammar allows), applied at resolution.
+    The kind, the type filter and the invert flag all come from
+    vocabulary.kind_for(record_type, field) - a parser cannot invent a kind
+    or forget a field's type filter, because the only way to get one is to
+    ask the definition, and it raises UnknownField on anything it does not
+    know rather than handing back a guess.
     """
+    spec = vocabulary.kind_for(record_type, field)
     link = {
         "source_id": source_id,
-        "kind": kind,
+        "kind": spec["kind"],
         "raw_value": raw_value,
         "field": field,
+        "invert": spec["invert"],
     }
-    if expect is not None:
-        link["expect"] = set(expect)
+    if spec["expect"] is not None:
+        link["expect"] = set(spec["expect"])
     return link
 
 
 def annotation(source_id, field, value, reason):
     """A reference-shaped value that did not become an edge.
 
-    reason is one of: sentinel, unresolved, out-of-scope-type, prose.
+    reason must be a member of vocabulary.REASONS - this is the one place
+    that gate lives, mirroring kind_for's discipline: an unregistered
+    reason string is a bug in the caller, not a new reason quietly
+    shipping unvalidated.
     """
+    if reason not in vocabulary.REASONS:
+        raise vocabulary.UnknownReason(
+            "no vocabulary entry for reason %r" % (reason,)
+        )
     return {
         "source_id": source_id,
         "field": field,
@@ -50,15 +63,46 @@ def annotation(source_id, field, value, reason):
     }
 
 
-def failure_reason(raw_value):
-    """Why a value failed to resolve: sentinel if it is one, else unresolved."""
-    return "sentinel" if sentinels.is_sentinel(raw_value) else "unresolved"
+# Fields whose values are .craft-relative paths rather than record slugs -
+# the only shapes a NOT_RECORDS directory name can meaningfully prefix.
+# Scoped deliberately: a dependency slug that happens to equal a directory
+# name ("design", "graph") is still a plain unresolved lookup, never a
+# not-a-record citation.
+_PATH_FIELDS = frozenset({"body_path", "reference_materials"})
+
+
+def is_not_a_record(raw_value):
+    """True when the value's first path segment names a vocabulary.
+    NOT_RECORDS directory or root-level filename - a citation to a real
+    .craft/ surface craft deliberately does not ingest as a record, not a
+    failed lookup. A root file's first segment is the whole value, so the
+    same lookup covers both shapes without a second code path."""
+    first = str(raw_value).strip().split("/", 1)[0].lower()
+    return first in vocabulary.NOT_RECORDS
+
+
+def failure_reason(raw_value, index=None, field=None):
+    """Why a value failed to resolve: sentinel if it is one, not-a-record if
+    it names a NOT_RECORDS surface, container if it strictly prefixes a
+    registered node path, else unresolved.
+
+    The container check needs the alias index, so it only runs when the
+    caller has one to give - a bare sentinel check never requires it.
+    """
+    if sentinels.is_sentinel(raw_value):
+        return "sentinel"
+    if field in _PATH_FIELDS and is_not_a_record(raw_value):
+        return "not-a-record"
+    if index is not None and index.is_container(raw_value):
+        return "container"
+    return "unresolved"
 
 
 class AliasIndex:
     def __init__(self):
         self._aliases = {}
         self._meta = {}
+        self._paths = []
 
     def register(self, alias, node_id):
         alias = alias.strip().lower()
@@ -75,11 +119,35 @@ class AliasIndex:
             "cycle": cycle,
         }
 
+    def register_path(self, path):
+        """Record a node's .craft-relative path for the container check.
+
+        Kept separate from the alias table: aliases include stems and names
+        that are not paths at all, and prefixing against those would let an
+        unrelated slug get misread as a folder.
+        """
+        if path:
+            self._paths.append(path)
+
     def candidates(self, alias):
         return list(self._aliases.get(alias.strip().lower(), []))
 
     def meta(self, node_id):
         return self._meta.get(node_id, {"type": None, "date": "", "cycle": None})
+
+    def is_container(self, value):
+        """True when value names a directory a registered node lives under.
+
+        Derived from the in-memory path list only - never from the
+        filesystem. A value that resolves to a real node never reaches this
+        check, because callers only run it after an exact alias lookup has
+        already failed.
+        """
+        stem = str(value).strip().rstrip("/")
+        if not stem:
+            return False
+        prefix = stem.lower() + "/"
+        return any(path.lower().startswith(prefix) for path in self._paths)
 
 
 def _cycle_of_path(path):
@@ -107,6 +175,7 @@ def build_index(nodes):
 
         index.register(nid, nid)
         if path:
+            index.register_path(path)
             index.register(path, nid)
             root, _ext = os.path.splitext(path)
             index.register(root, nid)
@@ -160,14 +229,69 @@ def resolve(index, raw_value, from_node=None, expect_types=None):
     return min(latest)
 
 
+def strip_decoration(value):
+    """Strip parenthetical asides and a trailing ' - prose' suffix from a
+    would-be slug.
+
+    Returns (clean, decorated): clean is the surviving text with
+    surrounding whitespace trimmed; decorated is True only when something
+    was actually removed. A slug never contains whitespace or parentheses -
+    this is the one place that rule is enforced, so every field that mixes
+    a real reference with free prose applies it the same way.
+    """
+    original = str(value).strip()
+    slug = original
+    decorated = False
+    if _PAREN_RE.search(slug):
+        decorated = True
+        slug = _PAREN_RE.sub("", slug).strip()
+    if " - " in slug:
+        decorated = True
+        slug = slug.split(" - ", 1)[0].strip()
+    return slug, decorated
+
+
+def prose_guarded_link(source_id, record_type, field, raw_value):
+    """A frontmatter link field that may hold a real slug, free prose, or a
+    slug wearing a parenthetical/dash aside - the shape source_story,
+    source_cycle and satisfied_todo all carry in practice.
+
+    Returns (link_or_None, annotation_or_None). A clean slug yields a link
+    and no annotation; a value that is still prose after decoration is
+    stripped yields an annotation and no link; a decorated value that
+    cleans to a real slug yields BOTH - the link for the surviving slug and
+    a prose annotation preserving the discarded aside, so the aside stays
+    visible instead of silently vanishing. A value that reduces to a
+    sentinel (bare, or once its aside is stripped - "none (design pattern
+    shift)" is exactly this shape) always yields a sentinel annotation and
+    never a link, even if it was also decorated.
+    """
+    if sentinels.is_sentinel(raw_value):
+        return None, annotation(source_id, field, raw_value, "sentinel")
+    slug, decorated = strip_decoration(raw_value)
+    if sentinels.is_sentinel(slug):
+        return None, annotation(source_id, field, raw_value, "sentinel")
+    if not slug or " " in slug:
+        return None, annotation(source_id, field, raw_value, "prose")
+    link = raw_link(source_id, record_type, field, slug)
+    note = (
+        annotation(source_id, field, raw_value, "prose") if decorated else None
+    )
+    return link, note
+
+
 def extract_targets(raw_value):
     """Split a polymorphic multi-target value into candidate reference
     strings, in source order.
 
     Handles wikilink brackets, parenthetical suffixes, semicolon and comma
     lists, and numbered (1)/(2) enumerations. Sentinels yield no candidates.
-    The caller resolves each candidate and preserves the unresolved remainder
-    as annotation text.
+    A slug never contains whitespace (the same rule parse_story enforces on
+    dependency targets); a segment that still has whitespace after
+    decoration-stripping is a prose fragment, not a second target, and is
+    dropped rather than handed to the resolver as a guaranteed miss. The
+    caller resolves each surviving candidate and preserves the unresolved
+    remainder as annotation text.
     """
     if sentinels.is_sentinel(raw_value):
         return []
@@ -184,6 +308,8 @@ def extract_targets(raw_value):
             if part.lower() in ("split", "and", "&"):
                 continue
             if sentinels.is_sentinel(part):
+                continue
+            if " " in part:
                 continue
             candidates.append(part)
     return candidates

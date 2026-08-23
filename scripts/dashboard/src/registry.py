@@ -21,6 +21,7 @@ from . import parse_riff
 from . import parse_story
 from . import parse_tweak
 from . import summary as summary_mod
+from . import vocabulary
 
 
 _RULES = [
@@ -50,7 +51,7 @@ def _compile(pattern):
 _COMPILED = [(record_type, _compile(pattern)) for record_type, pattern in _RULES]
 
 
-PARSERS = {
+_PARSER_FUNCS = {
     "story": parse_story.parse,
     "cycle": parse_cycle.parse,
     "planning": parse_planning.parse,
@@ -60,6 +61,13 @@ PARSERS = {
     "riff": parse_riff.parse,
     "mockup": parse_mockup.parse,
     "dial": parse_dial.parse,
+}
+
+# Keyed by the definition's record types, not a second hand-kept literal -
+# a record type the definition does not know cannot get a parser slot.
+PARSERS = {
+    record_type: _PARSER_FUNCS[record_type]
+    for record_type in vocabulary.RECORD_TYPES
 }
 
 

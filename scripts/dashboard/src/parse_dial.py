@@ -38,8 +38,5 @@ def parse(path, craft_rel, fields, body):
     }
     links = []
     annotations = []
-    field_link(
-        nid, fields, "graduated_to", "graduated_to", links, annotations,
-        expect={"tweak", "story", "notebook"},
-    )
+    field_link(nid, fields, "dial", "graduated_to", links, annotations)
     return node, links, annotations

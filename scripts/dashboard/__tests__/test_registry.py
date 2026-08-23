@@ -8,6 +8,7 @@ sys.path.insert(0, _HERE)
 
 import corpus_helper
 from src import registry
+from src import vocabulary
 
 
 EXPECTED = {
@@ -99,6 +100,37 @@ class TestNeverCrash(unittest.TestCase):
         self.assertEqual(links, [])
         self.assertEqual(annotations, [])
         self.assertIn("synthetic parser failure", node["_warnings"][0])
+
+    def test_parser_naming_an_undeclared_field_yields_minimal_node_plus_warning(
+        self,
+    ):
+        from src import resolve
+
+        def rogue(path, craft_rel, fields, body):
+            resolve.raw_link("some-id", "story", "not-a-real-field", "x")
+            return {}, [], []
+
+        original = registry.PARSERS["story"]
+        registry.PARSERS["story"] = rogue
+        try:
+            node, links, annotations = registry.parse_file(
+                "story",
+                "backlog/orphan-idea.md",
+                corpus_helper.read_fixture("backlog/orphan-idea.md"),
+            )
+        finally:
+            registry.PARSERS["story"] = original
+        self.assertEqual(node["type"], "story")
+        self.assertEqual(links, [])
+        self.assertEqual(annotations, [])
+        self.assertIn(
+            "no vocabulary entry for", node["_warnings"][0]
+        )
+
+
+class TestRecordTypesFromDefinition(unittest.TestCase):
+    def test_parsers_keys_match_vocabulary_record_types(self):
+        self.assertEqual(set(registry.PARSERS), set(vocabulary.RECORD_TYPES))
 
 
 if __name__ == "__main__":

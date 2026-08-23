@@ -36,6 +36,13 @@ def _notes(annotations, field=None, reason=None):
     return out
 
 
+def _dep_links(links, field):
+    """Dependency links now all carry kind "blocks" (blocked_by is
+    normalized to blocks with invert=True), so tests distinguish the two
+    markers by field rather than kind."""
+    return [l for l in links if l["field"] == field]
+
+
 class TestEnvelope(unittest.TestCase):
     def test_envelope_fields_map_per_translation_table(self):
         node, _, _ = _parse(WIDGET)
@@ -80,38 +87,60 @@ class TestChunks(unittest.TestCase):
 
 
 class TestDependencies(unittest.TestCase):
-    def test_bare_name_yields_blocked_by_raw_link(self):
+    def test_bare_name_yields_inverted_blocks_link(self):
         _, links, _ = _parse(WIDGET)
-        blocked = _links(links, "blocked_by")
+        blocked = _dep_links(links, "blocked_by")
         self.assertEqual([l["raw_value"] for l in blocked], ["data-layer"])
+        self.assertEqual(blocked[0]["kind"], "blocks")
+        self.assertTrue(blocked[0]["invert"])
 
-    def test_numbered_name_yields_blocked_by_raw_link(self):
+    def test_numbered_name_yields_inverted_blocks_link(self):
         _, links, _ = _parse(NUMBERED_DEPS)
-        blocked = _links(links, "blocked_by")
+        blocked = _dep_links(links, "blocked_by")
         self.assertEqual([l["raw_value"] for l in blocked], ["3-widget-panel"])
+        self.assertEqual(blocked[0]["kind"], "blocks")
+        self.assertTrue(blocked[0]["invert"])
+
+    def test_blocked_by_a_planning_doc_yields_a_type_filtered_link(self):
+        # sample-concept names a planning doc, not a story - the field's
+        # type filter is a property of the link, not proof it resolves.
+        _, links, _ = _parse(BACKLOG)
+        blocked = _dep_links(links, "blocked_by")
+        self.assertEqual([l["raw_value"] for l in blocked], ["sample-concept"])
+        self.assertEqual(blocked[0]["expect"], {"story"})
+
+    def test_blocks_none_with_trailing_period_yields_sentinel_annotation(
+        self,
+    ):
+        _, links, annotations = _parse(BACKLOG)
+        self.assertEqual(_dep_links(links, "blocks"), [])
+        sentinel = _notes(annotations, field="blocks", reason="sentinel")
+        self.assertEqual([a["value"] for a in sentinel], ["None."])
 
     def test_blocked_by_none_yields_no_links_and_one_sentinel_annotation(self):
         _, links, annotations = _parse(DATA_LAYER)
-        self.assertEqual(_links(links, "blocked_by"), [])
+        self.assertEqual(_dep_links(links, "blocked_by"), [])
         sentinel = _notes(annotations, field="blocked_by", reason="sentinel")
         self.assertEqual(len(sentinel), 1)
 
     def test_parenthetical_is_stripped_to_annotation_slug_still_links(self):
         _, links, annotations = _parse(WIDGET)
-        blocked = _links(links, "blocked_by")
+        blocked = _dep_links(links, "blocked_by")
         self.assertEqual(blocked[0]["raw_value"], "data-layer")
         prose = _notes(annotations, field="blocked_by", reason="prose")
         self.assertEqual(len(prose), 1)
         self.assertIn("needs the store first", prose[0]["value"])
 
-    def test_blocks_line_yields_blocks_raw_link(self):
+    def test_blocks_line_yields_uninverted_blocks_link(self):
         _, links, _ = _parse(DATA_LAYER)
-        blocks = _links(links, "blocks")
+        blocks = _dep_links(links, "blocks")
         self.assertEqual([l["raw_value"] for l in blocks], ["widget-panel"])
+        self.assertEqual(blocks[0]["kind"], "blocks")
+        self.assertFalse(blocks[0]["invert"])
 
     def test_bullet_form_yields_one_link_per_bullet(self):
         _, links, _ = _parse(BULLET_DEPS)
-        blocked = _links(links, "blocked_by")
+        blocked = _dep_links(links, "blocked_by")
         self.assertEqual(
             [l["raw_value"] for l in blocked],
             ["3-widget-panel", "data-layer"],
@@ -131,13 +160,13 @@ class TestDependencies(unittest.TestCase):
 
     def test_bullet_none_yields_sentinel_annotation_no_links(self):
         _, links, annotations = _parse(BULLET_DEPS)
-        self.assertEqual(_links(links, "blocks"), [])
+        self.assertEqual(_dep_links(links, "blocks"), [])
         sentinel = _notes(annotations, field="blocks", reason="sentinel")
         self.assertEqual([a["value"] for a in sentinel], ["(none)"])
 
     def test_bare_marker_with_no_bullets_yields_nothing(self):
         _, links, annotations = _parse(NUMBERED_DEPS)
-        self.assertEqual(_links(links, "blocks"), [])
+        self.assertEqual(_dep_links(links, "blocks"), [])
         self.assertEqual(_notes(annotations, field="blocks"), [])
 
     def test_bullets_stop_at_first_non_bullet_line(self):
@@ -146,7 +175,7 @@ class TestDependencies(unittest.TestCase):
             "**Blocks:**\n- data-layer\n\n- orphan-idea",
         )
         _, links, _ = registry.parse_file("story", BULLET_DEPS, text)
-        blocks = _links(links, "blocks")
+        blocks = _dep_links(links, "blocks")
         self.assertEqual([l["raw_value"] for l in blocks], ["data-layer"])
 
     def test_multiword_prose_value_is_annotation_not_unresolved_link(self):
@@ -155,7 +184,7 @@ class TestDependencies(unittest.TestCase):
             "**Blocked by:** the pending commit from an earlier session",
         )
         _, links, annotations = registry.parse_file("story", DATA_LAYER, text)
-        self.assertEqual(_links(links, "blocked_by"), [])
+        self.assertEqual(_dep_links(links, "blocked_by"), [])
         prose = _notes(annotations, field="blocked_by", reason="prose")
         self.assertEqual(len(prose), 1)
 
@@ -200,6 +229,26 @@ class TestMembershipAndBody(unittest.TestCase):
     def test_backlog_story_without_cycle_emits_no_belongs_to(self):
         _, links, _ = _parse(BACKLOG)
         self.assertEqual(_links(links, "belongs_to"), [])
+
+    def test_folder_mention_in_body_still_yields_a_raw_link(self):
+        # The parser cannot know a body path names a folder or a
+        # NOT_RECORDS surface - that classification happens at resolution,
+        # once the complete node set and the vocabulary are both in play.
+        # Here it only asserts every candidate is extracted, not dropped.
+        _, links, _ = _parse(BACKLOG)
+        body_paths = [l for l in links if l["field"] == "body_path"]
+        self.assertEqual(
+            sorted(l["raw_value"] for l in body_paths),
+            ["design/tokens.yaml", "tweaks/"],
+        )
+
+    def test_not_a_record_reference_materials_candidate_still_extracted(self):
+        _, links, _ = _parse(BACKLOG)
+        refs = [l for l in links if l["field"] == "reference_materials"]
+        self.assertEqual(
+            sorted(l["raw_value"] for l in refs),
+            ["research/some-investigation.md", "settings.yaml"],
+        )
 
     def test_body_craft_path_yields_references_candidate(self):
         _, links, _ = _parse(WIDGET)

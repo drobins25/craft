@@ -284,4 +284,24 @@ assert_contains "controls align to the panel's right edge" "right: 22px;" "$CONT
 assert_file_contains "the panel starts at top: 62px, clear of the controls above it" "top: 62px;" "$TEMPLATE"
 assert_file_contains "the hint stays left-aligned, clear of the right-aligned controls" "left: 20px;" "$TEMPLATE"
 
+# --- Test 31: no relationship, status or type display table is declared in the page ---
+begin_test "no relationship, status or type display table is declared in the page"
+assert_file_not_contains "no hardcoded KIND_OUT table" "const KIND_OUT" "$TEMPLATE"
+assert_file_not_contains "no hardcoded KIND_IN table" "const KIND_IN" "$TEMPLATE"
+assert_file_not_contains "no hardcoded STATUS table" "const STATUS = {" "$TEMPLATE"
+assert_file_not_contains "no hardcoded TYPE_NAME table" "const TYPE_NAME = {" "$TEMPLATE"
+assert_file_contains "the panel reads relationship words off the emitted vocabulary" "VOCAB.kinds" "$TEMPLATE"
+assert_file_contains "the panel reads type words off the emitted vocabulary" "VOCAB.types" "$TEMPLATE"
+assert_file_contains "the panel reads status words off the emitted vocabulary" "VOCAB.statuses" "$TEMPLATE"
+assert_file_contains "the panel reads dial outcome words off the emitted vocabulary" "VOCAB.dial_outcomes" "$TEMPLATE"
+
+# --- Test 32: the page still loads data through exactly two sibling script tags ---
+begin_test "the page still loads data through exactly two sibling script tags"
+SCRIPT_SRC_COUNT=$(grep -c '<script src=' "$TEMPLATE")
+assert_eq "exactly two script src tags" "2" "$SCRIPT_SRC_COUNT"
+
+# --- Test 33: an unrecognised status falls through to the stored value ---
+begin_test "an unrecognised status falls through to the stored value"
+assert_file_contains "the status fallback preserves the raw stored value" "|| n.status" "$TEMPLATE"
+
 finish_tests "test-dashboard-template.sh"

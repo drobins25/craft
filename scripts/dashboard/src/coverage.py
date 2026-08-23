@@ -6,39 +6,32 @@ the transcribed inventory fixture - partial link coverage fails the build
 rather than shipping quietly, and a stale entry fails just as loudly.
 """
 
+from . import vocabulary
+
+
+def _derive_handled():
+    """Every pair a parser routes a link OR an annotation for, named the
+    way __fixtures__/link_inventory.py spells it.
+
+    vocabulary.FIELDS is the one place this used to be transcribed a
+    second time: its optional "inventory" key carries the rename (or the
+    None that folds a pair into another one) directly on the entry, so
+    this is a pure comprehension rather than a bridge table between two
+    modules."""
+    handled = set()
+    for (record_type, field), spec in vocabulary.FIELDS.items():
+        if "inventory" in spec:
+            inventory_field = spec["inventory"]
+            if inventory_field is None:
+                continue
+        else:
+            inventory_field = field
+        handled.add((record_type, inventory_field))
+    return handled
+
+
 # Pairs a parser emits links or annotations for.
-HANDLED = {
-    ("story", "cycle"),
-    ("story", "mockup"),
-    ("story", "grew_from"),
-    ("story", "dependencies_blocked_by"),
-    ("story", "dependencies_blocks"),
-    ("story", "reference_materials"),
-    ("story", "element_binding_table"),
-    ("story", "body_paths"),
-    ("story", "body_wikilinks"),
-    ("cycle", "source_concept"),
-    ("cycle", "stories_membership"),
-    ("fix", "source_story"),
-    ("fix", "source_cycle"),
-    ("fix", "satisfied_todo"),
-    ("tweak", "source_story"),
-    ("tweak", "mockup"),
-    ("tweak", "dial"),
-    ("tweak", "reapplies"),
-    ("tweak", "grew_from"),
-    ("tweak", "satisfied_todo"),
-    ("dial", "graduated_to"),
-    ("mockup", "graduated_to"),
-    ("mockup", "origin"),
-    ("mockup", "solidify_outcome"),
-    ("notebook", "graduated_to"),
-    ("notebook", "source"),
-    ("planning", "body_paths"),
-    ("planning", "body_wikilinks"),
-    ("riff", "body_paths"),
-    ("riff", "body_wikilinks"),
-}
+HANDLED = _derive_handled()
 
 # Pairs deliberately excluded, each with a one-line reason.
 RULED_OUT = {

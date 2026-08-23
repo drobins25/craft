@@ -51,12 +51,51 @@ class TestParseFix(unittest.TestCase):
         self.assertIn(("source_story", "widget-panel"), kinds)
         self.assertIn(("source_cycle", "sample-cycle"), kinds)
 
-    def test_belongs_to_derives_from_source_cycle(self):
+    def test_source_cycle_yields_exactly_one_link(self):
+        # No belongs_to twin: vocabulary.KINDS["source_cycle"]["membership"]
+        # is what keeps a fix in its cluster now, so a fix's own single
+        # source_cycle edge carries both the label and the layout.
         _, links, _ = _parse(BROKEN)
-        belongs = [l for l in links if l["kind"] == "belongs_to"]
-        self.assertEqual(len(belongs), 1)
-        self.assertEqual(belongs[0]["raw_value"], "sample-cycle")
+        cycle_links = [l for l in links if l["kind"] == "source_cycle"]
+        self.assertEqual(len(cycle_links), 1)
+        self.assertEqual(cycle_links[0]["raw_value"], "sample-cycle")
+        self.assertEqual([l for l in links if l["kind"] == "belongs_to"], [])
 
+    def test_decorated_source_fields_still_link_on_the_clean_slug(self):
+        # source_story and source_cycle both carry a parenthetical aside in
+        # the fixture - the link uses the stripped slug, not the raw text.
+        _, links, _ = _parse(BROKEN)
+        kinds = {(l["kind"], l["raw_value"]) for l in links}
+        self.assertIn(("source_story", "widget-panel"), kinds)
+        self.assertIn(("source_cycle", "sample-cycle"), kinds)
+
+    def test_decorated_source_fields_also_yield_prose_annotations(self):
+        _, _, annotations = _parse(BROKEN)
+        prose = {
+            (a["field"], a["value"])
+            for a in annotations
+            if a["reason"] == "prose"
+        }
+        self.assertIn(
+            ("source_story", "widget-panel (needs the store first)"), prose
+        )
+        self.assertIn(
+            ("source_cycle", "sample-cycle (surfaced during a live QA pass)"),
+            prose,
+        )
+
+    def test_negative_declaration_with_parenthetical_yields_sentinel(self):
+        # "none (design pattern shift)" - the parenthetical must be stripped
+        # before the sentinel check, or this manufactures a failed lookup.
+        _, links, annotations = _parse(LEGACY)
+        self.assertEqual([l for l in links if l["field"] == "source_story"], [])
+        sentinel = [
+            a
+            for a in annotations
+            if a["field"] == "source_story" and a["reason"] == "sentinel"
+        ]
+        self.assertEqual(len(sentinel), 1)
+        self.assertEqual(sentinel[0]["value"], "none (design pattern shift)")
 
 if __name__ == "__main__":
     unittest.main()

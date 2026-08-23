@@ -7,6 +7,7 @@ sys.path.insert(0, os.path.dirname(_HERE))
 sys.path.insert(0, _HERE)
 
 from src import stats
+from src import vocabulary
 
 
 def _node(node_id, node_type="story", date=None):
@@ -83,6 +84,30 @@ class TestKeystone(unittest.TestCase):
         self.assertEqual(result["keystone"]["id"], "only")
         self.assertEqual(result["keystone"]["degree"], 0)
         self.assertIsNone(result["keystone"]["kind"])
+
+
+class TestLineageKindsDerived(unittest.TestCase):
+    def test_lineage_kinds_matches_vocabulary_flagged_kinds(self):
+        flagged = {
+            kind for kind in vocabulary.KINDS if vocabulary.KINDS[kind]["lineage"]
+        }
+        self.assertEqual(set(stats.LINEAGE_KINDS), flagged)
+
+    def test_flagging_a_fifth_kind_changes_the_keystone_label(self):
+        # Vacuity check: without the derivation actually reading the flag,
+        # this mutation of a copy would have no effect on stats.LINEAGE_KINDS.
+        original = dict(vocabulary.KINDS["references"])
+        vocabulary.KINDS["references"]["lineage"] = True
+        try:
+            derived = tuple(
+                kind
+                for kind in vocabulary.KINDS
+                if vocabulary.KINDS[kind]["lineage"]
+            )
+        finally:
+            vocabulary.KINDS["references"] = original
+        self.assertIn("references", derived)
+        self.assertNotIn("references", stats.LINEAGE_KINDS)
 
 
 if __name__ == "__main__":

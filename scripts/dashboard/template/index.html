@@ -158,6 +158,11 @@
    tags above rather than any import. */
 const TAU = Math.PI * 2;
 const GRAPH = (window.CRAFT_GRAPH && window.CRAFT_GRAPH.nodes) ? window.CRAFT_GRAPH : { nodes: [], edges: [] };
+// The relationship, status, dial-outcome and type words this page prints -
+// additive on the graph envelope, read here instead of held as a second
+// copy of the same rules inside the page.
+const VOCAB = GRAPH.vocabulary || { kinds: {}, statuses: {}, dial_outcomes: {}, types: {}, membership: [] };
+const MEMBERSHIP_KINDS = new Set(VOCAB.membership);
 
 // The page cannot read .craft/'s mtime, so elapsed time since the last build
 // carries no information about whether the graph is current - only these
@@ -225,16 +230,16 @@ function buildAdjacency(nodes, edges) {
 
 /* Cycles are cluster anchors placed evenly around a ring in a fixed
    reference box; every other node joins its cycle's cluster via the
-   first belongs_to edge pointing at a cycle, phyllotaxis-scattered around
-   that cluster's anchor with the spiral radius scaled by member count.
-   Anything with no belongs_to a cycle has nowhere to belong and forms
-   the outer dust ring. */
+   first membership-kind edge pointing at a cycle, phyllotaxis-scattered
+   around that cluster's anchor with the spiral radius scaled by member
+   count. Anything with no membership edge to a cycle has nowhere to
+   belong and forms the outer dust ring. */
 const GOLDEN_ANGLE = 2.399963229728653;
 function computeRealLayout(nodes, edges) {
   const cycles = nodes.filter(n => n.type === 'cycle');
-  const memberOf = new Map(); // nodeId -> cycleId, first belongs_to wins
+  const memberOf = new Map(); // nodeId -> cycleId, first membership edge wins
   for (const e of edges) {
-    if (e.kind !== 'belongs_to') continue;
+    if (!MEMBERSHIP_KINDS.has(e.kind)) continue;
     if (e.target.type === 'cycle' && !memberOf.has(e.source.id)) memberOf.set(e.source.id, e.target.id);
   }
   const clusterMembers = new Map(cycles.map(c => [c.id, []]));
@@ -592,13 +597,12 @@ class GraphView {
   glowFor(type) { return this.hoverGlow[type] || this.hoverGlow[FALLBACK_TYPE]; }
 
   fillPanel(n) {
-    const KIND_OUT = { belongs_to: 'Part of', blocked_by: 'Blocked by', blocks: 'Blocks', references: 'References', source_cycle: 'Came from cycle', source_story: 'Came from story', graduated_to: 'Graduated into', reapplies: 'Re-applies' };
-    const KIND_IN = { belongs_to: 'Contains', blocked_by: 'Blocks', blocks: 'Blocked by', references: 'Referenced by', source_cycle: 'Source of', source_story: 'Source of', graduated_to: 'Grew from', reapplies: 'Re-applied by' };
-    const STATUS = { complete: 'Completed', active: 'In progress', planning: 'Planning', ready: 'Ready', pending: 'Pending' };
-    const TYPE_NAME = { story: 'Story', cycle: 'Cycle', fix: 'Fix', tweak: 'Tweak', notebook: 'Notebook', planning: 'Planning', riff: 'Riff', dial: 'Dial', mockup: 'Mockup' };
     const fmtDate = d => { if (!d) return ''; const dt = new Date(d + 'T00:00:00'); return isNaN(dt) ? d : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); };
-    const bits = [TYPE_NAME[n.type] || n.type];
-    if (n.status) bits.push(STATUS[n.status] || n.status);
+    const bits = [VOCAB.types[n.type] || n.type];
+    // A dial's status slot holds a session outcome rather than a status -
+    // its own vocabulary axis, worded from a different table.
+    const statusWords = n.type === 'dial' ? VOCAB.dial_outcomes : VOCAB.statuses;
+    if (n.status) bits.push(statusWords[n.status] || n.status);
     if (n.date) bits.push(fmtDate(n.date));
     this.panel.querySelector('.p-type').textContent = bits.join(' · ');
     this.panel.querySelector('.p-title').textContent = n.label;
@@ -620,7 +624,8 @@ class GraphView {
       rels.forEach(rel => {
         const div = document.createElement('div');
         div.className = 'p-rel-item';
-        const verb = rel.dir === 'out' ? (KIND_OUT[rel.kind] || rel.kind) : (KIND_IN[rel.kind] || rel.kind);
+        const kindWords = VOCAB.kinds[rel.kind];
+        const verb = kindWords ? (rel.dir === 'out' ? kindWords.out : kindWords.in) : rel.kind;
         div.textContent = verb + ': ' + rel.other.short;
         relsEl.appendChild(div);
       });

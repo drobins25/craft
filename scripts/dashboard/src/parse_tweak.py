@@ -11,8 +11,6 @@ import re
 
 from . import body as body_mod
 from . import identity
-from . import resolve
-from . import sentinels
 from .parse_fix import field_link
 
 _LEGACY_TITLE_RE = re.compile(r"^# Tweak: (.+)$", re.M)
@@ -50,39 +48,10 @@ def parse(path, craft_rel, fields, body):
     links = []
     annotations = []
 
-    source_story = fields.get("source_story")
-    if source_story is not None:
-        if sentinels.is_sentinel(source_story):
-            annotations.append(
-                resolve.annotation(nid, "source_story", source_story, "sentinel")
-            )
-        elif _is_prose(source_story):
-            annotations.append(
-                resolve.annotation(nid, "source_story", source_story, "prose")
-            )
-        else:
-            links.append(
-                resolve.raw_link(
-                    nid, "source_story", source_story, "source_story",
-                    expect={"story"},
-                )
-            )
-
-    field_link(nid, fields, "mockup", "mockup", links, annotations,
-               expect={"mockup"})
-    field_link(nid, fields, "dial", "dial", links, annotations,
-               expect={"dial"})
-    field_link(nid, fields, "reapplies", "reapplies", links, annotations,
-               expect={"tweak"})
-    field_link(nid, fields, "grew_from", "grew_from", links, annotations,
-               expect={"tweak"})
-    field_link(nid, fields, "satisfied_todo", "satisfied_todo", links,
-               annotations, expect={"notebook"})
+    field_link(nid, fields, "tweak", "source_story", links, annotations)
+    field_link(nid, fields, "tweak", "mockup", links, annotations)
+    field_link(nid, fields, "tweak", "dial", links, annotations)
+    field_link(nid, fields, "tweak", "reapplies", links, annotations)
+    field_link(nid, fields, "tweak", "grew_from", links, annotations)
+    field_link(nid, fields, "tweak", "satisfied_todo", links, annotations)
     return node, links, annotations
-
-
-def _is_prose(value):
-    """A slug never contains whitespace; anything with spaces left after
-    stripping a parenthetical is prose."""
-    stripped = re.sub(r"\([^)]*\)", "", str(value)).strip()
-    return " " in stripped

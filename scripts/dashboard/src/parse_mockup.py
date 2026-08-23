@@ -34,12 +34,8 @@ def parse(path, craft_rel, fields, body):
     }
     links = []
     annotations = []
-    field_link(
-        nid, fields, "graduated_to", "graduated_to", links, annotations,
-        expect={"story", "tweak", "notebook"},
-    )
-    field_link(nid, fields, "origin", "origin", links, annotations,
-               expect={"tweak"})
+    field_link(nid, fields, "mockup", "graduated_to", links, annotations)
+    field_link(nid, fields, "mockup", "origin", links, annotations)
 
     solidify = fields.get("solidify_outcome")
     if solidify is not None and not sentinels.is_sentinel(solidify):

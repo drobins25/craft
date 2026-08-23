@@ -36,7 +36,5 @@ def parse(path, craft_rel, fields, body):
         source_concept = [source_concept] if source_concept else []
     for concept_path in source_concept or []:
         rel = body_mod.craft_relative(concept_path) or concept_path
-        links.append(
-            resolve.raw_link(nid, "references", rel, "source_concept")
-        )
+        links.append(resolve.raw_link(nid, "cycle", "source_concept", rel))
     return node, links, annotations

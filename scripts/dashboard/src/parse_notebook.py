@@ -44,10 +44,7 @@ def parse(path, craft_rel, fields, body):
 
     links = []
     annotations = []
-    field_link(
-        nid, fields, "graduated_to", "graduated_to", links, annotations,
-        expect={"fix", "tweak", "story", "dial"},
-    )
+    field_link(nid, fields, "notebook", "graduated_to", links, annotations)
 
     source = fields.get("source")
     if source is not None:
@@ -55,7 +52,7 @@ def parse(path, craft_rel, fields, body):
         if wikilink:
             links.append(
                 resolve.raw_link(
-                    nid, "references", wikilink.group(1).strip(), "source"
+                    nid, "notebook", "source", wikilink.group(1).strip()
                 )
             )
         elif not sentinels.is_sentinel(source):

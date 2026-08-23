@@ -31,9 +31,7 @@ def parse(path, craft_rel, fields, body):
     for raw_path in body_mod.craft_paths(stripped):
         rel = body_mod.craft_relative(raw_path)
         if rel:
-            links.append(resolve.raw_link(nid, "references", rel, "body_path"))
+            links.append(resolve.raw_link(nid, "riff", "body_path", rel))
     for inner in body_mod.wikilinks(stripped):
-        links.append(
-            resolve.raw_link(nid, "references", inner, "body_wikilink")
-        )
+        links.append(resolve.raw_link(nid, "riff", "body_wikilink", inner))
     return node, links, []
