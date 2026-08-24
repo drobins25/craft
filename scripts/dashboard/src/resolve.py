@@ -185,7 +185,20 @@ class AliasIndex:
         """Pass two's only write path. Refuses any alias already in the
         frozen canonical snapshot - a derived alias may never win a fight
         with a canonical one, and this is the second line of defence
-        behind the caller's own unclaimed check in _register_derived."""
+        behind the caller's own unclaimed check in _register_derived.
+
+        Raises BEFORE the freeze for the same reason register() raises
+        after it - the phase boundary is structural, not a reading-order
+        convention, and it is enforced from both ends. Called early, the
+        canonical snapshot is still empty, so every alias would pass the
+        unclaimed check and freeze_canonical() would then snapshot these
+        derived forms AS canonical: the silent shadow this class exists
+        to prevent, arriving through the other write path."""
+        if not self._frozen:
+            raise FrozenIndex(
+                "register_derived() called before freeze_canonical(); "
+                "canonical registration is not complete yet"
+            )
         alias = alias.strip().lower()
         if not alias:
             return
@@ -333,7 +346,14 @@ def _derived_candidates(node):
     stripped_stem = _NUM_PREFIX_RE.sub("", stem)
     candidates = set()
 
-    if ntype:
+    # S1 is keyed off a record's own slug ("story-27-riff-the-game"). For the
+    # two folder-based types the filename is a constant - every mockup's stem
+    # is "record", every cycle's is "cycle" - so S1 there would propose the
+    # meaningless "mockup-record" / "cycle-cycle" for every instance. A corpus
+    # with several of each suppresses them by multiplicity, but one with a
+    # single mockup would register it. S5 already covers what a citation to
+    # these types actually looks like: the containing folder.
+    if ntype and os.path.basename(path) not in _RECORD_FOLDER_FILENAMES:
         candidates.add("%s-%s" % (ntype, stem))
         candidates.add("%s-%s" % (ntype, stripped_stem))
 

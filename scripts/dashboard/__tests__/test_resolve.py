@@ -409,6 +409,16 @@ class TestTwoPassRegistration(unittest.TestCase):
         with self.assertRaises(resolve.FrozenIndex):
             index.register("some-alias", "some-id")
 
+    def test_register_derived_raises_before_freeze_canonical(self):
+        # The boundary is enforced from BOTH ends. Called early, the
+        # canonical snapshot is empty, so every alias would pass the
+        # unclaimed check and freeze_canonical() would then snapshot these
+        # derived forms as canonical - the silent shadow, through the other
+        # write path.
+        index = resolve.AliasIndex()
+        with self.assertRaises(resolve.FrozenIndex):
+            index.register_derived("some-alias", "some-id")
+
     def test_register_derived_refuses_an_alias_already_in_the_frozen_canonical_snapshot(
         self,
     ):
@@ -449,9 +459,15 @@ class TestAmbiguityInvariant(unittest.TestCase):
     def setUpClass(cls):
         cls.nodes = CORPUS_NODES
 
-    def test_fixture_corpus_has_four_ambiguous_canonical_aliases(self):
+    def test_fixture_corpus_has_ambiguous_canonical_aliases_including_widget_panel(
+        self,
+    ):
         # Non-vacuity check: the collect-then-commit rule only proves
         # anything if the corpus genuinely has ambiguous names to protect.
+        # Asserts the specific alias the suppression tests below depend on
+        # rather than a closed count - an exact count would break whenever a
+        # later story adds an unrelated fixture record that happens to share
+        # a stem, failing for a reason this test is not about.
         canonical_only = resolve.AliasIndex()
         resolve._register_canonical(canonical_only, self.nodes)
         ambiguous = {
@@ -459,7 +475,7 @@ class TestAmbiguityInvariant(unittest.TestCase):
             for alias, ids in canonical_only._aliases.items()
             if len(ids) > 1
         }
-        self.assertEqual(len(ambiguous), 4, ambiguous)
+        self.assertIn("widget-panel", ambiguous)
 
     def test_derived_registration_never_changes_the_set_of_ambiguous_aliases(
         self,
@@ -549,6 +565,34 @@ class TestDerivedShapesResolve(unittest.TestCase):
             )
         ]
         index = resolve.build_index(nodes)
+        self.assertEqual(
+            resolve.resolve(index, "mockups/2026-01-15-sample-hero"),
+            "mockup--mockups--2026-01-15-sample-hero--record",
+        )
+
+    def test_a_lone_folder_based_record_proposes_no_constant_stem_alias(self):
+        # S1 is keyed off a record's own slug. A mockup's stem is always
+        # "record" and a cycle's always "cycle", so S1 would propose the
+        # meaningless "mockup-record" / "cycle-cycle" for every instance.
+        # With several of each the multiplicity rule hides it; this corpus
+        # has exactly one of each, which is where it would actually
+        # register. The folder alias (S5) is what a citation really uses.
+        nodes = [
+            _synth_node(
+                "mockup--mockups--2026-01-15-sample-hero--record",
+                "mockup",
+                "mockups/2026-01-15-sample-hero/record.md",
+            ),
+            _synth_node(
+                "cycle--cycles--7-sample-cycle--cycle",
+                "cycle",
+                "cycles/7-sample-cycle/cycle.yaml",
+            ),
+        ]
+        index = resolve.build_index(nodes)
+        self.assertEqual(index.candidates("mockup-record"), [])
+        self.assertEqual(index.candidates("cycle-cycle"), [])
+        # The real citation shape still resolves.
         self.assertEqual(
             resolve.resolve(index, "mockups/2026-01-15-sample-hero"),
             "mockup--mockups--2026-01-15-sample-hero--record",
