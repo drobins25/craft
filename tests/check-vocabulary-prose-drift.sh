@@ -96,8 +96,9 @@ for record_type, field in sorted(vocabulary.FIELDS):
 # to a colon - the shape a real field-setting instruction takes in these
 # docs (` field:` or `field`:) - must be a field the definition knows about
 # SOMEWHERE. Never scoped to the doc's own record type: a doc legitimately
-# names the field of a record it hands off to (tweak.md mentions the dial
-# record's own `graduated_to`). Prints one finding per line to stdout.
+# names the field of a record it hands off to (mockup-inline.md mentions
+# the notebook record's own `source:`). Prints one finding per line to
+# stdout.
 _vocab_prose_check_direction1() {
   local doc="$1" path="$2" known_fields="$3"
   local line word

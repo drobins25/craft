@@ -20,7 +20,7 @@ echo ""
 
 # --- Test 1: every backticked link field named in a reference doc is
 #     known to the definition (direction 1, live doc corpus) ---
-begin_test "every link field named in a reference doc is known to the definition for that record type"
+begin_test "every link field named in a reference doc is known to the definition"
 D1_FINDINGS=""
 KNOWN_FIELDS="$(_vocab_prose_known_fields)"
 for doc in "${VOCAB_PROSE_DOCS[@]}"; do

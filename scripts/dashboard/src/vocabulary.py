@@ -61,6 +61,8 @@ REASONS = frozenset(
         "prose",
         "container",
         "not-a-record",
+        "wrong-type",
+        "self-reference",
     }
 )
 
@@ -68,11 +70,15 @@ REASONS = frozenset(
 # future maintainer can act on. Naming an exclusion turns "nobody thought
 # about it" into a decision (Decision 7's RULED_OUT idiom, one level up).
 #
-# Keys are either a directory name (matched against a citation's first path
-# segment) or a bare root-level filename (matched the same way, since a
-# root file's "first segment" is the whole value - it has no directory to
-# be a segment of). resolve.is_not_a_record does not care which shape a key
-# is; the lookup is identical either way.
+# A key is a `/`-separated SEGMENT PATTERN: a plain segment matches itself
+# and a `*` segment matches exactly one path segment. A key matches a value
+# when the key's segments equal the value's LEADING segments, case-
+# insensitively - "design" matches "design/tokens.yaml", "notebook/assets"
+# matches "notebook/assets/x.md", and "mockups/*/rounds" matches
+# "mockups/<anything>/rounds/round-1.html" through the wildcard middle
+# segment. A bare root-level filename ("project.md") is a one-segment key
+# whose value has no directory to be a segment of, so the same rule covers
+# it without a second code path. resolve.is_not_a_record owns the match.
 NOT_RECORDS = {
     "graph": "builder output - .craft/graph/ is written by the build, "
     "never read as a record source (registry.py skip list)",
@@ -99,6 +105,13 @@ NOT_RECORDS = {
     "record",
     "dashboard.html": "the shipped browser page itself - build output, not "
     "a record",
+    "notebook/assets": "attachments a notebook idea or todo links to - "
+    "craft does not ingest .craft/notebook/assets/ as a record source",
+    "mockups/*/rounds": "per-round screenshots inside a mockup folder - "
+    "craft does not ingest a mockup's rounds/ as a record source",
+    "analysis": "quality-gate analysis output (templates/analysis/pending "
+    "ships the shape) - craft does not ingest .craft/analysis/ as a "
+    "record source",
 }
 
 # One row per Content Direction relationship kind, in the table's order so

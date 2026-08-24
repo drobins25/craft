@@ -50,6 +50,10 @@ class TestParseMockup(unittest.TestCase):
         )
         notes = [a for a in annotations if a["field"] == "solidify_outcome"]
         self.assertEqual(len(notes), 1)
+        # Decision 8(a): a design-token cell citing a non-record is still
+        # labelled out-of-scope-type, unmoved by the self-reference relabel
+        # at assemble.py:131.
+        self.assertEqual(notes[0]["reason"], "out-of-scope-type")
 
     def test_origin_yields_tweak_link(self):
         _, links, _ = _parse(HERO)

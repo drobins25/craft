@@ -76,9 +76,7 @@ class TestParseTweak(unittest.TestCase):
     def test_satisfied_todo_slug_yields_link(self):
         _, links, _ = _parse(POLISH)
         matches = [l for l in links if l["kind"] == "satisfied_todo"]
-        self.assertEqual(
-            [l["raw_value"] for l in matches], ["2026-01-20-sample-todo"]
-        )
+        self.assertEqual([l["raw_value"] for l in matches], ["sample-todo"])
 
 
 if __name__ == "__main__":

@@ -19,6 +19,14 @@ _NUM_PREFIX_RE = re.compile(r"^\d+-")
 _WIKILINK_RE = re.compile(r"\[\[([^\]]+)\]\]")
 _PAREN_RE = re.compile(r"\([^)]*\)")
 _ENUM_SPLIT_RE = re.compile(r"\(\d+\)")
+_DATE_PREFIX_RE = re.compile(r"^\d{4}-\d{2}-\d{2}-")
+_SINGLE_DIGIT_PREFIX_RE = re.compile(r"^(\d)-(.+)$")
+
+# The two record types the registry declares as living inside a folder
+# rather than as a flat file (registry._RULES: mockups/*/record.md and
+# cycles/*/cycle.yaml). A node whose filename is one of these is the one
+# shape whose CONTAINING FOLDER is worth citing on its own.
+_RECORD_FOLDER_FILENAMES = frozenset({"record.md", "cycle.yaml"})
 
 
 def raw_link(source_id, record_type, field, raw_value):
@@ -71,31 +79,64 @@ def annotation(source_id, field, value, reason):
 _PATH_FIELDS = frozenset({"body_path", "reference_materials"})
 
 
+def _not_records_key_matches(key, value):
+    """True when key's `/`-separated segments equal value's LEADING
+    segments, case-insensitively, with a `*` segment in key matching
+    exactly one segment of value."""
+    key_parts = key.lower().split("/")
+    value_parts = value.lower().split("/")
+    if len(value_parts) < len(key_parts):
+        return False
+    return all(k == "*" or k == v for k, v in zip(key_parts, value_parts))
+
+
 def is_not_a_record(raw_value):
-    """True when the value's first path segment names a vocabulary.
-    NOT_RECORDS directory or root-level filename - a citation to a real
-    .craft/ surface craft deliberately does not ingest as a record, not a
-    failed lookup. A root file's first segment is the whole value, so the
-    same lookup covers both shapes without a second code path."""
-    first = str(raw_value).strip().split("/", 1)[0].lower()
-    return first in vocabulary.NOT_RECORDS
+    """True when the value's leading path segments match a vocabulary.
+    NOT_RECORDS segment pattern - a citation to a real .craft/ surface
+    craft deliberately does not ingest as a record, not a failed lookup.
+    A root-level filename key's whole value is a one-segment pattern, so
+    the same match covers both shapes without a second code path."""
+    value = str(raw_value).strip()
+    return any(
+        _not_records_key_matches(key, value) for key in vocabulary.NOT_RECORDS
+    )
 
 
-def failure_reason(raw_value, index=None, field=None):
-    """Why a value failed to resolve: sentinel if it is one, not-a-record if
-    it names a NOT_RECORDS surface, container if it strictly prefixes a
-    registered node path, else unresolved.
+def failure_reason(raw_value, index=None, field=None, expect=None):
+    """Why a value failed to resolve, in precedence order: sentinel if it
+    is one; not-a-record if it names a NOT_RECORDS surface on a path field;
+    wrong-type if it names a real record of a kind the field forbids;
+    container if it strictly prefixes a registered node path; else
+    unresolved.
 
-    The container check needs the alias index, so it only runs when the
-    caller has one to give - a bare sentinel check never requires it.
+    wrong-type sits above container because a value that names a real
+    record is never a folder mention, and below not-a-record because a
+    path field's excluded surface is the more specific fact. It requires
+    both an index and an expect set - without either there is nothing to
+    diagnose the value's type against - and fires only when the alias
+    lookup itself found candidates, which is the evidence that the value
+    names a real record rather than nothing at all.
+
+    The container and wrong-type checks both need the alias index, so
+    they only run when the caller has one to give - a bare sentinel check
+    never requires it.
     """
     if sentinels.is_sentinel(raw_value):
         return "sentinel"
     if field in _PATH_FIELDS and is_not_a_record(raw_value):
         return "not-a-record"
+    if index is not None and expect is not None and index.candidates(str(raw_value)):
+        return "wrong-type"
     if index is not None and index.is_container(raw_value):
         return "container"
     return "unresolved"
+
+
+class FrozenIndex(Exception):
+    """Raised by register() once freeze_canonical() has run - a structural
+    phase boundary rather than a reading-order convention. A maintainer
+    who adds a tenth record type's canonical registration in the wrong
+    half gets an exception here, not a silent shadow six months later."""
 
 
 class AliasIndex:
@@ -103,14 +144,85 @@ class AliasIndex:
         self._aliases = {}
         self._meta = {}
         self._paths = []
+        self._folder_aliases = {}
+        self._frozen = False
+        self._canonical_snapshot = frozenset()
+        self._derived_report = {
+            "proposed": 0,
+            "suppressed_claimed": 0,
+            "suppressed_multiple": 0,
+            "registered": 0,
+        }
 
     def register(self, alias, node_id):
+        if self._frozen:
+            raise FrozenIndex(
+                "register() called after freeze_canonical(); "
+                "use register_derived() in pass two"
+            )
         alias = alias.strip().lower()
         if not alias:
             return
         self._aliases.setdefault(alias, [])
         if node_id not in self._aliases[alias]:
             self._aliases[alias].append(node_id)
+
+    def freeze_canonical(self):
+        """Close pass one. Snapshots every alias registered so far - the
+        set register_derived() is forbidden to touch - and flips the
+        index so a further register() call raises rather than quietly
+        adding a second canonical form."""
+        self._canonical_snapshot = frozenset(self._aliases.keys())
+        self._frozen = True
+
+    def alias_is_claimed(self, alias):
+        """True when alias was registered during pass one, before the
+        freeze - the fact pass two's unclaimed-only rule is checked
+        against."""
+        return alias.strip().lower() in self._canonical_snapshot
+
+    def register_derived(self, alias, node_id):
+        """Pass two's only write path. Refuses any alias already in the
+        frozen canonical snapshot - a derived alias may never win a fight
+        with a canonical one, and this is the second line of defence
+        behind the caller's own unclaimed check in _register_derived."""
+        alias = alias.strip().lower()
+        if not alias:
+            return
+        if alias in self._canonical_snapshot:
+            return
+        self._aliases.setdefault(alias, [])
+        if node_id not in self._aliases[alias]:
+            self._aliases[alias].append(node_id)
+
+    def mark_record_folder(self, alias, node_id):
+        """Track alias as a record-folder alias - the narrow subset the
+        parent-directory retry is allowed to consult. Deliberately
+        separate from the general alias table: a canonical alias can also
+        look directory-shaped (a cycle's bare numbered dir name, say), and
+        letting the retry match against ANY registered alias would turn a
+        one-level parent lookup into a de facto substring scan. Only a
+        node whose own file lives at <folder>/record.md or
+        <folder>/cycle.yaml earns a folder-retry entry.
+        """
+        alias = alias.strip().lower()
+        self._folder_aliases.setdefault(alias, [])
+        if node_id not in self._folder_aliases[alias]:
+            self._folder_aliases[alias].append(node_id)
+
+    def folder_candidates(self, value):
+        stem = str(value).strip().rstrip("/")
+        return list(self._folder_aliases.get(stem.lower(), []))
+
+    def set_derived_report(self, report):
+        self._derived_report = dict(report)
+
+    def derived_report(self):
+        """{"proposed", "suppressed_claimed", "suppressed_multiple",
+        "registered"} - a build-time measurement of how much the derived
+        pass widened the index and how much of that widening it refused.
+        In-memory only; never added to the graph envelope."""
+        return dict(self._derived_report)
 
     def register_node(self, node_id, node_type, date, cycle):
         self._meta[node_id] = {
@@ -157,15 +269,14 @@ def _cycle_of_path(path):
     return None
 
 
-def build_index(nodes):
-    """Build the alias index from the COMPLETE node set.
-
-    Each node registers: its canonical id; its .craft-relative path with and
-    without extension; its filename stem; its frontmatter name/slug; stories
-    additionally the stem with the numeric prefix stripped; cycles
-    additionally both the numbered directory name and the bare cycle name.
+def _register_canonical(index, nodes):
+    """Pass one: exact canonical surface forms, unchanged from before the
+    two-pass split. Each node registers its id; its .craft-relative path
+    with and without extension; its filename stem; its frontmatter
+    name/slug; stories additionally the stem with the numeric prefix
+    stripped; cycles additionally both the numbered directory name and
+    the bare cycle name.
     """
-    index = AliasIndex()
     for node in nodes:
         nid = node["id"]
         ntype = node.get("type")
@@ -190,19 +301,167 @@ def build_index(nodes):
                     index.register(_NUM_PREFIX_RE.sub("", cycle_dir), nid)
         if name:
             index.register(name, nid)
+
+
+def _derived_candidates(node):
+    """The five miss-shape surface forms derivable from one node's own
+    _path, type and _name - never the filesystem (AliasIndex.is_container's
+    pure-lens law applies here too: derived from the in-memory path list
+    only).
+
+    S1: cited by type name plus stem, with and without the leading number
+        - the "story-27-riff-the-game" shape a written-out citation takes
+          when `27-riff-the-game` is what got registered.
+    S2: a dated stem with its leading YYYY-MM-DD- removed - the exact form
+        craft's own notebook helper writes into satisfied_todo.
+    S3: for stories only, a single-digit leading story number zero-padded
+        to two digits.
+    S4: for stories under cycles/, cited relative to their cycle - by
+        numbered directory and by bare cycle name - which also
+        disambiguates a stem shared across cycles.
+    S5: the containing folder of a record that lives at <folder>/<file>
+        rather than as a flat file (a mockup's record.md, a cycle's
+        cycle.yaml) - so a citation naming the folder resolves like
+        naming the record itself.
+    """
+    path = node.get("_path", "")
+    if not path:
+        return set()
+    ntype = node.get("type")
+    root, _ext = os.path.splitext(path)
+    stem = os.path.basename(root)
+    stripped_stem = _NUM_PREFIX_RE.sub("", stem)
+    candidates = set()
+
+    if ntype:
+        candidates.add("%s-%s" % (ntype, stem))
+        candidates.add("%s-%s" % (ntype, stripped_stem))
+
+    date_stripped = _DATE_PREFIX_RE.sub("", stem)
+    if date_stripped != stem:
+        candidates.add(date_stripped)
+
+    if ntype == "story":
+        m = _SINGLE_DIGIT_PREFIX_RE.match(stem)
+        if m:
+            candidates.add("0%s-%s" % (m.group(1), m.group(2)))
+
+    if ntype == "story" and path.startswith("cycles/"):
+        cycle_dir = _cycle_of_path(path)
+        if cycle_dir:
+            candidates.add("%s/%s" % (cycle_dir, stem))
+            candidates.add(
+                "%s/%s" % (_NUM_PREFIX_RE.sub("", cycle_dir), stem)
+            )
+
+    if os.path.basename(path) in _RECORD_FOLDER_FILENAMES:
+        folder = os.path.dirname(path)
+        if folder:
+            candidates.add(folder)
+
+    return candidates
+
+
+def _folder_candidate(node):
+    """The S5 folder-path candidate alone (lowercased), or None - used to
+    mark which committed derived aliases the parent-directory retry may
+    consult. A node earns one only when its own file is <folder>/record.md
+    or <folder>/cycle.yaml; every other candidate resolve() finds through
+    the ordinary alias table instead."""
+    path = node.get("_path", "")
+    if not path or os.path.basename(path) not in _RECORD_FOLDER_FILENAMES:
+        return None
+    folder = os.path.dirname(path)
+    return folder.strip().lower() if folder else None
+
+
+def _register_derived(index, nodes):
+    """Pass two: COLLECT every node's derived candidates into one
+    alias -> {node id} map first, then commit only the aliases that are
+    (a) absent from the frozen canonical snapshot and (b) proposed by
+    exactly one node.
+
+    Collecting before committing is what makes the outcome independent of
+    node order: checking against pass one's frozen snapshot alone stops a
+    derived alias from beating a canonical one, but two derived aliases
+    from different nodes could still race each other inside pass two if
+    each committed as soon as it found itself unclaimed. Requiring a
+    single proposer, decided from the complete map, closes that gap
+    without depending on which node happened to run first.
+    """
+    proposals = {}
+    folder_keys = set()
+    for node in nodes:
+        folder_candidate = _folder_candidate(node)
+        for alias in _derived_candidates(node):
+            key = alias.strip().lower()
+            if not key:
+                continue
+            proposals.setdefault(key, set()).add(node["id"])
+            if folder_candidate is not None and key == folder_candidate:
+                folder_keys.add(key)
+
+    claimed = 0
+    multiple = 0
+    registered = 0
+    for alias, node_ids in proposals.items():
+        if index.alias_is_claimed(alias):
+            claimed += 1
+            continue
+        if len(node_ids) > 1:
+            multiple += 1
+            continue
+        node_id = next(iter(node_ids))
+        index.register_derived(alias, node_id)
+        if alias in folder_keys:
+            index.mark_record_folder(alias, node_id)
+        registered += 1
+
+    index.set_derived_report(
+        {
+            "proposed": len(proposals),
+            "suppressed_claimed": claimed,
+            "suppressed_multiple": multiple,
+            "registered": registered,
+        }
+    )
+
+
+def build_index(nodes):
+    """Build the alias index from the COMPLETE node set, in two passes
+    with a freeze between them: register canonical forms exactly as
+    before, freeze, then register derived forms - see _register_canonical
+    and _register_derived for what each half writes.
+    """
+    index = AliasIndex()
+    _register_canonical(index, nodes)
+    index.freeze_canonical()
+    _register_derived(index, nodes)
     return index
 
 
 def resolve(index, raw_value, from_node=None, expect_types=None):
     """Resolve one reference string -> node id, or None.
 
-    Order: sentinel refusal; exact alias lookup; expect_types filter;
-    deterministic ambiguity tie-break (same cycle as from_node, then latest
-    date, then smallest id). No fuzzy or substring matching, ever.
+    Order: sentinel refusal; exact alias lookup; if THAT lookup found zero
+    candidates and the value contains a "/", one retry against the value's
+    parent directory - exact, one level, and scoped to registered
+    record-folder aliases only (AliasIndex.folder_candidates, not the
+    general alias table), so a bare directory name that merely happens to
+    match a canonical alias can never turn this into a substring scan;
+    never attempted when the exact lookup found candidates that the
+    expect_types filter below then emptied, so it can never mask a
+    wrong-type diagnosis; expect_types filter; deterministic ambiguity
+    tie-break (same cycle as from_node, then latest date, then smallest
+    id). No fuzzy or substring matching, ever.
     """
     if sentinels.is_sentinel(raw_value):
         return None
-    candidates = index.candidates(str(raw_value))
+    value = str(raw_value)
+    candidates = index.candidates(value)
+    if not candidates and "/" in value:
+        parent = value.rsplit("/", 1)[0]
+        candidates = index.folder_candidates(parent)
     if expect_types is not None:
         candidates = [
             c for c in candidates if index.meta(c)["type"] in expect_types
@@ -230,18 +489,25 @@ def resolve(index, raw_value, from_node=None, expect_types=None):
 
 
 def strip_decoration(value):
-    """Strip parenthetical asides and a trailing ' - prose' suffix from a
-    would-be slug.
+    """Strip a wrapping backtick pair, parenthetical asides, and a
+    trailing ' - prose' suffix from a would-be slug.
 
     Returns (clean, decorated): clean is the surviving text with
     surrounding whitespace trimmed; decorated is True only when something
-    was actually removed. A slug never contains whitespace or parentheses -
-    this is the one place that rule is enforced, so every field that mixes
-    a real reference with free prose applies it the same way.
+    was actually DISCARDED. A slug never contains whitespace or
+    parentheses - this is the one place that rule is enforced, so every
+    field that mixes a real reference with free prose applies it the same
+    way. A matched pair of surrounding backticks is unwrapped rather than
+    discarded - the text inside survives whole - so it does not set
+    decorated; marking it decorated would emit a spurious prose annotation
+    for every backticked citation, which is the opposite of what quoting a
+    slug is for.
     """
     original = str(value).strip()
     slug = original
     decorated = False
+    if len(slug) >= 2 and slug.startswith("`") and slug.endswith("`"):
+        slug = slug[1:-1].strip()
     if _PAREN_RE.search(slug):
         decorated = True
         slug = _PAREN_RE.sub("", slug).strip()
@@ -302,7 +568,7 @@ def extract_targets(raw_value):
     for segment in segments:
         segment = _PAREN_RE.sub("", segment)
         for part in re.split(r"[;,]", segment):
-            part = part.strip().strip(".:")
+            part = part.strip().strip(".:`")
             if not part:
                 continue
             if part.lower() in ("split", "and", "&"):

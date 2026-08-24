@@ -22,6 +22,10 @@ A neutral fixture story with the full link grammar exercised.
 See the polish notes in .craft/tweaks/tweak-sample-polish.md and the
 data story [[1-data-layer]].
 
+The panel icon came from .craft/notebook/assets/sample-asset.md, and an
+early pass is captured at
+.craft/mockups/2026-01-15-sample-hero/rounds/round-1.html.
+
 ```markdown
 ---
 name: fake-story-in-code-sample
@@ -45,7 +49,7 @@ A sample citing .craft/fixes/fake-fix.md should never become a link.
 | Element | Token |
 |---------|-------|
 | Panel background | color.surface |
-| Panel border | color.border |
+| Panel border | - |
 
 ## Chunks
 

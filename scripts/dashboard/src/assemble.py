@@ -103,7 +103,7 @@ def link_pass(nodes, raw_links):
                         source_id,
                         field,
                         raw,
-                        resolve.failure_reason(raw, index, field),
+                        resolve.failure_reason(raw, index, field, expect),
                     )
                 )
                 continue
@@ -122,13 +122,13 @@ def link_pass(nodes, raw_links):
                         source_id,
                         field,
                         candidate,
-                        resolve.failure_reason(candidate, index, field),
+                        resolve.failure_reason(candidate, index, field, expect),
                     )
                 )
             elif target == source_id:
                 notes.append(
                     resolve.annotation(
-                        source_id, field, candidate, "out-of-scope-type"
+                        source_id, field, candidate, "self-reference"
                     )
                 )
             elif invert:

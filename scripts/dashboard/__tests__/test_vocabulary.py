@@ -21,6 +21,52 @@ sys.path.insert(0, _HERE)
 from src import vocabulary
 
 
+def _instantiate_segment(segment):
+    """A rule-pattern segment with its wildcard(s) replaced by a literal
+    that satisfies them - "*" and "**" both become "probe", ".md"-suffixed
+    wildcards become "probe.md"."""
+    if segment in ("*", "**"):
+        return "probe"
+    if "*" in segment:
+        return segment.replace("*", "probe")
+    return segment
+
+
+def _probe_path(key, pattern):
+    """The path a NOT_RECORDS key would need to prefix in order to also be
+    a real record under `pattern` - key's own segments (wildcards
+    instantiated) followed by however much of pattern's tail the key does
+    not already cover. When key is at least as long as pattern, only
+    pattern's final segment is appended, so a key like "mockups/*/rounds"
+    is probed with a trailing "record.md" rather than nothing at all."""
+    key_segments = [
+        "probe" if segment == "*" else segment for segment in key.split("/")
+    ]
+    rule_segments = pattern.split("/")
+    if len(key_segments) >= len(rule_segments):
+        tail = [rule_segments[-1]]
+    else:
+        tail = rule_segments[len(key_segments):]
+    tail = [_instantiate_segment(segment) for segment in tail]
+    return "/".join(key_segments + tail)
+
+
+def _failing_not_records_keys(not_records):
+    """Every key in not_records that prefixes at least one probe path the
+    real registry.classify calls a record - the guard's verdict, derived
+    from registry._RULES rather than a hand-kept probe list so a new rule
+    shape is covered automatically."""
+    from src import registry
+
+    failing = set()
+    for key in not_records:
+        for _record_type, pattern in registry._RULES:
+            probe = _probe_path(key, pattern)
+            if registry.classify(probe) is not None:
+                failing.add(key)
+    return failing
+
+
 class TestKindWords(unittest.TestCase):
     def test_every_kind_carries_a_non_empty_outbound_and_inbound_word(self):
         for kind, spec in vocabulary.KINDS.items():
@@ -102,9 +148,38 @@ class TestRecordTypesAndDirectories(unittest.TestCase):
         for directory, reason in vocabulary.NOT_RECORDS.items():
             self.assertTrue(reason.strip(), directory)
 
-    def test_no_directory_is_both_a_record_source_and_excluded(self):
-        overlap = set(vocabulary.NOT_RECORDS) & set(vocabulary.RECORD_TYPES)
-        self.assertEqual(overlap, set())
+
+class TestNotRecordsGuard(unittest.TestCase):
+    """Decision 6: the old guard was a literal set-intersection of dict
+    keys against record-type names, which works only while every key is a
+    single segment - "notebook/ideas" would pass it clean and silently
+    stop every real notebook idea from resolving. This rewrite checks each
+    key as a path prefix against the real classifier instead."""
+
+    def test_a_not_records_key_cannot_prefix_any_path_the_classifier_calls_a_record(
+        self,
+    ):
+        # THE FIRST TEST: probes built from registry._RULES for every
+        # declared key, failing with the key(s) that classified.
+        failing = _failing_not_records_keys(vocabulary.NOT_RECORDS)
+        self.assertEqual(
+            failing,
+            set(),
+            "NOT_RECORDS key(s) prefix a path the classifier calls a "
+            "record: %s" % sorted(failing),
+        )
+
+    def test_seeding_notebook_ideas_as_a_key_fails_the_guard_and_names_it(
+        self,
+    ):
+        broken = dict(vocabulary.NOT_RECORDS)
+        broken["notebook/ideas"] = "seeded for the vacuity check"
+        self.assertIn("notebook/ideas", _failing_not_records_keys(broken))
+
+    def test_seeding_mockups_star_as_a_key_fails_the_guard_and_names_it(self):
+        broken = dict(vocabulary.NOT_RECORDS)
+        broken["mockups/*"] = "seeded for the vacuity check"
+        self.assertIn("mockups/*", _failing_not_records_keys(broken))
 
 
 class TestFields(unittest.TestCase):
@@ -165,6 +240,25 @@ class TestFields(unittest.TestCase):
 
 
 class TestReasons(unittest.TestCase):
+    def test_reasons_gains_wrong_type_and_self_reference_without_losing_any(
+        self,
+    ):
+        self.assertEqual(
+            vocabulary.REASONS,
+            frozenset(
+                {
+                    "sentinel",
+                    "unresolved",
+                    "out-of-scope-type",
+                    "prose",
+                    "container",
+                    "not-a-record",
+                    "wrong-type",
+                    "self-reference",
+                }
+            ),
+        )
+
     def test_resolve_annotation_accepts_every_registered_reason(self):
         from src import resolve
 

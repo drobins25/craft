@@ -10,7 +10,7 @@ mockup: 2026-01-15-sample-hero
 dial:
 reapplies:
 grew_from:
-satisfied_todo: 2026-01-20-sample-todo
+satisfied_todo: sample-todo
 taste: loved
 attempts: 1
 outcome_note: tightened toolbar gap

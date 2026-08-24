@@ -21,6 +21,10 @@ Exercises the bullet-list dependency form the full template scaffolds.
 **Blocked by:**
 - 3-widget-panel (needs the panel shell first)
 - data-layer - shares the store contract
+- story-data-layer
+- 01-data-layer
+- 7-sample-cycle/3-widget-panel
+- `data-layer`
 
 **Blocks:**
 - (none)

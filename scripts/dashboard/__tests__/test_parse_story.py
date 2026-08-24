@@ -143,7 +143,14 @@ class TestDependencies(unittest.TestCase):
         blocked = _dep_links(links, "blocked_by")
         self.assertEqual(
             [l["raw_value"] for l in blocked],
-            ["3-widget-panel", "data-layer"],
+            [
+                "3-widget-panel",
+                "data-layer",
+                "story-data-layer",
+                "01-data-layer",
+                "7-sample-cycle/3-widget-panel",
+                "data-layer",
+            ],
         )
 
     def test_bullet_parenthetical_and_dash_prose_become_annotations(self):
@@ -255,7 +262,11 @@ class TestMembershipAndBody(unittest.TestCase):
         body_paths = [l for l in links if l["field"] == "body_path"]
         self.assertEqual(
             [l["raw_value"] for l in body_paths],
-            ["tweaks/tweak-sample-polish.md"],
+            [
+                "tweaks/tweak-sample-polish.md",
+                "notebook/assets/sample-asset.md",
+                "mockups/2026-01-15-sample-hero/rounds/round-1.html",
+            ],
         )
 
     def test_body_wikilink_yields_references_candidate(self):
@@ -271,9 +282,17 @@ class TestMembershipAndBody(unittest.TestCase):
     def test_binding_table_token_column_yields_token_annotations(self):
         _, _, annotations = _parse(WIDGET)
         tokens = _notes(annotations, field="token")
-        self.assertEqual(
-            [a["value"] for a in tokens], ["color.surface", "color.border"]
-        )
+        self.assertEqual([a["value"] for a in tokens], ["color.surface"])
+        self.assertEqual(tokens[0]["reason"], "out-of-scope-type")
+
+    def test_binding_table_dash_cell_produces_no_annotation(self):
+        # The Element Binding Table's N/A convention is the literal
+        # character "-", not an empty cell - the fixture's second row
+        # carries it, and it must not become a token annotation.
+        _, _, annotations = _parse(WIDGET)
+        values = {a["value"] for a in _notes(annotations, field="token")}
+        self.assertNotIn("-", values)
+        self.assertNotIn("color.border", values)
 
 
 if __name__ == "__main__":

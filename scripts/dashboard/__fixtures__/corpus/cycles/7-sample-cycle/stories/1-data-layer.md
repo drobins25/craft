@@ -18,6 +18,9 @@ current_chunk: 0
 ## Spark
 A neutral fixture story that stores widget data.
 
+An early design pass lives at .craft/mockups/2026-01-15-sample-hero, with
+one round captured at .craft/mockups/2026-01-15-sample-hero/mockup.html.
+
 ## Dependencies
 **Blocked by:** none
 **Blocks:** widget-panel

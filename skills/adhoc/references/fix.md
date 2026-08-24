@@ -21,7 +21,7 @@ status: proposed
 created: [YYYY-MM-DD]
 project: [project name]
 category: [see categories below]
-source_story: [story that introduced the bug, if known]
+source_story: [story that introduced the bug, if known - e.g. riff-the-game]
 source_cycle: [cycle name, if known]
 files_changed: 0
 lines_changed: 0

@@ -214,7 +214,7 @@ def _parse_binding_table(nid, stripped, annotations):
             continue
         if set("".join(cells)) <= set("-: "):
             continue
-        if token_col < len(cells) and cells[token_col]:
+        if token_col < len(cells) and cells[token_col] and cells[token_col] != "-":
             annotations.append(
                 resolve.annotation(
                     nid, "token", cells[token_col], "out-of-scope-type"

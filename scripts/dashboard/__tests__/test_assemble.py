@@ -86,6 +86,7 @@ class TestLinkPass(unittest.TestCase):
         edges, notes = assemble.link_pass(SYNTH_NODES, links)
         self.assertEqual(edges, [])
         self.assertEqual(len(notes), 1)
+        self.assertEqual(notes[0]["reason"], "self-reference")
 
     def test_duplicate_edges_collapse_to_one(self):
         link = resolve.raw_link(
@@ -193,7 +194,10 @@ class TestLinkPass(unittest.TestCase):
         self.assertEqual(edges[0]["source"], blocker["id"])
         self.assertEqual(edges[0]["target"], blocked["id"])
 
-    def test_story_dependency_naming_a_non_story_does_not_resolve(self):
+    def test_story_dependency_naming_a_non_story_annotates_wrong_type(self):
+        # The value names a real record - just not one of the kind the
+        # field forbids - so it must say "wrong-type", not the generic
+        # "not found" a plain miss gets.
         planning_node = _make_node(
             "planning--planning--sample-concept",
             "planning",
@@ -209,7 +213,7 @@ class TestLinkPass(unittest.TestCase):
         ]
         edges, notes = assemble.link_pass(nodes, links)
         self.assertEqual(edges, [])
-        self.assertEqual(notes[0]["reason"], "unresolved")
+        self.assertEqual(notes[0]["reason"], "wrong-type")
 
     def test_emitted_kinds_stay_inside_the_closed_set(self):
         root = corpus_helper.corpus_root()
@@ -269,15 +273,24 @@ class TestBuildOnCorpus(unittest.TestCase):
         ]
         self.assertEqual(len(sentinels), 1)
 
-    def test_cross_type_dependency_does_not_resolve(self):
+    def test_cross_type_dependency_annotates_wrong_type(self):
+        # sample-concept is a real planning record; a story's blocked_by
+        # field forbids planning targets, so this is wrong-type rather
+        # than an unclassified miss.
         unresolved = [
             a
             for a in self.graph["annotations"]
             if a["reason"] == "unresolved" and a["value"] == "sample-concept"
         ]
-        self.assertEqual(len(unresolved), 1)
+        self.assertEqual(unresolved, [])
+        wrong_type = [
+            a
+            for a in self.graph["annotations"]
+            if a["reason"] == "wrong-type" and a["value"] == "sample-concept"
+        ]
+        self.assertEqual(len(wrong_type), 1)
         self.assertEqual(
-            unresolved[0]["source_id"], "story--backlog--orphan-idea"
+            wrong_type[0]["source_id"], "story--backlog--orphan-idea"
         )
 
     def test_folder_mention_yields_container_not_unresolved(self):
@@ -302,6 +315,8 @@ class TestBuildOnCorpus(unittest.TestCase):
             "design/tokens.yaml",
             "research/some-investigation.md",
             "settings.yaml",
+            "notebook/assets/sample-asset.md",
+            "mockups/2026-01-15-sample-hero/rounds/round-1.html",
         }
         unresolved_leaked = [
             a
@@ -413,6 +428,20 @@ class TestBuildOnCorpus(unittest.TestCase):
         )
         self.assertEqual(self.graph["build"]["unresolved"], expected)
 
+    def test_graph_envelope_keys_are_unchanged_by_derived_registration(self):
+        self.assertEqual(
+            set(self.graph),
+            {
+                "version",
+                "nodes",
+                "edges",
+                "annotations",
+                "stats",
+                "build",
+                "vocabulary",
+            },
+        )
+
     def test_envelope_carries_a_vocabulary_block_and_version_stays_one(self):
         self.assertEqual(self.graph["version"], 1)
         self.assertEqual(
@@ -440,6 +469,98 @@ class TestBuildOnCorpus(unittest.TestCase):
         known = set(self.graph["vocabulary"]["statuses"])
         missing = emitted - known
         self.assertEqual(missing, set(), "statuses with no display words: %s" % missing)
+
+    def test_type_prefixed_citation_resolves(self):
+        # S1: "story-data-layer" on 4-bullet-deps.md.
+        values = {a["value"] for a in self.graph["annotations"]}
+        self.assertNotIn("story-data-layer", values)
+
+    def test_zero_padded_story_number_resolves(self):
+        # S3: "01-data-layer" on 4-bullet-deps.md.
+        values = {a["value"] for a in self.graph["annotations"]}
+        self.assertNotIn("01-data-layer", values)
+
+    def test_cycle_dir_story_stem_citation_resolves(self):
+        # S4: "7-sample-cycle/3-widget-panel" on 4-bullet-deps.md - also
+        # disambiguates the corpus's own ambiguous "widget-panel" stem.
+        values = {a["value"] for a in self.graph["annotations"]}
+        self.assertNotIn("7-sample-cycle/3-widget-panel", values)
+        edges = {
+            (e["kind"], e["source"], e["target"])
+            for e in self.graph["edges"]
+        }
+        self.assertIn(
+            (
+                "blocks",
+                "story--cycles--7-sample-cycle--stories--3-widget-panel",
+                "story--cycles--8-other-cycle--stories--4-bullet-deps",
+            ),
+            edges,
+        )
+
+    def test_backticked_citation_resolves_with_no_prose_annotation(self):
+        # S6: "`data-layer`" on 4-bullet-deps.md.
+        prose_values = {
+            a["value"] for a in self.graph["annotations"] if a["reason"] == "prose"
+        }
+        self.assertNotIn("`data-layer`", prose_values)
+        self.assertNotIn(
+            "`data-layer`", {a["value"] for a in self.graph["annotations"]}
+        )
+
+    def test_date_stripped_satisfied_todo_resolves(self):
+        # S2: tweak-sample-polish.md's satisfied_todo moved to the
+        # date-stripped form craft's own notebook helper actually writes.
+        edges = {
+            (e["kind"], e["source"], e["target"])
+            for e in self.graph["edges"]
+        }
+        self.assertIn(
+            (
+                "satisfied_todo",
+                "tweak--tweaks--tweak-sample-polish",
+                "notebook--notebook--todos--2026-01-20-sample-todo",
+            ),
+            edges,
+        )
+
+    def test_record_folder_citation_resolves(self):
+        # S5: 1-data-layer.md cites the mockup's containing folder bare.
+        values = {a["value"] for a in self.graph["annotations"]}
+        self.assertNotIn("mockups/2026-01-15-sample-hero", values)
+        edges = {
+            (e["kind"], e["source"], e["target"])
+            for e in self.graph["edges"]
+        }
+        self.assertIn(
+            (
+                "references",
+                "story--cycles--7-sample-cycle--stories--1-data-layer",
+                "mockup--mockups--2026-01-15-sample-hero--record",
+            ),
+            edges,
+        )
+
+    def test_sibling_artifact_beside_record_md_resolves(self):
+        # 1-data-layer.md also cites a sibling artifact inside that folder.
+        values = {a["value"] for a in self.graph["annotations"]}
+        self.assertNotIn(
+            "mockups/2026-01-15-sample-hero/mockup.html", values
+        )
+
+    def test_source_story_naming_a_cycle_annotates_wrong_type(self):
+        # legacy-heading-tweak.md's source_story names sample-cycle, a real
+        # cycle record - the audit's S7 shape, end to end on the fixture
+        # corpus rather than a synthetic node list.
+        wrong_type = [
+            a
+            for a in self.graph["annotations"]
+            if a["reason"] == "wrong-type" and a["value"] == "sample-cycle"
+        ]
+        self.assertEqual(len(wrong_type), 1)
+        self.assertEqual(
+            wrong_type[0]["source_id"], "tweak--tweaks--legacy-heading-tweak"
+        )
 
     def test_fix_emits_exactly_one_edge_to_its_source_cycle(self):
         fix_id = "fix--fixes--sample-broken-widget"
