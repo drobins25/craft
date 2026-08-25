@@ -108,14 +108,15 @@ plugins/craft/
 │   ├── story-backlog.md       ← Backlog story template
 │   ├── story-full.md          ← Full story template (with chunks)
 │   └── story-roadmap.md       ← Roadmap-only story template
-├── reference/                 ← Orchestration-critical (injected by hooks, drives routing)
+├── reference/                 ← Orchestration-critical (injected by hooks, read by skills at runtime)
 │   ├── calibration-loop.md    ← Shared technique: boundary elicitation (creative-spark +)
-│   ├── decision-tree.md
+│   ├── cold-start-index.min
 │   ├── hunch-settling.md      ← Shared technique: executable-threshold gate (mockup funnel +)
 │   └── orchestration-index.min
-├── docs/                      ← Generated documentation (informational, not auto-loaded)
+├── docs/                      ← Human-facing documentation (informational, not auto-loaded)
 │   ├── agent-catalog.md
 │   ├── creative-workshop.md
+│   ├── decision-tree.md       ← Routing map: every /craft path, as flowcharts
 │   ├── design-philosophy.md
 │   ├── plan-tdd-enforcement.md
 │   ├── research-agentic-research-patterns.md
@@ -496,4 +497,4 @@ Individual tests follow the pattern `test-{script-name}.sh` and test the corresp
 
 ---
 
-*For decision trees and orchestration routing, see `reference/`. For design philosophy and TDD enforcement patterns, see `docs/`.*
+*For decision trees, orchestration routing, design philosophy and TDD enforcement patterns, see `docs/` - the human-facing documentation. `reference/` holds only what the harness loads at runtime: the index files injected by hooks and the technique files skills read inline.*

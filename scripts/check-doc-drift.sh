@@ -28,11 +28,10 @@ BT='`'   # backtick literal, so the shell never tries to expand `...`
 # Reference docs that are legitimately NOT wired to a hook or command. Each
 # entry REQUIRES a one-line reason. Adds appear in the commit diff, so a
 # reviewer sees the bypass and the reason forces a conscious "yes, standalone."
-ALLOWLIST=(
-  # reference/decision-tree.md: human- and guide-facing orchestration map. Read
-  #   directly by people and the guide agent; not invoked by any hook/command.
-  "reference/decision-tree.md"
-)
+# Entries are reference/ paths - that is the only domain the check-5 loop below
+# walks, so a path outside reference/ can never match and would be dead weight.
+# Currently empty: every reference/ file is wired to a hook, command or skill.
+ALLOWLIST=()
 
 findings=()
 add() { findings+=("$1"); }
@@ -51,11 +50,11 @@ has_token() { printf '%s' "$1" | grep -qF "${BT}${2}${BT}"; }
 #    Expected set = /craft (commands/craft.md) + /craft:<x> (commands/craft-*.md)
 #    + skills invoked as commands, read from the machine-readable marker so the
 #    list stays single-source (never hardcoded here).
-cmd_ref="$(section '## Commands Reference' reference/decision-tree.md)"
+cmd_ref="$(section '## Commands Reference' docs/decision-tree.md)"
 # Unquoted $skill_cmds in the loop below is intentional - it word-splits the
 # marker list on IFS (spaces and newlines), which handles one or many markers.
 # Do not quote it.
-skill_cmds="$(grep -oE '<!-- skill-commands:[^>]*-->' reference/decision-tree.md \
+skill_cmds="$(grep -oE '<!-- skill-commands:[^>]*-->' docs/decision-tree.md \
   | sed -E 's/<!-- skill-commands: *//; s/ *-->//' | tr ',' ' ')"
 expected_cmds="/craft"
 for f in commands/craft-*.md; do
@@ -68,7 +67,7 @@ for c in $expected_cmds; do
 done
 
 # 2. Skill parity: every skill dir appears in the Skills Reference.
-skill_ref="$(section '## Skills Reference' reference/decision-tree.md)"
+skill_ref="$(section '## Skills Reference' docs/decision-tree.md)"
 for d in skills/*/; do
   [ -d "$d" ] || continue
   n="$(basename "$d")"
@@ -76,7 +75,7 @@ for d in skills/*/; do
 done
 
 # 3. Agent parity x3: every agent appears in all three lists.
-agents_dt="$(section '## Agents Reference' reference/decision-tree.md)"
+agents_dt="$(section '## Agents Reference' docs/decision-tree.md)"
 agents_rm="$(section '## Agents' README.md)"
 catalog="$(cat docs/agent-catalog.md)"
 for f in agents/*.md; do
@@ -110,7 +109,10 @@ check_count commands "$n_commands"
 for f in reference/*.md reference/*.min; do
   [ -e "$f" ] || continue
   skip=0
-  for a in "${ALLOWLIST[@]}"; do [ "$a" = "$f" ] && skip=1; done
+  # Guarded expansion: under `set -u`, bash 3.2 (what macOS ships as /bin/bash)
+  # treats "${ALLOWLIST[@]}" on an EMPTY array as an unbound variable and aborts.
+  # This form is a no-op when the array has entries and safe when it does not.
+  for a in ${ALLOWLIST[@]+"${ALLOWLIST[@]}"}; do [ "$a" = "$f" ] && skip=1; done
   [ "$skip" = 1 ] && continue
   base="$(basename "$f")"
   grep -rqF "$base" hooks/ commands/ skills/ agents/ 2>/dev/null \
@@ -130,7 +132,7 @@ sentinel="$(grep -rln 'validate-chunk via Skill\|Invoke validate-chunk skill' \
 while read -r p; do
   [ -z "$p" ] && continue
   [ -e "$p" ] || [ -e "commands/$p" ] || add "[refpath] decision-tree names '$p' but no such file exists"
-done < <(grep -oE '(commands/)?references/[A-Za-z0-9_./-]+\.md' reference/decision-tree.md | sort -u)
+done < <(grep -oE '(commands/)?references/[A-Za-z0-9_./-]+\.md' docs/decision-tree.md | sort -u)
 
 # 8. Changelog sanity: entries are notable-only (features and user-visible
 #    fixes), so the newest entry may LAG plugin.json - internal changes bump

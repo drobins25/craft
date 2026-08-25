@@ -112,7 +112,7 @@ Run before opening a PR. All commits should pass.
 
 ## Documentation integrity
 
-Craft's reference docs (`docs/agent-catalog.md`, `reference/decision-tree.md`, `README.md`, `DESIGN.md`) must stay in sync with the source they describe - agent/command/skill counts, the catalog tables, the orchestration map. A deterministic check enforces this:
+Craft's reference docs (`docs/agent-catalog.md`, `docs/decision-tree.md`, `README.md`, `DESIGN.md`) must stay in sync with the source they describe - agent/command/skill counts, the catalog tables, the orchestration map. A deterministic check enforces this:
 
 ```
 bash scripts/check-doc-drift.sh   # exit 0 = clean, exit 1 = drift (prints exactly what to fix)

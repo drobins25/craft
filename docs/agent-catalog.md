@@ -131,4 +131,4 @@ Need to build a new expert?      → /craft:become (become-researcher + crystall
 
 ---
 
-*For full agent implementation details, see individual files in `plugins/craft/agents/`. For orchestration design patterns, see `reference/decision-tree.md` and consult the `conductor` agent.*
+*For full agent implementation details, see individual files in `plugins/craft/agents/`. For orchestration design patterns, see `docs/decision-tree.md` and consult the `conductor` agent.*

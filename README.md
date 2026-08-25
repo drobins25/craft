@@ -262,7 +262,7 @@ It ends with a real first move, not a blank prompt: **mock up a screen**, **desc
 
 or ship one targeted fix through `/craft:adhoc`. You'll see the whole loop without restructuring anything.
 
-*Curious how `/craft` decides what to invoke? See the [decision tree](reference/decision-tree.md).*
+*Curious how `/craft` decides what to invoke? See the [decision tree](docs/decision-tree.md).*
 
 ### Capture an idea
 
@@ -297,7 +297,7 @@ This runs the story end-to-end. Craft flows through four beats: a creative pass 
 
 You rarely type these. Craft routes plain English to the right one - this table is for when you want to be explicit.
 
-*How `/craft` chooses what to invoke is mapped in [reference/decision-tree.md](reference/decision-tree.md).*
+*How `/craft` chooses what to invoke is mapped in [docs/decision-tree.md](docs/decision-tree.md).*
 
 | Command | Purpose |
 |---------|---------|
@@ -536,7 +536,7 @@ flowchart LR
   C -->|backlog only / nothing| N["Create story or cycle"]
 ```
 
-For the complete routing map across every command - fast paths, state recovery, request gates, the works - see [reference/decision-tree.md](reference/decision-tree.md).
+For the complete routing map across every command - fast paths, state recovery, request gates, the works - see [docs/decision-tree.md](docs/decision-tree.md).
 
 State is the input. There are no flags, no subcommand picker. Whatever is true on disk determines the route.
 
