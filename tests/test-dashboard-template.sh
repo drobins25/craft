@@ -218,7 +218,7 @@ assert_file_contains "the loop reads rest through the shared predicate" "!this.s
 # --- Test 19: every input path calls requestRender ---
 begin_test "every input path calls requestRender"
 REQUEST_RENDER_COUNT=$(grep -c "this.requestRender();" "$TEMPLATE")
-assert_eq "requestRender is called from every input site (mousedown, mousemove, release, mouseleave, wheel, resize, replay)" "7" "$REQUEST_RENDER_COUNT"
+assert_eq "requestRender is called from every input site (mousedown, mousemove, release, mouseleave, wheel, resize, replay, goTo, goBack)" "9" "$REQUEST_RENDER_COUNT"
 
 # --- Test 20: both controls exist ---
 begin_test "both controls exist"
@@ -238,7 +238,9 @@ begin_test "controls use the machine voice and the ghost border/text values"
 CONTROLS_CSS=$(awk '/#stage #controls \{/,/^  \}/' "$TEMPLATE")
 assert_contains "controls use the machine-voice font stack" 'ui-monospace, "SF Mono", Menlo, Consolas, monospace' "$CONTROLS_CSS"
 assert_contains "control buttons carry the hairline border" "1px solid rgba(210, 215, 225, 0.16)" "$CONTROLS_BUTTON_CSS"
-assert_contains "control buttons rest at the ghost text value" "rgba(220, 224, 232, 0.34)" "$CONTROLS_BUTTON_CSS"
+# Raised from the original ghost 0.34: that measured 2.2:1, under the 4.5:1
+# WCAG minimum, leaving the page's only two controls unreadable until hover.
+assert_contains "control buttons rest at a legible value" "rgba(226, 230, 238, 0.78)" "$CONTROLS_BUTTON_CSS"
 assert_file_contains "control buttons brighten on hover" "#stage #controls button:hover" "$TEMPLATE"
 
 # --- Test 23: refresh reloads the page ---
@@ -290,7 +292,10 @@ assert_file_not_contains "no hardcoded KIND_OUT table" "const KIND_OUT" "$TEMPLA
 assert_file_not_contains "no hardcoded KIND_IN table" "const KIND_IN" "$TEMPLATE"
 assert_file_not_contains "no hardcoded STATUS table" "const STATUS = {" "$TEMPLATE"
 assert_file_not_contains "no hardcoded TYPE_NAME table" "const TYPE_NAME = {" "$TEMPLATE"
-assert_file_contains "the panel reads relationship words off the emitted vocabulary" "VOCAB.kinds" "$TEMPLATE"
+# The card prints no relationship verbs since the Connections region became
+# the commit strip, so there is no VOCAB.kinds read to assert. What must hold
+# is that the words never creep back in as a hardcoded table (asserted above).
+assert_file_not_contains "the panel reads no relationship words at all" "VOCAB.kinds" "$TEMPLATE"
 assert_file_contains "the panel reads type words off the emitted vocabulary" "VOCAB.types" "$TEMPLATE"
 assert_file_contains "the panel reads status words off the emitted vocabulary" "VOCAB.statuses" "$TEMPLATE"
 assert_file_contains "the panel reads dial outcome words off the emitted vocabulary" "VOCAB.dial_outcomes" "$TEMPLATE"

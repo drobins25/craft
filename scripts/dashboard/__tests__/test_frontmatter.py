@@ -98,10 +98,74 @@ class TestParse(unittest.TestCase):
         )
 
     def test_nested_indented_lines_are_skipped(self):
+        # Indented lines under a PLAIN key are a nested mapping and stay
+        # skipped. This is deliberately distinct from a block scalar body,
+        # which the tests below require to be collected.
         text = "---\nname: outer\nnested:\n  inner: value\n---\nbody\n"
         fields, _ = frontmatter.parse(text)
         self.assertEqual(fields["name"], "outer")
         self.assertNotIn("inner", fields)
+
+    def test_literal_block_scalar_keeps_its_lines(self):
+        text = "---\ntarget: |\n  First line.\n  Second line.\nstatus: active\n---\nbody\n"
+        fields, _ = frontmatter.parse(text)
+        self.assertEqual(fields["target"], "First line.\nSecond line.\n")
+        self.assertEqual(fields["status"], "active")
+
+    def test_folded_block_scalar_joins_with_spaces(self):
+        text = "---\ntarget: >\n  one\n  two\nstatus: active\n---\nbody\n"
+        fields, _ = frontmatter.parse(text)
+        self.assertEqual(fields["target"], "one two\n")
+        self.assertEqual(fields["status"], "active")
+
+    def test_block_scalar_strip_chomping_drops_trailing_newline(self):
+        text = "---\ntarget: |-\n  no trailing newline\nstatus: active\n---\nbody\n"
+        fields, _ = frontmatter.parse(text)
+        self.assertEqual(fields["target"], "no trailing newline")
+
+    def test_block_scalar_with_explicit_indent_and_comment(self):
+        text = "---\ntarget: |2 # why\n  indented\nstatus: active\n---\nbody\n"
+        fields, _ = frontmatter.parse(text)
+        self.assertEqual(fields["target"], "indented\n")
+        self.assertEqual(fields["status"], "active")
+
+    def test_block_scalar_indicators_parse_in_either_order(self):
+        # YAML lets the chomping indicator and the explicit indent digit be
+        # written in either order. Pinning one order sent `|2-` down the
+        # plain-scalar path, where the header text became the whole value and
+        # the prose under it was dropped - the original defect, unfixed.
+        for header, expected in (
+            ("|-2", "no trailing newline"),
+            ("|2-", "no trailing newline"),
+            ("|+2", "no trailing newline\n"),
+            ("|2+", "no trailing newline\n"),
+        ):
+            text = "---\ntarget: %s\n  no trailing newline\nstatus: active\n---\nbody\n" % header
+            fields, _ = frontmatter.parse(text)
+            self.assertEqual(fields["target"], expected, header)
+            self.assertEqual(fields["status"], "active", header)
+
+    def test_empty_block_scalar_is_empty_string(self):
+        text = "---\ntarget: |\nstatus: active\n---\nbody\n"
+        fields, _ = frontmatter.parse(text)
+        self.assertEqual(fields["target"], "")
+        self.assertEqual(fields["status"], "active")
+
+    def test_block_scalar_does_not_swallow_a_following_nested_key(self):
+        text = "---\ntarget: |\n  body text\ngoals:\n  - a\nstatus: active\n---\nbody\n"
+        fields, _ = frontmatter.parse(text)
+        self.assertEqual(fields["target"], "body text\n")
+        self.assertEqual(fields["status"], "active")
+
+    def test_a_pipe_inside_a_plain_scalar_is_not_a_block(self):
+        text = "---\ntarget: foo | bar\nstatus: active\n---\nbody\n"
+        fields, _ = frontmatter.parse(text)
+        self.assertEqual(fields["target"], "foo | bar")
+
+    def test_a_non_block_pipe_token_stays_verbatim(self):
+        text = "---\ntarget: |x\nstatus: active\n---\nbody\n"
+        fields, _ = frontmatter.parse(text)
+        self.assertEqual(fields["target"], "|x")
 
     def test_crlf_line_endings_parse(self):
         text = "---\r\nname: windows-record\r\n---\r\nbody\r\n"

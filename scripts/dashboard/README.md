@@ -30,8 +30,19 @@ outside `<root>/.craft/graph/` (enforced, tested).
 All output lands in `<root>/.craft/graph/`, loadable from `file://` via
 `<script src>` (no fetch needed):
 
+> **Expected console noise on `file://`.** Chrome logs `Unsafe attempt to load
+> URL <page> from frame with URL <page>. 'file:' URLs are treated as unique
+> security origins.` once per load. It is not caused by this page: a file
+> containing a single character reproduces it, and adding a favicon (data URI
+> or a real adjacent `.ico`) does not suppress it. It is a long-standing
+> Chromium defect where a generic origin-check message is printed for `file:`
+> origins, naming the frame's own URL on both sides -
+> https://issues.chromium.org/issues/41189947 (open since 2015). Nothing to
+> fix here; the only workarounds are browser launch flags, which this design
+> deliberately does not require.
+
 - **`graph.js`** assigns `window.CRAFT_GRAPH`:
-  `{version, nodes, edges, annotations, stats, build}`.
+  `{version, nodes, edges, annotations, stats, build, vocabulary}`.
   - `version` (integer, currently 1) exists for the page template to gate
     on. On a mismatch, handling - defensive read or prompting a rebuild -
     is the TEMPLATE's job, never this builder's.
@@ -41,12 +52,19 @@ All output lands in `<root>/.craft/graph/`, loadable from `file://` via
     `kind` on dials, optional `summary` on any type with an extractable
     source section - absent, never empty or null, when the record has none).
   - `edges` are `{source, target, kind}`, sorted by `(kind, source,
-    target)`. Kinds: `belongs_to, blocked_by, blocks, graduated_to,
-    grew_from, reapplies, satisfied_todo, source_story, source_cycle,
-    mockup, dial, origin, references`.
+    target)`. The twelve kinds: `belongs_to, blocks, dial, graduated_to,
+    grew_from, mockup, origin, reapplies, references, satisfied_todo,
+    source_cycle, source_story`. `blocked_by` is NOT among them: a story's
+    `**Blocked by:**` marker is a `blocks` FIELD carrying `invert=True`, so it
+    becomes one `blocks` edge pointing the other way, never a thirteenth kind.
   - `annotations` hold every reference-shaped value that did NOT become an
-    edge, with a reason (`sentinel`, `unresolved`, `out-of-scope-type`,
-    `prose`). Nothing is silently dropped.
+    edge, with a reason - one of the eight: `sentinel`, `unresolved`,
+    `out-of-scope-type`, `prose`, `container`, `not-a-record`, `wrong-type`,
+    `self-reference`. Nothing is silently dropped.
+  - `vocabulary` carries the display words the page prints, so the page holds
+    no second copy of the rules: `statuses`, `dial_outcomes`, `types`, and
+    `membership` (the kinds that mean containment, which the page clusters
+    on). Relationship verbs are deliberately absent - nothing reads them.
   - `graph.js` carries NO timestamp: an unchanged corpus produces
     byte-identical output and the second build writes zero files.
 - **`records/{id}.js`** (one per record) assigns

@@ -30,6 +30,23 @@ class TestPerTypeExtraction(unittest.TestCase):
             summary.extract("cycle", fields, ""), "Ship the graph template."
         )
 
+    def test_cycle_target_written_as_a_block_scalar_is_not_the_indicator(self):
+        # Handing extract() a pre-parsed dict never exercises the parse step,
+        # which is how a cycle shipped with "|" as its whole summary. Parse
+        # the TEXT so the reader is in the path under test.
+        from src import registry
+        text = (
+            "name: x\n"
+            "title: \"X\"\n"
+            "status: active\n"
+            "target: |\n"
+            "  Make the harness comprehensible.\n"
+            "  A second line of prose.\n"
+        )
+        node, _, _ = registry.parse_file("cycle", "cycles/9-x/cycle.yaml", text)
+        self.assertNotEqual(node.get("summary"), "|")
+        self.assertIn("Make the harness comprehensible.", node.get("summary", ""))
+
     def test_fix_summary_comes_from_symptom(self):
         body = "## Symptom\n\nThe agent produces stale output.\n\n## Root Cause\n\nCache never invalidated.\n"
         self.assertEqual(

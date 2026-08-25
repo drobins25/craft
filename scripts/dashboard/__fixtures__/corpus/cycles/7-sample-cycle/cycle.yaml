@@ -3,7 +3,10 @@ title: "Sample Cycle"
 status: active
 created: 2026-01-01
 updated: 2026-01-10
-target: A neutral fixture cycle for parser tests.
+target: |
+  A neutral fixture cycle for parser tests. Written as a block scalar on
+  purpose: the corpus must carry this shape, or a reader that drops block
+  bodies passes every corpus test.
 source_concept: ['planning/sample-concept.md']
 
 goals:

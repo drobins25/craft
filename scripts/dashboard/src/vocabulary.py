@@ -82,8 +82,10 @@ REASONS = frozenset(
 NOT_RECORDS = {
     "graph": "builder output - .craft/graph/ is written by the build, "
     "never read as a record source (registry.py skip list)",
-    "dashboard": "dashboard output - .craft/dashboard/ is written by the "
-    "build, never read as a record source (registry.py skip list)",
+    "dashboard": "legacy builder output - .craft/dashboard/ was the output "
+    "folder before 2026-08-21; the build writes .craft/graph/ now, but a "
+    "leftover copy must still never be read as a record source "
+    "(registry.py skip list)",
     "checkpoints": "state, not records - not nodes (alignment)",
     "requests": "queued user requests are not nodes in v1 (alignment)",
     "design": "visual DNA (tokens, locked patterns) - values, not records "
@@ -424,10 +426,10 @@ def display_block():
     cycle edge without leaving the page's clustering broken.
     """
     return {
-        "kinds": {
-            kind: {"out": spec["out"], "in": spec["in"]}
-            for kind, spec in KINDS.items()
-        },
+        # No `kinds` block. The page stopped printing relationship words when
+        # the card's Connections region became the commit strip, so shipping
+        # them was 679 bytes nothing reads. KINDS still governs parsing,
+        # inversion and membership here - only the display pair is unemitted.
         "statuses": dict(STATUSES),
         "dial_outcomes": dict(DIAL_OUTCOMES),
         "types": {t: t.capitalize() for t in RECORD_TYPES},

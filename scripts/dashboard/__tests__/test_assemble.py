@@ -446,14 +446,18 @@ class TestBuildOnCorpus(unittest.TestCase):
         self.assertEqual(self.graph["version"], 1)
         self.assertEqual(
             set(self.graph["vocabulary"]),
-            {"kinds", "statuses", "dial_outcomes", "types", "membership"},
+            {"statuses", "dial_outcomes", "types", "membership"},
         )
 
-    def test_emitted_vocabulary_covers_every_kind_the_build_emitted(self):
+    def test_every_emitted_kind_is_a_declared_kind(self):
+        # The words are no longer emitted (the card prints none), but the
+        # kinds themselves still reach the page on every edge and drive
+        # clustering through `membership`. An edge carrying a kind the
+        # definition never declared is still a build defect.
+        from src import vocabulary
         emitted_kinds = {e["kind"] for e in self.graph["edges"]}
-        known_kinds = set(self.graph["vocabulary"]["kinds"])
-        missing = emitted_kinds - known_kinds
-        self.assertEqual(missing, set(), "kinds with no display words: %s" % missing)
+        undeclared = emitted_kinds - set(vocabulary.KINDS)
+        self.assertEqual(undeclared, set(), "undeclared kinds: %s" % undeclared)
 
     def test_emitted_vocabulary_covers_every_status_the_build_emitted(self):
         # Dial nodes hold a session outcome in the status slot, a separate
@@ -615,6 +619,65 @@ class TestEmptyCorpus(unittest.TestCase):
         self.assertEqual(graph["stats"]["days_of_craft"], 0)
         self.assertIsNone(graph["stats"]["keystone"])
         self.assertNotIn("tokens", graph)
+
+
+class TestEnsureUniqueId(unittest.TestCase):
+    """Case-fold id collisions. These tests used to guard identity.IdAllocator,
+    a second implementation of this same rule that nothing in the build ever
+    called; the allocator is gone and the coverage moved onto the code that
+    actually runs."""
+
+    def _node(self, nid, path):
+        return {"id": nid, "_path": path}
+
+    def test_distinct_paths_keep_their_ids_and_warn_nothing(self):
+        seen, warnings = {}, []
+        n1, _ = assemble._ensure_unique_id(
+            self._node("planning--planning--readme", "planning/README.md"), [], seen, warnings
+        )
+        n2, _ = assemble._ensure_unique_id(
+            self._node("planning--planning--sample-area--readme",
+                       "planning/sample-area/README.md"), [], seen, warnings
+        )
+        self.assertNotEqual(n1["id"], n2["id"])
+        self.assertEqual(warnings, [])
+
+    def test_case_variant_paths_get_distinct_ids_with_a_warning(self):
+        seen, warnings = {}, []
+        n1, _ = assemble._ensure_unique_id(
+            self._node("planning--planning--notes", "planning/Notes.md"), [], seen, warnings
+        )
+        n2, _ = assemble._ensure_unique_id(
+            self._node("planning--planning--notes", "planning/notes.md"), [], seen, warnings
+        )
+        self.assertNotEqual(n1["id"], n2["id"])
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(warnings[0]["path"], "planning/notes.md")
+        self.assertIn("planning/Notes.md", warnings[0]["reason"])
+
+    def test_remap_follows_the_node_onto_its_own_links(self):
+        seen, warnings = {}, []
+        assemble._ensure_unique_id(
+            self._node("note--a--x", "a/X.md"), [], seen, warnings
+        )
+        links = [{"source_id": "note--a--x", "field": "blocks"}]
+        node, out = assemble._ensure_unique_id(
+            self._node("note--a--x", "a/x.md"), links, seen, warnings
+        )
+        # A link left pointing at the pre-remap id would resolve to the wrong record.
+        self.assertEqual(out[0]["source_id"], node["id"])
+
+    def test_suffix_allocation_is_deterministic(self):
+        def run():
+            seen, warnings, out = {}, [], []
+            for path in ["a/X.md", "a/x.md", "a/X.MD"]:
+                node, _ = assemble._ensure_unique_id(
+                    self._node("note--a--x", path), [], seen, warnings
+                )
+                out.append(node["id"])
+            return out
+
+        self.assertEqual(run(), run())
 
 
 if __name__ == "__main__":

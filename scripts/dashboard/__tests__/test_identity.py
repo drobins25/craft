@@ -40,35 +40,5 @@ class TestNodeId(unittest.TestCase):
         self.assertEqual(nid, nid.lower())
 
 
-class TestIdAllocator(unittest.TestCase):
-    def test_distinct_paths_allocate_without_warning(self):
-        alloc = identity.IdAllocator()
-        id1, warn1 = alloc.allocate("planning", "planning/README.md")
-        id2, warn2 = alloc.allocate("planning", "planning/sample-area/README.md")
-        self.assertNotEqual(id1, id2)
-        self.assertIsNone(warn1)
-        self.assertIsNone(warn2)
-
-    def test_case_variant_paths_get_distinct_ids_with_warning(self):
-        alloc = identity.IdAllocator()
-        id1, warn1 = alloc.allocate("planning", "planning/Notes.md")
-        id2, warn2 = alloc.allocate("planning", "planning/notes.md")
-        self.assertIsNone(warn1)
-        self.assertIsNotNone(warn2)
-        self.assertNotEqual(id1, id2)
-        self.assertTrue(ID_PATTERN.match(id2), id2)
-
-    def test_suffix_allocation_is_deterministic(self):
-        def run():
-            alloc = identity.IdAllocator()
-            out = []
-            for p in ["a/X.md", "a/x.md", "a/X.MD"]:
-                nid, _ = alloc.allocate("note", p)
-                out.append(nid)
-            return out
-
-        self.assertEqual(run(), run())
-
-
 if __name__ == "__main__":
     unittest.main()

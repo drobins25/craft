@@ -340,20 +340,19 @@ class TestDisplayBlock(unittest.TestCase):
     type sets), and shipping it would put a second copy of the rules on
     disk, which is the exact defect this story exists to end."""
 
-    def test_display_block_has_the_five_declared_top_level_keys(self):
+    def test_display_block_has_the_four_declared_top_level_keys(self):
         block = vocabulary.display_block()
         self.assertEqual(
             set(block),
-            {"kinds", "statuses", "dial_outcomes", "types", "membership"},
+            {"statuses", "dial_outcomes", "types", "membership"},
         )
 
-    def test_display_block_kinds_carry_only_out_and_in_words(self):
-        block = vocabulary.display_block()
-        self.assertEqual(set(block["kinds"]), set(vocabulary.KINDS))
-        for kind, spec in block["kinds"].items():
-            self.assertEqual(set(spec), {"out", "in"})
-            self.assertEqual(spec["out"], vocabulary.KINDS[kind]["out"])
-            self.assertEqual(spec["in"], vocabulary.KINDS[kind]["in"])
+    def test_display_block_emits_no_relationship_words(self):
+        # The card stopped printing relationship verbs when its Connections
+        # region became the commit strip. KINDS still carries the words and
+        # the gates below still hold them correct - they are simply not
+        # shipped to a page with no reader for them.
+        self.assertNotIn("kinds", vocabulary.display_block())
 
     def test_display_block_carries_no_enforcement_data(self):
         # No invert flags, no type sets, no expect sets - the page reads
@@ -397,7 +396,9 @@ class TestStatusProseDrift(unittest.TestCase):
     `in-progress`, `draft` and `written` onto session files that classify
     as no record type under registry._RULES. So the scope below is a
     declared list, per file, with the reason it counts as a record-writer -
-    the ALLOWLIST idiom already used at check-doc-drift.sh:31-35. Decision
+    the ALLOWLIST idiom already used by the orphan-reference check in
+    scripts/check-doc-drift.sh (grep for `ALLOWLIST=`; named rather than
+    cited by line, so an edit above it cannot rot this reference). Decision
     11 (an unrecognised status prints as stored) is the designed valve for
     what this scope cannot reach.
     """

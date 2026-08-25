@@ -16,6 +16,14 @@ BOM = "\ufeff"
 
 _KEY_RE = re.compile(r"^([A-Za-z0-9_-]+):(.*)$")
 _COMMENT_RE = re.compile(r"\s#\s?")
+# A block scalar header: `|` or `>`, then the two optional header indicators
+# (a chomping `-`/`+` and an explicit indent digit) in EITHER order, then an
+# optional trailing comment. Matching them as one unordered group matters:
+# pinning an order rejected `|2-` and `|2+`, and a rejected header falls
+# through to the plain-scalar path, where the indicator character itself
+# becomes the value and the prose beneath it is dropped by the indented-line
+# skip below.
+_BLOCK_RE = re.compile(r"^([|>])([-+0-9]*)\s*(?:#.*)?$")
 
 
 def read(path):
@@ -52,11 +60,16 @@ def parse_mapping(lines):
 
     Values are strings, except inline lists (`[a, b]`) which become list[str]
     (`[]` becomes []). Trailing ` # comment` is stripped from unquoted
-    scalars. Indented (nested) lines and comment lines are skipped.
+    scalars. Indented (nested) lines and comment lines are skipped, EXCEPT
+    where they form the body of a block scalar (`key: |` / `key: >`), which
+    is collected as that key's value.
     """
     fields = {}
-    for line in lines:
-        line = line.rstrip("\r")
+    lines = [line.rstrip("\r") for line in lines]
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        i += 1
         if not line.strip() or line.lstrip().startswith("#"):
             continue
         if line[0] in (" ", "\t"):
@@ -66,6 +79,10 @@ def parse_mapping(lines):
             continue
         key = m.group(1)
         rest = m.group(2).strip()
+        block = _BLOCK_RE.match(rest)
+        if block:
+            fields[key], i = _read_block(lines, i, block.group(1), block.group(2))
+            continue
         if rest.startswith("["):
             end = rest.rfind("]")
             if end != -1:
@@ -73,6 +90,53 @@ def parse_mapping(lines):
                 continue
         fields[key] = _parse_scalar(rest)
     return fields
+
+
+def _read_block(lines, start, style, indicators):
+    """Collect a block scalar's indented body -> (value, index after it).
+
+    `|` keeps the body's newlines, `>` folds them to spaces. `indicators` is
+    the header's raw indicator text (chomping and explicit-indent digit, in
+    either order); a `-` anywhere in it drops the trailing newline.
+
+    Known divergence from spec YAML: `+` (keep) does not preserve trailing
+    blank lines. No craft record uses `|+`, and card summaries collapse
+    whitespace before display, so the difference is unobservable here.
+    """
+    body = []
+    i = start
+    while i < len(lines):
+        line = lines[i]
+        if line.strip() and not line[0].isspace():
+            break
+        body.append(line)
+        i += 1
+    while body and not body[-1].strip():
+        body.pop()
+    indents = [len(l) - len(l.lstrip()) for l in body if l.strip()]
+    indent = min(indents) if indents else 0
+    body = [l[indent:] if l.strip() else "" for l in body]
+    value = _fold(body) if style == ">" else "\n".join(body)
+    if "-" not in indicators and value:
+        value += "\n"
+    return value, i
+
+
+def _fold(body):
+    """Join a folded block's lines with spaces. A blank line is a paragraph
+    break, and a more-indented line keeps its own newline - YAML's
+    literal-inside-folded rule."""
+    out = []
+    for line in body:
+        if not line.strip():
+            out.append("\n")
+        elif line[0].isspace():
+            out.append("\n" + line)
+        elif out and not out[-1].endswith("\n"):
+            out.append(" " + line)
+        else:
+            out.append(line)
+    return "".join(out)
 
 
 def _parse_scalar(raw):

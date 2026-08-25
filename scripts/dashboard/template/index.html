@@ -23,7 +23,7 @@
     pointer-events: none;
     z-index: 5;
     font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-    color: rgba(220, 224, 232, 0.34);
+    color: rgba(220, 224, 232, 0.62);
   }
 
   #stage #controls {
@@ -44,7 +44,7 @@
     pointer-events: auto;
     font-family: inherit;
     font-size: inherit;
-    color: rgba(220, 224, 232, 0.34);
+    color: rgba(226, 230, 238, 0.78);
     background: transparent;
     border: 1px solid rgba(210, 215, 225, 0.16);
     border-radius: 4px;
@@ -104,15 +104,26 @@
     color: #c6cad4;
     margin-bottom: 12px;
     flex: none;
+    overflow-wrap: anywhere;
   }
+  /* Section headers carry their own boundary: without the top rule and margin
+     a chunk list and the Connections heading below it sit flush together. */
   #stage #panel .p-rel-label {
     font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
     font-size: 10px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: #767b87;
+    color: #9298a6;
+    margin-top: 18px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(210, 215, 225, 0.14);
     margin-bottom: 6px;
     flex: none;
+  }
+  #stage #panel .p-rels > .p-rel-label:first-child {
+    margin-top: 4px;
+    padding-top: 0;
+    border-top: none;
   }
   #stage #panel .p-rels {
     overflow-y: auto;
@@ -124,8 +135,138 @@
     color: #c7cbd4;
     padding: 4px 0;
     border-top: 1px solid rgba(210, 215, 225, 0.08);
+    overflow-wrap: anywhere;
   }
   #stage #panel .p-rel-item:first-of-type { border-top: none; }
+
+  /* Back is a character in the type line, not a control on the card: bare
+     chevron in that line's own colour and size, no fill, no border, no
+     hit-box. iOS navigation-bar chevron / Linear's side panel. */
+  #stage #panel .p-back {
+    all: unset;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+    font-size: 1.25em;
+    line-height: 1;
+    margin-right: 0.5em;
+    vertical-align: -0.06em;
+  }
+  #stage #panel .p-back:hover { color: #ffffff; }
+  /* `all: unset` above also unsets the user-agent focus ring, so the keyboard
+     affordance has to be put back by hand - same outline the strip scroller
+     uses. :focus-visible, not :focus, so a mouse click leaves no ring behind. */
+  #stage #panel .p-back:focus-visible {
+    outline: 1px solid rgba(159, 216, 255, 0.5);
+    outline-offset: 2px;
+    color: #ffffff;
+  }
+
+  /* The commit strip. A cell is ONE RECORD at a fixed size - a longer span
+     widens the strip and scrolls; it never shrinks the cells below a
+     clickable target. The scroller and its chrome exist only on overflow. */
+  #stage #panel .p-strip-view { overflow: hidden; }
+  #stage #panel .p-strip-view.is-scrollable {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding-bottom: 7px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(210, 215, 225, 0.34) rgba(210, 215, 225, 0.10);
+    -webkit-mask-image: linear-gradient(to right,
+      transparent 0,
+      #000 calc(18px * var(--fade-l, 0)),
+      #000 calc(100% - 18px * var(--fade-r, 0)),
+      transparent 100%);
+  }
+  /* The hairline that was already under the strip IS the scrollbar track, so
+     overflow adds no new visual object to the card. */
+  #stage #panel .p-strip-view.is-scrollable::-webkit-scrollbar { height: 3px; }
+  #stage #panel .p-strip-view.is-scrollable::-webkit-scrollbar-track {
+    background: rgba(210, 215, 225, 0.10);
+    border-radius: 2px;
+  }
+  #stage #panel .p-strip-view.is-scrollable::-webkit-scrollbar-thumb {
+    background: rgba(210, 215, 225, 0.34);
+    border-radius: 2px;
+  }
+  #stage #panel .p-strip-view.is-scrollable::-webkit-scrollbar-thumb:hover {
+    background: rgba(210, 215, 225, 0.55);
+  }
+  #stage #panel .p-strip-view.is-scrollable:focus-visible {
+    outline: 1px solid rgba(159, 216, 255, 0.5);
+    outline-offset: 2px;
+  }
+  #stage #panel .p-strip-grid {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+  }
+  #stage #panel .p-strip-col {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 2px;
+    width: 22px;
+    flex: none;
+  }
+  #stage #panel .p-strip-cell {
+    width: 22px;
+    height: 9px;
+    border-radius: 1.5px;
+    cursor: pointer;
+  }
+  /* The strip is one tab stop with arrow keys inside it, so the ring has to
+     read at 22x9 - same outline as the scroller and the back chevron. */
+  #stage #panel .p-strip-cell:focus-visible {
+    outline: 1px solid rgba(159, 216, 255, 0.5);
+    outline-offset: 2px;
+  }
+  #stage #panel .p-strip-empty {
+    width: 22px;
+    height: 1px;
+    background: rgba(210, 215, 225, 0.10);
+  }
+  #stage #panel .p-strip-ends {
+    display: flex;
+    justify-content: space-between;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #83889a;
+    margin-top: 6px;
+  }
+  #stage #panel .p-strip-span {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #7b808e;
+    margin-top: 7px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(210, 215, 225, 0.10);
+  }
+  #stage #panel .p-strip-legend {
+    margin-top: 7px;
+    font-size: 11px;
+    color: #9aa0ad;
+    line-height: 1.7;
+  }
+  #stage #panel .p-strip-legend span { margin-right: 11px; white-space: nowrap; }
+  #stage #panel .p-strip-swatch {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 1.5px;
+    margin-right: 5px;
+  }
+  #stage #panel .p-strip-hover {
+    font-size: 11.5px;
+    color: #aeb4c1;
+    margin-top: 8px;
+    height: 32px;
+    line-height: 16px;
+    overflow: hidden;
+  }
 </style>
 </head>
 <body>
@@ -158,10 +299,11 @@
    tags above rather than any import. */
 const TAU = Math.PI * 2;
 const GRAPH = (window.CRAFT_GRAPH && window.CRAFT_GRAPH.nodes) ? window.CRAFT_GRAPH : { nodes: [], edges: [] };
-// The relationship, status, dial-outcome and type words this page prints -
-// additive on the graph envelope, read here instead of held as a second
-// copy of the same rules inside the page.
-const VOCAB = GRAPH.vocabulary || { kinds: {}, statuses: {}, dial_outcomes: {}, types: {}, membership: [] };
+// The status, dial-outcome and type words this page prints - additive on the
+// graph envelope, read here instead of held as a second copy of the same rules
+// inside the page. No relationship verbs: the card's Connections region is the
+// commit strip now, so the builder stopped emitting words nothing reads.
+const VOCAB = GRAPH.vocabulary || { statuses: {}, dial_outcomes: {}, types: {}, membership: [] };
 const MEMBERSHIP_KINDS = new Set(VOCAB.membership);
 
 // The page cannot read .craft/'s mtime, so elapsed time since the last build
@@ -441,6 +583,18 @@ const TYPE_HSL = {
 const TYPE_RGB = {};
 for (const k in TYPE_HSL) TYPE_RGB[k] = hsl2rgb(TYPE_HSL[k][0], TYPE_HSL[k][1], TYPE_HSL[k][2]);
 const GROUND = '#121214';
+const rgbCss = (rgb, a) => 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',' + (a === undefined ? 1 : a) + ')';
+// Status dims a record without changing its hue, so the strip reads type by
+// colour and progress by weight, the same pair the graph already uses.
+const STATUS_ALPHA = { complete: 1, shipped: 1, active: 0.85, ready: 0.6, open: 0.6, planning: 0.4 };
+const fillFor = n => rgbCss(TYPE_RGB[n.type] || FALLBACK_RGB, STATUS_ALPHA[n.status] === undefined ? 0.75 : STATUS_ALPHA[n.status]);
+// Legend wording rides the same vocabulary table the cards already print.
+const typeCountWord = (t, count) => {
+  const word = String(VOCAB.types[t] || t).toLowerCase();
+  if (count === 1) return word;
+  if (/[^aeiou]y$/.test(word)) return word.slice(0, -1) + 'ies';   // -y becomes -ies
+  return /(?:[sxz]|ch|sh)$/.test(word) ? word + 'es' : word + 's'; // sibilants take -es
+};
 // Neutral hue for a record type this page has never seen, so a future
 // type degrades gracefully instead of throwing on the first draw frame.
 const FALLBACK_TYPE = '__unknown__';
@@ -596,6 +750,209 @@ class GraphView {
   spriteFor(type, bucket) { return (this.fill[type] || this.fill[FALLBACK_TYPE])[bucket]; }
   glowFor(type) { return this.hoverGlow[type] || this.hoverGlow[FALLBACK_TYPE]; }
 
+  // ---- the commit strip -------------------------------------------------
+  // One cell = one record, at a FIXED size. A longer span makes the strip
+  // wider (and scrollable); it never shrinks a cell below a clickable target.
+  // The bucket unit is a calendar decision taken from the date strings before
+  // anything is laid out - layout adapts to it and never overrules it.
+  buildStrip(rels) {
+    const CELL_W = 22, CELL_H = 9, GAP = 2;
+    const el = (tag, cls) => { const e = document.createElement(tag); if (cls) e.className = cls; return e; };
+    const host = el('div');
+
+    const items = rels.map(r => r.other).filter(n => n.date).sort((a, b) => a.date.localeCompare(b.date));
+    const undated = rels.length - items.length;
+    if (!items.length) {
+      const none = el('div', 'p-rel-item');
+      none.textContent = rels.length + ' connection' + (rels.length === 1 ? '' : 's') + ', no dates recorded';
+      host.appendChild(none);
+      return host;
+    }
+
+    // Read the calendar straight off 'YYYY-MM-DD'. No average day-lengths:
+    // an approximated month drifts off real month boundaries.
+    const ymd = t => ({ y: +t.slice(0, 4), m: +t.slice(5, 7), d: +t.slice(8, 10) });
+    const a = ymd(items[0].date), b = ymd(items[items.length - 1].date);
+    const spanDays = Math.round((Date.UTC(b.y, b.m - 1, b.d) - Date.UTC(a.y, a.m - 1, a.d)) / 86400000) + 1;
+    const spanMonths = (b.y - a.y) * 12 + (b.m - a.m);
+    const unit = spanDays <= 21 ? 'day' : spanMonths < 4 ? 'week' : spanMonths < 36 ? 'month' : 'year';
+
+    const iso = dt => dt.toISOString().slice(0, 10);
+    const monday = t => { const p = ymd(t); const dt = new Date(Date.UTC(p.y, p.m - 1, p.d)); dt.setUTCDate(dt.getUTCDate() - ((dt.getUTCDay() + 6) % 7)); return iso(dt); };
+    const keyOf = { day: t => t, week: monday, month: t => t.slice(0, 7), year: t => t.slice(0, 4) }[unit];
+    const nextKey = {
+      day:   k => { const p = ymd(k); return iso(new Date(Date.UTC(p.y, p.m - 1, p.d + 1))); },
+      week:  k => { const p = ymd(k); return iso(new Date(Date.UTC(p.y, p.m - 1, p.d + 7))); },
+      month: k => { const y = +k.slice(0, 4), m = +k.slice(5, 7); return m === 12 ? (y + 1) + '-01' : y + '-' + String(m + 1).padStart(2, '0'); },
+      year:  k => String(+k + 1)
+    }[unit];
+
+    // Walk the calendar end to end so an idle week or month is a visible gap.
+    const firstKey = keyOf(items[0].date), lastKey = keyOf(items[items.length - 1].date);
+    const keys = [firstKey];
+    for (let k = firstKey; k !== lastKey && keys.length < 4000; ) { k = nextKey(k); keys.push(k); }
+    const slot = new Map(keys.map((k, i) => [k, i]));
+    const cols = keys.map(() => []);
+    items.forEach(n => { const i = slot.get(keyOf(n.date)); cols[i === undefined ? 0 : i].push(n); });
+
+    const nCols = keys.length;
+    const gridW = nCols * CELL_W + (nCols - 1) * GAP;
+    const tallest = Math.max.apply(null, cols.map(c => c.length).concat([1]));
+
+    const view = el('div', 'p-strip-view');
+    const inner = el('div');
+    inner.style.width = gridW + 'px';
+    const grid = el('div', 'p-strip-grid');
+    grid.style.height = (tallest * (CELL_H + GAP)) + 'px';
+
+    const hover = el('div', 'p-strip-hover');
+    // Cells are addressable by (column, row) so the key handler can walk the
+    // grid. Row 0 is the bottom of a column - .p-strip-col is column-reverse.
+    const colCells = [];
+    cols.forEach((bucket, ci) => {
+      const colEl = el('div', 'p-strip-col');
+      const cells = [];
+      bucket.forEach(n => {
+        const cell = el('div', 'p-strip-cell');
+        cell.style.background = fillFor(n);
+        cell.title = n.label;
+        // A div with a click handler is a pointer affordance and nothing else -
+        // the browser synthesizes no keyboard activation for a roleless
+        // element. Role plus a tab stop plus Enter/Space is the whole gap.
+        cell.setAttribute('role', 'button');
+        cell.setAttribute('aria-label', n.label);
+        cell.tabIndex = -1;
+        cell._node = n;
+        cell._col = ci;
+        cell._row = cells.length;
+        cell.addEventListener('mouseenter', () => { hover.textContent = n.label; });
+        cell.addEventListener('mouseleave', () => { hover.textContent = ''; });
+        cell.addEventListener('focus', () => { hover.textContent = n.label; });
+        cell.addEventListener('blur', () => { hover.textContent = ''; });
+        cell.addEventListener('click', ev => { ev.stopPropagation(); this.goTo(n); });
+        cells.push(cell);
+        colEl.appendChild(cell);
+      });
+      colCells.push(cells);
+      if (!bucket.length) colEl.appendChild(el('div', 'p-strip-empty'));
+      grid.appendChild(colEl);
+    });
+    inner.appendChild(grid);
+
+    // The endpoint dates ride inside the scroller with the bars, so the axis
+    // never describes a window you are not looking at.
+    const fmt = t => new Date(t + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const ends = el('div', 'p-strip-ends');
+    ends.style.width = gridW + 'px';
+    const from = el('span'); from.textContent = fmt(items[0].date); ends.appendChild(from);
+    if (nCols > 1) { const to = el('span'); to.textContent = fmt(items[items.length - 1].date); ends.appendChild(to); }
+    inner.appendChild(ends);
+    view.appendChild(inner);
+    host.appendChild(view);
+
+    // Roving tabindex: the strip is ONE tab stop and the arrows walk it. A tab
+    // stop per cell would put a thousand-record project's whole history in the
+    // tab order, which is why this is not just tabIndex = 0 on every cell.
+    const occupied = colCells.filter(c => c.length);
+    if (occupied.length) {
+      const firstCell = occupied[0][0];
+      const lastCol = occupied[occupied.length - 1];
+      const lastCell = lastCol[lastCol.length - 1];
+      firstCell.tabIndex = 0;
+      grid.setAttribute('role', 'group');
+      grid.setAttribute('aria-label', 'Connected records, ' + items.length + ' dated, oldest first');
+
+      // Nudge the scroller rather than scrollIntoView, which would also scroll
+      // every ancestor. Paired with focus({preventScroll}) so the page is still.
+      const keepInView = cell => {
+        if (!view.classList.contains('is-scrollable')) return;
+        const vr = view.getBoundingClientRect(), cr = cell.getBoundingClientRect();
+        if (cr.left < vr.left) view.scrollLeft -= (vr.left - cr.left);
+        else if (cr.right > vr.right) view.scrollLeft += (cr.right - vr.right);
+      };
+      const move = (from, to) => {
+        if (!to || to === from) return;
+        from.tabIndex = -1;
+        to.tabIndex = 0;
+        to.focus({ preventScroll: true });
+        keepInView(to);
+      };
+      // Step to the nearest column that actually holds records, then clamp the
+      // row - an idle week is a visible gap, and focus should skip over it.
+      const stepCol = (ci, dir, row) => {
+        for (let i = ci + dir; i >= 0 && i < colCells.length; i += dir) {
+          if (colCells[i].length) return colCells[i][Math.min(row, colCells[i].length - 1)];
+        }
+        return null;
+      };
+
+      grid.addEventListener('keydown', ev => {
+        const cell = ev.target;
+        if (!cell || !cell.classList || !cell.classList.contains('p-strip-cell')) return;
+        if (ev.key === 'Enter' || ev.key === ' ' || ev.key === 'Spacebar') {
+          ev.preventDefault();
+          ev.stopPropagation();
+          this.goTo(cell._node);
+          return;
+        }
+        const col = colCells[cell._col];
+        let to = null;
+        if (ev.key === 'ArrowUp') to = col[cell._row + 1];
+        else if (ev.key === 'ArrowDown') to = col[cell._row - 1];
+        else if (ev.key === 'ArrowRight') to = stepCol(cell._col, 1, cell._row);
+        else if (ev.key === 'ArrowLeft') to = stepCol(cell._col, -1, cell._row);
+        else if (ev.key === 'Home') to = firstCell;
+        else if (ev.key === 'End') to = lastCell;
+        else return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        move(cell, to);
+      });
+    }
+
+    // Overflow chrome exists only when the strip actually overflows.
+    const rail = this.panel.querySelector('.p-rels');
+    if (gridW > (rail ? rail.clientWidth : gridW)) {
+      view.classList.add('is-scrollable');
+      view.tabIndex = 0;
+      view.setAttribute('role', 'region');
+      view.setAttribute('aria-label', 'Timeline, ' + nCols + ' ' + unit + (nCols === 1 ? '' : 's') + ', scrollable');
+      const fades = () => {
+        const max = view.scrollWidth - view.clientWidth;
+        view.style.setProperty('--fade-l', view.scrollLeft > 1 ? '1' : '0');
+        view.style.setProperty('--fade-r', view.scrollLeft < max - 1 ? '1' : '0');
+      };
+      view.addEventListener('scroll', fades, { passive: true });
+      // Opened on the most recent end by fillPanel, once the strip is in the
+      // document and has a measurable scrollWidth. Deliberately not deferred
+      // to a frame: the render loop owns the only two rAF call sites.
+      view.dataset.openAtEnd = '1';
+      this._stripFades = fades;
+    }
+
+    // The span and the legend describe the whole record, not the visible
+    // window, so they stay outside the scroller. The span is worded from the
+    // columns actually drawn - there is no second unit ladder to drift.
+    const span = el('div', 'p-strip-span');
+    span.textContent = nCols + ' ' + unit + (nCols === 1 ? '' : 's') + (undated ? ' · ' + undated + ' undated' : '');
+    host.appendChild(span);
+
+    const counts = {};
+    rels.forEach(r => { counts[r.other.type] = (counts[r.other.type] || 0) + 1; });
+    const legend = el('div', 'p-strip-legend');
+    Object.keys(counts).sort((x, y) => counts[y] - counts[x]).forEach(t => {
+      const w = el('span');
+      const sw = el('span', 'p-strip-swatch');
+      sw.style.background = rgbCss(TYPE_RGB[t] || FALLBACK_RGB);
+      w.appendChild(sw);
+      w.appendChild(document.createTextNode(counts[t] + ' ' + typeCountWord(t, counts[t])));
+      legend.appendChild(w);
+    });
+    host.appendChild(legend);
+    host.appendChild(hover);
+    return host;
+  }
+
   fillPanel(n) {
     const fmtDate = d => { if (!d) return ''; const dt = new Date(d + 'T00:00:00'); return isNaN(dt) ? d : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); };
     const bits = [VOCAB.types[n.type] || n.type];
@@ -604,7 +961,18 @@ class GraphView {
     const statusWords = n.type === 'dial' ? VOCAB.dial_outcomes : VOCAB.statuses;
     if (n.status) bits.push(statusWords[n.status] || n.status);
     if (n.date) bits.push(fmtDate(n.date));
-    this.panel.querySelector('.p-type').textContent = bits.join(' · ');
+    const typeEl = this.panel.querySelector('.p-type');
+    typeEl.textContent = bits.join(' · ');
+    // Back is a prefix character on the line that already says where you are,
+    // shown only when there is a card behind this one. No container, no label.
+    if (this.trail && this.trail.length) {
+      const back = document.createElement('button');
+      back.className = 'p-back';
+      back.textContent = '\u2039';
+      back.setAttribute('aria-label', 'Back');
+      back.addEventListener('click', ev => { ev.stopPropagation(); this.goBack(); });
+      typeEl.insertBefore(back, typeEl.firstChild);
+    }
     this.panel.querySelector('.p-title').textContent = n.label;
     this.panel.querySelector('.p-meta').textContent = n.degree + ' connection' + (n.degree === 1 ? '' : 's');
     const summaryEl = this.panel.querySelector('.p-summary');
@@ -621,14 +989,9 @@ class GraphView {
     const rels = this.sim.adj.get(n.id);
     if (rels.length) {
       const label = document.createElement('div'); label.className = 'p-rel-label'; label.textContent = 'Connections'; relsEl.appendChild(label);
-      rels.forEach(rel => {
-        const div = document.createElement('div');
-        div.className = 'p-rel-item';
-        const kindWords = VOCAB.kinds[rel.kind];
-        const verb = kindWords ? (rel.dir === 'out' ? kindWords.out : kindWords.in) : rel.kind;
-        div.textContent = verb + ': ' + rel.other.short;
-        relsEl.appendChild(div);
-      });
+      relsEl.appendChild(this.buildStrip(rels));
+      const view = relsEl.querySelector('.p-strip-view[data-open-at-end]');
+      if (view) { view.scrollLeft = view.scrollWidth; if (this._stripFades) this._stripFades(); }
     }
   }
 
@@ -638,6 +1001,23 @@ class GraphView {
     this.camera.x = window.innerWidth / 2;
     this.camera.y = window.innerHeight / 2;
     this.bg = bakeBackground(window.innerWidth, window.innerHeight);
+    this.requestRender();
+  }
+
+  // Travel between records from inside the card. Pushing happens only on an
+  // in-card click; a canvas click clears the trail (see the mouseup handler).
+  goTo(node) {
+    if (this.selectedNode) (this.trail = this.trail || []).push(this.selectedNode);
+    this.selectedNode = node;
+    this.fillPanel(node);
+    this.requestRender();
+  }
+
+  goBack() {
+    const prev = (this.trail || []).pop();
+    if (!prev) return;
+    this.selectedNode = prev;
+    this.fillPanel(prev);
     this.requestRender();
   }
 
@@ -718,6 +1098,9 @@ class GraphView {
       } else if (this.dragCandidate) {
         const hit = this.dragCandidate;
         this.selectedNode = (hit === this.selectedNode) ? null : hit;
+        // A canvas click is a jump to somewhere new, not a step along a path,
+        // so it starts the card's back-trail over rather than extending it.
+        this.trail = [];
         if (this.selectedNode) this.fillPanel(this.selectedNode);
         if (this.panel) this.panel.classList.toggle('visible', !!this.selectedNode);
       } else if (this.panel && this.panStartScreen) {
