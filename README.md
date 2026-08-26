@@ -607,12 +607,13 @@ Run by the `chunk-validator` agent after every chunk:
 4. **Build** - story-final only. The project's build script must succeed.
 5. **Tests + Coverage** - story-final only. Affected tests must pass.
 6. **Design Tokens** - hardcoded values in UI code that should reference `tokens.yaml` get flagged.
+7. **Citation Scan** - story-final only. Code comments citing craft planning artifacts ("Chunk 3", "Story 4", tokens.yaml key paths) get flagged - comments should say why, not which planning step wrote them.
 
 Failures route to `refine-chunk` (build/lint) or `test-fix` (tests). FAIL is FAIL - no override.
 
 ### Beyond npm: verified command gates
 
-The six built-ins auto-detect npm-shaped projects. For everything else - .NET, Go, Python, Rust, Make, multi-stack monorepos - craft never guesses. It measures what it can see and tells you the truth about the rest:
+The built-ins auto-detect npm-shaped projects. For everything else - .NET, Go, Python, Rust, Make, multi-stack monorepos - craft never guesses. It measures what it can see and tells you the truth about the rest:
 
 - **The coverage line.** Every validation report carries one `Gates` row. A fast filesystem probe (`gate-signals.sh`) fingerprints which toolchain manifests your repo actually has; when every signal is measured by some gate, the row reads `full coverage`, otherwise it names what's unmeasured (`1 uncovered: *.csproj`). Coverage is judged by what actually ran - a package.json whose checks all skipped counts as uncovered, not covered.
 - **The reconcile offer.** When a chunk passes validation while a toolchain sits unmeasured, craft asks - a real question, not a footnote: wire up a gate for *.csproj? There are two answers. Accept, and the setup beat runs. Decline, and craft confirms once what you're waiving ("craft doesn't normally let quality go unwatched, but this is your call") - then never asks about that toolchain again. No answer just means the question returns at the next attended validation; a timeout is not a decision. Autonomous runs ask at launch instead - the pre-flight closes the question while you're still at the keyboard, so a hands-off run never validates toolchains nobody agreed to leave unmeasured.

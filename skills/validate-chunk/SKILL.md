@@ -95,7 +95,7 @@ The agent outputs structured markdown. Parse these fields:
 **Error block format** (may have multiple):
 ```
 - **Check:** [check name]
-- **Type:** [type-error|lint-error|build-error|test-failure|verified-gate-error]
+- **Type:** [type-error|lint-error|build-error|test-failure|verified-gate-error|citation-leak]
 - **File:** [file path]
 - **Line:** [line number or -]
 - **Message:** [error message]

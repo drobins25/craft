@@ -231,12 +231,25 @@ Assignment is enforced primarily at plan time (the binding is a Contract the imp
 
 **Error detail:** first relevant failure line from the command output, max 200 characters.
 
+### 8. Craft Citation Scan
+
+**Goal:** No craft planning citations (chunk/story/cycle numbers, tokens.yaml key paths) ship in code comments.
+**Tool:** Bash
+**Mode:** story-final ONLY — per-chunk mode resolves **SKIP**.
+
+**How:**
+1. If FILES_CHANGED is empty, or PLUGIN_ROOT is absent → **SKIP** (never FAIL; an empty file list is a real story-final state, and without PLUGIN_ROOT never guess the path)
+2. Run: `python3 <PLUGIN_ROOT>/hooks/scripts/check-craft-vocab.py --scan <FILES_CHANGED>`
+3. Exit 0 → **PASS**. Non-zero → **FAIL**, one error block per reported `path:line:` hit (Type: `citation-leak`)
+
+**Error detail:** the scan's `path:line: <text>` output lines, max 200 characters.
+
 ### Gates Coverage
 
 After all checks resolve, derive the coverage summary for the report's `Gates` row from the Pre-Check stack fingerprint. Coverage keys on OUTCOMES, never on manifest presence:
 
 - A **non-package.json manifest** is **covered** when some verified gate that plausibly exercises its toolchain resolved PASS or WARN (judge from the gate's command and name: `dotnet` → `*.csproj`/`*.sln`, `go` → `go.mod`, `cargo` → `Cargo.toml`, `make` → `Makefile`, `composer` → `composer.json`, python tools → `pyproject.toml`). Otherwise it is **uncovered**.
-- The **package.json** manifest is **covered** when at least one built-in check resolved PASS, WARN, or FAIL. If ALL built-in checks resolved SKIP, package.json is **uncovered** — presence alone never covers.
+- The **package.json** manifest is **covered** when at least one built-in check resolved PASS, WARN, or FAIL. If ALL built-in checks resolved SKIP, package.json is **uncovered** — presence alone never covers. Check 8 (Citation Scan) is EXCLUDED from this arithmetic and from the Gates row's ran/skipped counts entirely — it exercises no toolchain and must never make a manifest count as covered.
 
 Row value:
 - No uncovered signals → `full coverage`
@@ -272,6 +285,7 @@ You MUST return your results in this EXACT format. No deviations.
 | Tests + Coverage | PASS|FAIL|SKIP |
 | Design Tokens | PASS|WARN|SKIP |
 | Visual Binding Assignment | PASS|WARN|SKIP |
+| Citation Scan | PASS|FAIL|SKIP |
 | Gates | full coverage | N ran, M skipped, K uncovered: <globs> | coverage unknown (no probe) |
 
 **Fix count:** 0 | No fixes required
@@ -281,7 +295,7 @@ If there are FAILs, add an **Errors:** section:
 ```
 **Errors:**
 - **Check:** [check name]
-- **Type:** [type-error|lint-error|build-error|test-failure|verified-gate-error]
+- **Type:** [type-error|lint-error|build-error|test-failure|verified-gate-error|citation-leak]
 - **File:** [file path]
 - **Line:** [line number or -]
 - **Message:** [error message]
@@ -304,7 +318,7 @@ For a verified command gate, the **Check** field is ALWAYS the literal `Verified
 
 - **Report, don't fix.** You run checks and report results. You never modify source code.
 - **Exact output format.** The skill parses your output with string matching. Any format deviation breaks routing.
-- **Run checks in order.** TypeScript → Lint → Any Types → Build → Tests → Tokens → Visual Binding → Verified Gates.
+- **Run checks in order.** TypeScript → Lint → Any Types → Build → Tests → Tokens → Visual Binding → Verified Gates → Citation Scan.
 - **Minimize tool calls.** Use Read, Grep, and Glob instead of Bash wherever possible. Only use Bash for the stack-signal scan, lint, build, test, and verified-gate execution. Read package.json ONCE and reuse it. Target ~8 total tool calls, not 20+ (the scan adds exactly one; verified gates add one per gate only when a project has wired them).
 - **Truncate long output.** Error/warning messages max 200 characters. Test output can be verbose — extract only the relevant failure line.
 - **Fail open on check errors.** If a check command itself errors (e.g., tool not installed), mark it SKIP with a note, not FAIL. EXCEPTION: a verified command gate that cannot start (exit 127) is a rot-warning WARN, never a silent SKIP — a `verified:` stamp promises measurement, so broken measurement must surface.

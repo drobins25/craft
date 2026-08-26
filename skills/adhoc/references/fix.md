@@ -95,6 +95,7 @@ This is not "run the build and see if it passes." You must verify the **original
 - **Visual fixes** (alignment, style, typography, broken-interaction): You must use Chrome DevTools MCP to navigate to the affected page, take a screenshot, and visually confirm the fix. "Tests pass" is not validation for UI issues - the whole point is what the user sees. Use `take_screenshot`, `evaluate_script`, or `take_snapshot` to verify.
 - **Build/type/lint errors**: Run the specific check that was failing and confirm it passes.
 - **Infrastructure** (chain breaks, state issues): Trace the flow and confirm the safety net exists.
+- **All fixes**: Run `python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/check-craft-vocab.py --scan <files you changed>` and resolve any reported citation before recording validation.
 
 Write what you checked and what you observed in the Validation section.
 
