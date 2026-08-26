@@ -56,7 +56,7 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/dashboard/dashboard-run.sh --root "$PROJECT"
 
 This prints one JSON line on stdout. Read it directly - do not re-derive counts elsewhere:
 
-- `"status":"ok"` - read `nodes` and `edges` from the JSON. On a routine run print: `Your second brain, rebuilt - <nodes> records, <edges> connections`. On the FIRST run (Step 1 hit `STATE=missing`) print the reveal instead - these three blocks verbatim, blank line between them, then continue to Step 3:
+- `"status":"ok"` - read `nodes` and `edges` from the JSON. On a routine run print: `Your second brain, rebuilt - <nodes> records, <edges> connections. It grows as you work - Refresh catches it up.` On the FIRST run (Step 1 hit `STATE=missing`) print the reveal instead - these three blocks verbatim, blank line between them, then continue to Step 3:
 
   ```
   Graph rebuilt - <nodes> records, <edges> connections
