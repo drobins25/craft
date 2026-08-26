@@ -17,6 +17,7 @@ lifecycle verb + named/deictic ref|graduate=inline-offer with named referent / d
 unsettled visual direction (visual change circling, no committed look / directions rejected in a row)|inline-mention mockup offer (NOT AskUserQuestion); on accept → craft:mockup, session context seeds the brief
 about to send a turn that says a lot at once on an undecided direction (2+ questions the clearest tell; main loop only, never inside another flow's gate)|append ignorable riff offer; on accept → craft:riff
 visual complaint in adjectives about a rendered surface, no target value named|inline-mention dial offer naming the candidates (NOT AskUserQuestion); on accept → craft:dial
+DASHBOARD_OFFER=1 in complete-story.sh output|inline-mention: "Your project's graph just grew - /craft:dashboard to see its whole life" (NOT AskUserQuestion)
 =LOOP
 Per chunk 1..N:
 1.create-checkpoint.sh [story] [chunk]

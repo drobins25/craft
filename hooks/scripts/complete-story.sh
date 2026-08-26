@@ -188,4 +188,11 @@ if [ "${COMMIT_ABORTED:-0}" = "1" ]; then
   exit 1
 fi
 
+# The user has never opened the graph page - surface it once, right when
+# the project's story data just grew, so the next turn can mention it.
+# Once the page exists this never fires again; no counter or state needed.
+if [ -n "$PROJECT_ROOT" ] && [ ! -f "${PROJECT_ROOT}.craft/dashboard.html" ]; then
+  echo "DASHBOARD_OFFER=1"
+fi
+
 echo "Story completed: $STORY_FILE"

@@ -302,7 +302,8 @@ You rarely type these. Craft routes plain English to the right one - this table 
 | Command | Purpose |
 |---------|---------|
 | `/craft` | Main entry point - start here |
-| `/craft:status` | Dashboard view of progress |
+| `/craft:status` | Terminal snapshot of progress - cycles, stories, backlog |
+| `/craft:dashboard` | Opens the project graph page in your browser - cycles, stories, and every record, all connected |
 | `/craft:notebook` | Low-ceremony capture for ideas, todos, and notes (durable project facts). Graduate / mark done conversationally - no subcommands needed for lifecycle. |
 | `/craft:riff` | Riff on an idea together - a two-player conversation in small beats, one concept at a time, until it's ready to build. Bare invocation opens from the oldest open notebook idea. |
 | `/craft:story-new` | Create story (lands in backlog) |

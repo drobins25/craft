@@ -26,9 +26,9 @@ fi
 
 # --- Test 2: version stamp appears exactly once, within the first 10 lines ---
 begin_test "version stamp appears exactly once, within the first 10 lines"
-STAMP_COUNT=$(grep -c '<meta name="craft-template-version" content="1">' "$TEMPLATE" || true)
+STAMP_COUNT=$(grep -c '<meta name="craft-template-version" content="' "$TEMPLATE" || true)
 assert_eq "exactly one version stamp in the whole file" "1" "$STAMP_COUNT"
-STAMP_IN_HEAD=$(head -10 "$TEMPLATE" | grep -c '<meta name="craft-template-version" content="1">' || true)
+STAMP_IN_HEAD=$(head -10 "$TEMPLATE" | grep -c '<meta name="craft-template-version" content="' || true)
 assert_eq "the version stamp is within the first 10 lines" "1" "$STAMP_IN_HEAD"
 
 # --- Test 3: no dev chrome survives ---
@@ -308,5 +308,13 @@ assert_eq "exactly two script src tags" "2" "$SCRIPT_SRC_COUNT"
 # --- Test 33: an unrecognised status falls through to the stored value ---
 begin_test "an unrecognised status falls through to the stored value"
 assert_file_contains "the status fallback preserves the raw stored value" "|| n.status" "$TEMPLATE"
+
+# --- Test 34: the data-version notice names the command that fixes it ---
+begin_test "the data-version notice names the command that fixes it"
+assert_file_contains "the notice tells the user to run /craft:dashboard" "/craft:dashboard" "$TEMPLATE"
+
+# --- Test 35: the data-version notice no longer tells the user to refresh ---
+begin_test "the data-version notice no longer tells the user to refresh"
+assert_file_not_contains "the stale 'Refresh to try again' notice is gone" "Refresh to try again" "$TEMPLATE"
 
 finish_tests "test-dashboard-template.sh"

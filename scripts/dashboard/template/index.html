@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="craft-template-version" content="1">
+<meta name="craft-template-version" content="2">
 <title>Craft Browser</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -316,7 +316,7 @@ function computeNotice(build, graph) {
     return 'No graph data yet. Run any craft flow, then press Refresh.';
   }
   if (graph.version !== EXPECTED_DATA_VERSION) {
-    return 'This data was written by a different version of craft. Refresh to try again.';
+    return 'This page is older than your project data. Run /craft:dashboard to update it.';
   }
   if (build && build.status !== 'ok') {
     return "The last rebuild didn't finish. Refresh once it has run again.";
