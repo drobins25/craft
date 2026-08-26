@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="craft-template-version" content="2">
+<meta name="craft-template-version" content="3">
 <title>Craft Browser</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -624,6 +624,24 @@ function bakeRadialGlow(rgb, size) {
   return c;
 }
 
+// A quieter, always-on sibling to bakeRadialGlow above (that one stays a
+// hover-only interaction cue). This sprite paints permanently under a
+// handful of rare or high-degree nodes so the sky itself reads as alive
+// at rest, not only when a visitor points at something. Same additive
+// no-blur baking approach, its own gradient curve.
+function bakeAmbientGlow(rgb, size) {
+  size = size || 96;
+  const c = document.createElement('canvas'); c.width = size; c.height = size;
+  const g = c.getContext('2d');
+  const cs = `${rgb[0]},${rgb[1]},${rgb[2]}`;
+  const grad = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  grad.addColorStop(0, `rgba(${cs},1)`);
+  grad.addColorStop(0.45, `rgba(${cs},0.32)`);
+  grad.addColorStop(1, `rgba(${cs},0)`);
+  g.fillStyle = grad; g.beginPath(); g.arc(size / 2, size / 2, size / 2, 0, TAU); g.fill();
+  return c;
+}
+
 // Flat circle baked at an explicit radius (bakeR) so rim width can be
 // proportioned to that size bucket rather than one universal stretch ratio.
 // No canvas blur-shadow property anywhere in this bakery or the per-frame
@@ -668,6 +686,20 @@ function drawLabelHalo(ctx, text, x, y, fillStyle) {
 
 const DEG_CAP = 40;
 const MIN_R = 6, MAX_R = 40;
+
+// Ambient node-treatment ratios - everything scales off each node's own
+// radius or the current viewport width, never a fixed pixel count, so the
+// look holds at any window size.
+const GLOW_ACCENT_TO_R = 4.2;      // rare/hero nodes: reach 4.2x their own radius
+const GLOW_HUB_QUIET_TO_R = 1.5;   // large cycle hubs: a quieter 1.5x halo
+const GLOW_ACCENT_HERO_ALPHA = 0.7;
+const GLOW_ACCENT_RARE_ALPHA = 0.55;
+const GLOW_HUB_QUIET_ALPHA = 0.15;
+const DEPTH_ALPHA_FLOOR = 0.45;    // fill alpha never drops below this far from the core
+const DEPTH_REACH_TO_W = 0.94;     // world-units of viewport width the falloff spans
+const MESH_REACH_TO_W = 0.094;     // hairline links quiet down to a floor past this reach
+const MESH_ALPHA_FLOOR = 0.08;
+const MESH_ALPHA_NEAR = 0.19;
 // A trackpad zoom stream fires many wheel events per second; a shorter
 // window would stutter the loop stopping and restarting between them.
 const CALM_MS = 900;
@@ -716,6 +748,12 @@ class GraphView {
 
     this.sim = new Sim({ repulse: 60000, springK: 2.5, springLength: 110, damping: 0.90, gravity: 18, maxSpeed: 6000, alphaDecay: 0.06 });
     this.sim.nodes.forEach(n => this.shapeNode(n));
+    // The single largest cluster anchor earns the brightest always-on glow -
+    // a sky needs one point the eye lands on first.
+    this.heroHub = null;
+    for (const n of this.sim.nodes) {
+      if (n.type === 'cycle' && (!this.heroHub || n.hw > this.heroHub.hw)) this.heroHub = n;
+    }
     this.bakeAssets();
     this.attachInteraction();
     this.tick = this.tick.bind(this);
@@ -736,10 +774,12 @@ class GraphView {
   bakeAssets() {
     this.fill = {};
     this.hoverGlow = {};
+    this.ambientGlow = {};
     const bake = (key, rgb) => {
       this.fill[key] = {};
       for (const b of SIZE_BUCKETS) this.fill[key][b.key] = bakeFlatCircle(rgb, b.bakeR, 0.85, 55);
       this.hoverGlow[key] = bakeRadialGlow(rgb, 100);
+      this.ambientGlow[key] = bakeAmbientGlow(rgb, 100);
     };
     for (const t in TYPE_RGB) bake(t, TYPE_RGB[t]);
     bake(FALLBACK_TYPE, FALLBACK_RGB);
@@ -748,6 +788,7 @@ class GraphView {
   // A record type this page has no hue for still resolves - to the baked
   // fallback sprite set - rather than throwing on the first draw frame.
   spriteFor(type, bucket) { return (this.fill[type] || this.fill[FALLBACK_TYPE])[bucket]; }
+  ambientGlowFor(type) { return this.ambientGlow[type] || this.ambientGlow[FALLBACK_TYPE]; }
   glowFor(type) { return this.hoverGlow[type] || this.hoverGlow[FALLBACK_TYPE]; }
 
   // ---- the commit strip -------------------------------------------------
@@ -1159,15 +1200,36 @@ class GraphView {
     // Always-on first, then most prominent (bigger radius) first.
     labelCandidates.sort((a, b) => (b.alwaysOn - a.alwaysOn) || (b.n.hw - a.n.hw));
 
+    // Ambient hairline reach: the resting mesh (no node under the pointer or
+    // selected) reads as a quiet constellation instead of a flat wireframe -
+    // nearby links carry more of the line, distant ones settle to a floor
+    // rather than vanish, so no real connection goes fully invisible.
+    const meshReach = w * MESH_REACH_TO_W;
     for (const e of sim.edges) {
       const isConn = !!(active && (e.source.id === active.id || e.target.id === active.id));
       ctx.beginPath(); ctx.moveTo(e.source.x, e.source.y); ctx.lineTo(e.target.x, e.target.y);
-      ctx.strokeStyle = isConn ? 'rgba(220,225,235,0.6)' : (active ? 'rgba(180,185,195,0.04)' : 'rgba(180,185,195,0.13)');
-      ctx.lineWidth = isConn ? 1.6 : 1;
+      if (isConn) {
+        ctx.strokeStyle = 'rgba(220,225,235,0.6)';
+        ctx.lineWidth = 1.6;
+      } else if (active) {
+        ctx.strokeStyle = 'rgba(180,185,195,0.04)';
+        ctx.lineWidth = 1;
+      } else {
+        const d = Math.hypot(e.source.x - e.target.x, e.source.y - e.target.y);
+        const near = 1 - Math.min(d / meshReach, 1);
+        ctx.strokeStyle = `rgba(180,185,195,${MESH_ALPHA_FLOOR + near * (MESH_ALPHA_NEAR - MESH_ALPHA_FLOOR)})`;
+        ctx.lineWidth = 1;
+      }
       ctx.globalAlpha = ea;
       ctx.stroke();
       ctx.globalAlpha = 1;
     }
+
+    // Depth: fill alpha eases off with distance from the sky's brightest
+    // anchor, so the composition reads as a core with a fading field around
+    // it instead of a flat scatter of equally-weighted dots.
+    const depthOrigin = this.heroHub || { x: 0, y: 0 };
+    const depthReach = w * DEPTH_REACH_TO_W;
 
     for (const n of sim.nodes) {
       const dim = active && n !== active && !(connectedIds && connectedIds.has(n.id)) ? 0.3 : 1;
@@ -1178,8 +1240,25 @@ class GraphView {
         ctx.globalAlpha = 0.7 * ea;
         ctx.drawImage(this.glowFor(n.type), n.x - gs / 2, n.y - gs / 2, gs, gs);
         ctx.globalCompositeOperation = 'source-over';
+      } else {
+        // Always-on ambient glow: the hero hub, and any rare riff/dial node,
+        // burn bright; other large cycle hubs get a much quieter halo. Every
+        // other node stays glow-free so the effect reads as rare, not busy.
+        let glowRatio = 0, glowAlpha = 0;
+        if (n === this.heroHub) { glowRatio = GLOW_ACCENT_TO_R; glowAlpha = GLOW_ACCENT_HERO_ALPHA; }
+        else if (n.type === 'riff' || n.type === 'dial') { glowRatio = GLOW_ACCENT_TO_R; glowAlpha = GLOW_ACCENT_RARE_ALPHA; }
+        else if (n.type === 'cycle' && (n.bucket === 'medium' || n.bucket === 'hub')) { glowRatio = GLOW_HUB_QUIET_TO_R; glowAlpha = GLOW_HUB_QUIET_ALPHA; }
+        if (glowRatio) {
+          const gs = n.hw * glowRatio;
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.globalAlpha = glowAlpha * ea;
+          ctx.drawImage(this.ambientGlowFor(n.type), n.x - gs / 2, n.y - gs / 2, gs, gs);
+          ctx.globalCompositeOperation = 'source-over';
+        }
       }
-      ctx.globalAlpha = dim * ea;
+      const dist = Math.hypot(n.x - depthOrigin.x, n.y - depthOrigin.y);
+      const depthAlpha = Math.max(DEPTH_ALPHA_FLOOR, 1 - Math.min(dist / depthReach, 1) * (1 - DEPTH_ALPHA_FLOOR));
+      ctx.globalAlpha = dim * ea * depthAlpha;
       const d2 = n.hw * 2;
       ctx.drawImage(this.spriteFor(n.type, n.bucket), n.x - n.hw, n.y - n.hh, d2, d2);
       ctx.globalAlpha = 1;
