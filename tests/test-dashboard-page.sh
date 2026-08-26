@@ -214,6 +214,20 @@ assert_eq "backup holds only the most recent prior copy" "generation two" "$(cat
 rm -rf "$ROOT"
 echo ""
 
+# --- Test 13: a relative --root still resolves PAGE to an absolute path ---
+begin_test "a relative --root still resolves PAGE to an absolute path"
+
+ROOT=$(make_fixture_root)
+
+OUT=$(cd "$ROOT" && bash "$PAGE_SCRIPT" --check --root .)
+PAGE_VALUE="$(printf '%s\n' "$OUT" | grep '^PAGE=' | sed -E 's/^PAGE=//')"
+
+assert_contains "PAGE is an absolute path" "^PAGE=/" "$OUT"
+assert_eq "PAGE resolves under the real fixture root" "$(cd "$ROOT" && pwd)/.craft/dashboard.html" "$PAGE_VALUE"
+
+rm -rf "$ROOT"
+echo ""
+
 # --- Test 13: an unwritable .craft reports PULLED=0 with a machine code ---
 begin_test "an unwritable .craft reports PULLED=0 with a machine code and exits 0"
 

@@ -10,6 +10,8 @@ Opens `.craft/dashboard.html` - a single page rendering your project's whole gra
 
 ## Project Root
 
+Use `$CRAFT_PROJECT_ROOT` (set at session start) as the base path for all `.craft/` references. If not set, resolve it by walking up from PWD to find the nearest `.craft/.global-state`.
+
 Set `PROJECT` to `${CRAFT_PROJECT_ROOT:-.}`.
 
 ## Flow

@@ -46,6 +46,17 @@ if [ -z "$ROOT" ]; then
   fi
 fi
 
+# A relative --root (e.g. "." from a caller's cwd) would otherwise leak into
+# PAGE and print as a relative file:// link with no meaning outside that
+# caller's shell. Resolve to absolute here so every consumer of PAGE gets a
+# path that works regardless of where it's read from.
+case "$ROOT" in
+  /*) ;;
+  *)
+    ROOT="$(cd "$ROOT" 2>/dev/null && pwd)" || ROOT=""
+    ;;
+esac
+
 PAGE="$ROOT/.craft/dashboard.html"
 SIDECAR="$ROOT/.craft/graph/.dashboard.sha256"
 
