@@ -309,5 +309,167 @@ assert_file_not_contains "no ripe line in the routing block" "Taste:" "$SCRIPTS_
 
 echo ""
 
+# Helper: read a key's value back out of a project's .global-state
+read_state_key() {
+  local key="$1" root="$2"
+  grep "^${key}=" "$root/.craft/.global-state" 2>/dev/null | sed "s/${key}=\"\(.*\)\"/\1/"
+}
+
+# Test 11: stale write gate with no holders is cleared at session start
+begin_test "stale write gate with no holders is cleared at session start"
+
+TEST_DIR=$(create_minimal_craft)
+ENV_FILE=$(mktemp)
+
+cat > "$TEST_DIR/.craft/.global-state" << 'EOF'
+ACTIVE_CYCLE=""
+CURRENT_STORY=""
+PLANNING_CYCLE=""
+LAST_ACTIVITY=""
+CRAFT_WRITE_ENABLED="true"
+CURRENT_WORKFLOW_SESSION=""
+EOF
+
+set +e
+(cd "$TEST_DIR" && unset PROJECT_ROOT && unset CRAFT_PROJECT_ROOT && unset CRAFT_MULTI_PROJECT && export CLAUDE_ENV_FILE="$ENV_FILE" && bash "$SESSION_SCRIPT" >/dev/null 2>&1)
+SESSION_EXIT=$?
+set -e
+
+assert_eq "exits 0" "0" "$SESSION_EXIT"
+GATE_VALUE=$(read_state_key CRAFT_WRITE_ENABLED "$TEST_DIR")
+assert_eq "stale gate cleared" "" "$GATE_VALUE"
+
+rm -f "$ENV_FILE"
+cleanup_test_dir
+echo ""
+
+# Test 12: write gate survives when a story is in progress
+begin_test "write gate survives when a story is in progress"
+
+TEST_DIR=$(create_minimal_craft)
+ENV_FILE=$(mktemp)
+
+cat > "$TEST_DIR/.craft/.global-state" << 'EOF'
+ACTIVE_CYCLE=""
+CURRENT_STORY="some-story"
+PLANNING_CYCLE=""
+LAST_ACTIVITY=""
+CRAFT_WRITE_ENABLED="true"
+CURRENT_WORKFLOW_SESSION=""
+EOF
+
+set +e
+(cd "$TEST_DIR" && unset PROJECT_ROOT && unset CRAFT_PROJECT_ROOT && unset CRAFT_MULTI_PROJECT && export CLAUDE_ENV_FILE="$ENV_FILE" && bash "$SESSION_SCRIPT" >/dev/null 2>&1)
+SESSION_EXIT=$?
+set -e
+
+assert_eq "exits 0" "0" "$SESSION_EXIT"
+GATE_VALUE=$(read_state_key CRAFT_WRITE_ENABLED "$TEST_DIR")
+assert_eq "gate preserved with story in progress" "true" "$GATE_VALUE"
+
+rm -f "$ENV_FILE"
+cleanup_test_dir
+echo ""
+
+# Test 13: write gate survives when a live workflow session holds it
+begin_test "write gate survives when a live workflow session holds it"
+
+TEST_DIR=$(create_minimal_craft)
+ENV_FILE=$(mktemp)
+
+WF_DIR="$TEST_DIR/.craft/workflows/wf/sessions/s"
+mkdir -p "$WF_DIR"
+cat > "$WF_DIR/session.md" << 'EOF'
+---
+status: active
+---
+EOF
+
+cat > "$TEST_DIR/.craft/.global-state" << EOF
+ACTIVE_CYCLE=""
+CURRENT_STORY=""
+PLANNING_CYCLE=""
+LAST_ACTIVITY=""
+CRAFT_WRITE_ENABLED="true"
+CURRENT_WORKFLOW_SESSION="$WF_DIR"
+EOF
+
+set +e
+(cd "$TEST_DIR" && unset PROJECT_ROOT && unset CRAFT_PROJECT_ROOT && unset CRAFT_MULTI_PROJECT && export CLAUDE_ENV_FILE="$ENV_FILE" && bash "$SESSION_SCRIPT" >/dev/null 2>&1)
+SESSION_EXIT=$?
+set -e
+
+assert_eq "exits 0" "0" "$SESSION_EXIT"
+GATE_VALUE=$(read_state_key CRAFT_WRITE_ENABLED "$TEST_DIR")
+assert_eq "gate preserved with live workflow session" "true" "$GATE_VALUE"
+
+rm -f "$ENV_FILE"
+cleanup_test_dir
+echo ""
+
+# Test 14: stale workflow session clears both the session key and the gate
+begin_test "stale workflow session clears both the session key and the gate"
+
+TEST_DIR=$(create_minimal_craft)
+ENV_FILE=$(mktemp)
+
+WF_DIR="$TEST_DIR/.craft/workflows/wf/sessions/s"
+mkdir -p "$WF_DIR"
+cat > "$WF_DIR/session.md" << 'EOF'
+---
+status: complete
+---
+EOF
+
+cat > "$TEST_DIR/.craft/.global-state" << EOF
+ACTIVE_CYCLE=""
+CURRENT_STORY=""
+PLANNING_CYCLE=""
+LAST_ACTIVITY=""
+CRAFT_WRITE_ENABLED="true"
+CURRENT_WORKFLOW_SESSION="$WF_DIR"
+EOF
+
+set +e
+(cd "$TEST_DIR" && unset PROJECT_ROOT && unset CRAFT_PROJECT_ROOT && unset CRAFT_MULTI_PROJECT && export CLAUDE_ENV_FILE="$ENV_FILE" && bash "$SESSION_SCRIPT" >/dev/null 2>&1)
+SESSION_EXIT=$?
+set -e
+
+assert_eq "exits 0" "0" "$SESSION_EXIT"
+WF_VALUE=$(read_state_key CURRENT_WORKFLOW_SESSION "$TEST_DIR")
+assert_eq "stale workflow session cleared" "" "$WF_VALUE"
+GATE_VALUE=$(read_state_key CRAFT_WRITE_ENABLED "$TEST_DIR")
+assert_eq "gate cleared after stale workflow clear" "" "$GATE_VALUE"
+
+rm -f "$ENV_FILE"
+cleanup_test_dir
+echo ""
+
+# Test 15: a keyless state file never gains a CRAFT_WRITE_ENABLED key
+begin_test "a keyless state file never gains a CRAFT_WRITE_ENABLED key"
+
+TEST_DIR=$(create_minimal_craft)
+ENV_FILE=$(mktemp)
+
+cat > "$TEST_DIR/.craft/.global-state" << 'EOF'
+ACTIVE_CYCLE=""
+CURRENT_STORY=""
+PLANNING_CYCLE=""
+LAST_ACTIVITY=""
+EOF
+
+set +e
+(cd "$TEST_DIR" && unset PROJECT_ROOT && unset CRAFT_PROJECT_ROOT && unset CRAFT_MULTI_PROJECT && export CLAUDE_ENV_FILE="$ENV_FILE" && bash "$SESSION_SCRIPT" >/dev/null 2>&1)
+SESSION_EXIT=$?
+KEY_COUNT=$(grep -c "^CRAFT_WRITE_ENABLED=" "$TEST_DIR/.craft/.global-state")
+set -e
+
+assert_eq "exits 0" "0" "$SESSION_EXIT"
+assert_eq "key not appended to a keyless state file" "0" "$KEY_COUNT"
+
+rm -f "$ENV_FILE"
+cleanup_test_dir
+echo ""
+
 # --- Summary ---
 finish_tests

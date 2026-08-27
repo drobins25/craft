@@ -33,6 +33,21 @@ if [ -f "${PROJECT_ROOT}.craft/.global-state" ]; then
   fi
 fi
 
+# Reset a write gate left open by a crashed session: clear CRAFT_WRITE_ENABLED
+# when neither a story in progress nor a live workflow session still holds it.
+# Contract for future gate-openers: a new flow that sets CRAFT_WRITE_ENABLED
+# must either track a holder this block checks, delete its own marker before
+# this block runs (the adhoc .active-fix pattern above), or accept that its
+# gate can be cleared by a session start in another pane.
+if [ -f "${PROJECT_ROOT}.craft/.global-state" ]; then
+  GATE=$(grep "^CRAFT_WRITE_ENABLED=" "${PROJECT_ROOT}.craft/.global-state" 2>/dev/null | sed 's/CRAFT_WRITE_ENABLED="\(.*\)"/\1/')
+  CS=$(grep "^CURRENT_STORY=" "${PROJECT_ROOT}.craft/.global-state" 2>/dev/null | sed 's/CURRENT_STORY="\(.*\)"/\1/')
+  WF_NOW=$(grep "^CURRENT_WORKFLOW_SESSION=" "${PROJECT_ROOT}.craft/.global-state" 2>/dev/null | sed 's/CURRENT_WORKFLOW_SESSION="\(.*\)"/\1/')
+  if [ "$GATE" = "true" ] && [ -z "$CS" ] && [ -z "$WF_NOW" ]; then
+    "$SCRIPT_DIR/update-global-state.sh" CRAFT_WRITE_ENABLED "" "${PROJECT_ROOT%/}"
+  fi
+fi
+
 # Persist project root for this session
 if [ -n "$CLAUDE_ENV_FILE" ] && [ -n "$PROJECT_ROOT" ]; then
   echo "export CRAFT_PROJECT_ROOT=\"${PROJECT_ROOT%/}\"" >> "$CLAUDE_ENV_FILE"
