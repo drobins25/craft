@@ -627,8 +627,9 @@ function bakeRadialGlow(rgb, size) {
 // A quieter, always-on sibling to bakeRadialGlow above (that one stays a
 // hover-only interaction cue). This sprite paints permanently under a
 // handful of rare or high-degree nodes so the sky itself reads as alive
-// at rest, not only when a visitor points at something. Same additive
-// no-blur baking approach, its own gradient curve.
+// at rest, not only when a visitor points at something. Same no-blur
+// baking approach, its own gradient curve (1.0 -> 0.32 @ 45% -> 0, per
+// tokens.yaml visual.node_treatment.glow_sprite).
 function bakeAmbientGlow(rgb, size) {
   size = size || 96;
   const c = document.createElement('canvas'); c.width = size; c.height = size;
@@ -647,16 +648,19 @@ function bakeAmbientGlow(rgb, size) {
 // No canvas blur-shadow property anywhere in this bakery or the per-frame
 // draw path - sprites are baked once per (hue x size bucket) and reused
 // every frame instead.
-function bakeFlatCircle(rgb, bakeR, rimAlpha, rimBoost) {
+// Rim per tokens.yaml visual.node_treatment.rim_to_radius: width
+// max(1px, 0.08r), own hue +16 LIGHTNESS (not an RGB boost - a lightness
+// lift keeps the rim in-hue), 0.55 alpha. The rim carries most of the
+// "alive" read, so it stays quiet rather than hot.
+function bakeFlatCircle(rgb, bakeR, rimRgb) {
   const pad = 6;
   const SZ = bakeR * 2 + pad * 2;
   const c = document.createElement('canvas'); c.width = SZ; c.height = SZ;
   const g = c.getContext('2d');
   g.beginPath(); g.arc(SZ / 2, SZ / 2, bakeR, 0, TAU);
   g.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},1)`; g.fill();
-  g.lineWidth = clamp(bakeR * 0.09, 1.3, 3);
-  const rb = rimBoost || 40;
-  g.strokeStyle = `rgba(${Math.min(255, rgb[0] + rb)},${Math.min(255, rgb[1] + rb)},${Math.min(255, rgb[2] + rb)},${rimAlpha})`;
+  g.lineWidth = Math.max(1, bakeR * 0.08);
+  g.strokeStyle = `rgba(${rimRgb[0]},${rimRgb[1]},${rimRgb[2]},0.55)`;
   g.stroke();
   return c;
 }
@@ -667,8 +671,13 @@ function bakeBackground(w, h) {
   const bctx = c.getContext('2d');
   bctx.fillStyle = GROUND;
   bctx.fillRect(0, 0, w, h);
-  const vg = bctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.22, w / 2, h / 2, Math.max(w, h) * 0.75);
-  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.4)');
+  // Ground vignette per tokens.yaml visual.node_treatment.ground_vignette:
+  // transparent -> 0.22 black at 65% -> 0.62 at the edge, outer radius 1.05x
+  // the long dimension - deep enough that every glow reads by contrast.
+  const vg = bctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.22, w / 2, h / 2, Math.max(w, h) * 1.05);
+  vg.addColorStop(0, 'rgba(0,0,0,0)');
+  vg.addColorStop(0.65, 'rgba(0,0,0,0.22)');
+  vg.addColorStop(1, 'rgba(0,0,0,0.62)');
   bctx.fillStyle = vg; bctx.fillRect(0, 0, w, h);
   return c;
 }
@@ -746,7 +755,9 @@ class GraphView {
     this.lastInputAt = 0;
     this.rafId = null;
 
-    this.sim = new Sim({ repulse: 60000, springK: 2.5, springLength: 110, damping: 0.90, gravity: 18, maxSpeed: 6000, alphaDecay: 0.06 });
+    // Slow-bloom entrance: slower alpha decay + higher damping + lighter
+    // gravity = tighter spawn, grander expansion, floatier ~5s settle.
+    this.sim = new Sim({ repulse: 60000, springK: 2.5, springLength: 110, damping: 0.94, gravity: 12, maxSpeed: 6000, alphaDecay: 0.025 });
     this.sim.nodes.forEach(n => this.shapeNode(n));
     // The single largest cluster anchor earns the brightest always-on glow -
     // a sky needs one point the eye lands on first.
@@ -775,14 +786,20 @@ class GraphView {
     this.fill = {};
     this.hoverGlow = {};
     this.ambientGlow = {};
-    const bake = (key, rgb) => {
+    // Rim colour is the node's own hue lifted +16 lightness (clamped), so it
+    // needs the HSL triple, not the precomputed RGB. Ambient glow bakes at
+    // 256px: it now stretches to the glow's full DIAMETER (2x its reach), and
+    // a 100px bake would band at hero size.
+    const bake = (key, hsl) => {
+      const rgb = hsl2rgb(hsl[0], hsl[1], hsl[2]);
+      const rim = hsl2rgb(hsl[0], hsl[1], Math.min(90, hsl[2] + 16));
       this.fill[key] = {};
-      for (const b of SIZE_BUCKETS) this.fill[key][b.key] = bakeFlatCircle(rgb, b.bakeR, 0.85, 55);
+      for (const b of SIZE_BUCKETS) this.fill[key][b.key] = bakeFlatCircle(rgb, b.bakeR, rim);
       this.hoverGlow[key] = bakeRadialGlow(rgb, 100);
-      this.ambientGlow[key] = bakeAmbientGlow(rgb, 100);
+      this.ambientGlow[key] = bakeAmbientGlow(rgb, 256);
     };
-    for (const t in TYPE_RGB) bake(t, TYPE_RGB[t]);
-    bake(FALLBACK_TYPE, FALLBACK_RGB);
+    for (const t in TYPE_HSL) bake(t, TYPE_HSL[t]);
+    bake(FALLBACK_TYPE, [0, 0, 55]);
   }
 
   // A record type this page has no hue for still resolves - to the baked
@@ -1065,7 +1082,7 @@ class GraphView {
   replay() {
     const w = window.innerWidth, h = window.innerHeight;
     this.sim.resizeHome(w, h);
-    seedCompactCloud(this.sim.nodes, w / 2, h / 2, 0.13);
+    seedCompactCloud(this.sim.nodes, w / 2, h / 2, 0.06);
     this.sim.alpha = 1;
     this.sim.alphaTarget = 0;
     this.selectedNode = null;
@@ -1212,12 +1229,12 @@ class GraphView {
         ctx.strokeStyle = 'rgba(220,225,235,0.6)';
         ctx.lineWidth = 1.6;
       } else if (active) {
-        ctx.strokeStyle = 'rgba(180,185,195,0.04)';
+        ctx.strokeStyle = 'rgba(190,195,205,0.04)';
         ctx.lineWidth = 1;
       } else {
         const d = Math.hypot(e.source.x - e.target.x, e.source.y - e.target.y);
         const near = 1 - Math.min(d / meshReach, 1);
-        ctx.strokeStyle = `rgba(180,185,195,${MESH_ALPHA_FLOOR + near * (MESH_ALPHA_NEAR - MESH_ALPHA_FLOOR)})`;
+        ctx.strokeStyle = `rgba(190,195,205,${MESH_ALPHA_FLOOR + near * (MESH_ALPHA_NEAR - MESH_ALPHA_FLOOR)})`;
         ctx.lineWidth = 1;
       }
       ctx.globalAlpha = ea;
@@ -1234,12 +1251,16 @@ class GraphView {
     for (const n of sim.nodes) {
       const dim = active && n !== active && !(connectedIds && connectedIds.has(n.id)) ? 0.3 : 1;
       const isActive = n === active;
+      // Glow ratios are the gradient's outer RADIUS in node-radii (the mockup's
+      // glow(x, y, r * 4.2) contract), so the sprite is drawn at 2x that reach
+      // for its width. Compositing is plain source-over with the glow UNDER the
+      // fill - per tokens.yaml hero.fill, the luminous read is emergent, "never
+      // a lighter paint"; additive blending is what made these read neon-tight
+      // instead of atmospheric.
       if (isActive) {
-        const gs = n.hw * 4.4;
-        ctx.globalCompositeOperation = 'lighter';
+        const gs = n.hw * 4.4 * 2;
         ctx.globalAlpha = 0.7 * ea;
         ctx.drawImage(this.glowFor(n.type), n.x - gs / 2, n.y - gs / 2, gs, gs);
-        ctx.globalCompositeOperation = 'source-over';
       } else {
         // Always-on ambient glow: the hero hub, and any rare riff/dial node,
         // burn bright; other large cycle hubs get a much quieter halo. Every
@@ -1249,11 +1270,9 @@ class GraphView {
         else if (n.type === 'riff' || n.type === 'dial') { glowRatio = GLOW_ACCENT_TO_R; glowAlpha = GLOW_ACCENT_RARE_ALPHA; }
         else if (n.type === 'cycle' && (n.bucket === 'medium' || n.bucket === 'hub')) { glowRatio = GLOW_HUB_QUIET_TO_R; glowAlpha = GLOW_HUB_QUIET_ALPHA; }
         if (glowRatio) {
-          const gs = n.hw * glowRatio;
-          ctx.globalCompositeOperation = 'lighter';
+          const gs = n.hw * glowRatio * 2;
           ctx.globalAlpha = glowAlpha * ea;
           ctx.drawImage(this.ambientGlowFor(n.type), n.x - gs / 2, n.y - gs / 2, gs, gs);
-          ctx.globalCompositeOperation = 'source-over';
         }
       }
       const dist = Math.hypot(n.x - depthOrigin.x, n.y - depthOrigin.y);
