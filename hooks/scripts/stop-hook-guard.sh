@@ -15,8 +15,14 @@ if [ -n "$STOP_HOOK_ACTIVE" ]; then
   exit 0
 fi
 
-# Use working directory hash as session identifier
-SESSION_ID=$(echo "$PWD" | md5sum | cut -c1-8 2>/dev/null || echo "$PWD" | md5 | cut -c1-8)
+# Use working directory hash as session identifier.
+# Linux-tool-first with an empty-check fallback: a piped fallback after || can
+# never fire (a pipeline's exit status is its last command's), so md5-less
+# machines would silently get an empty SESSION_ID.
+SESSION_ID=$(echo "$PWD" | md5sum 2>/dev/null | cut -c1-8)
+if [ -z "$SESSION_ID" ]; then
+  SESSION_ID=$(echo "$PWD" | md5 2>/dev/null | cut -c1-8)
+fi
 
 # Resolve project root for state checks
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
