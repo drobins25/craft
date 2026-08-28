@@ -19,8 +19,47 @@
 
 set -uo pipefail
 
+# Optional: --range <base>..<head> makes check 9 (feat: commits need a
+# CHANGELOG.md change) run against that commit range instead of the
+# upstream..HEAD it derives locally. A PR checkout in CI is detached - no
+# upstream - so without this flag check 9 silently no-ops there. Opt-in by
+# design: every existing caller invokes with no arguments and is untouched.
+RANGE=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --range)
+      RANGE="${2:-}"
+      shift 2 || { echo "check-doc-drift: --range needs a <base>..<head> value" >&2; exit 2; }
+      ;;
+    *)
+      echo "check-doc-drift: unknown argument '$1' (usage: check-doc-drift.sh [--range <base>..<head>])" >&2
+      exit 2
+      ;;
+  esac
+done
+
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$ROOT" || { echo "check-doc-drift: cannot resolve repo root" >&2; exit 1; }
+
+# A bad --range must exit loudly rather than skipping check 9 - a silent
+# skip is the exact failure the flag exists to remove.
+if [ -n "$RANGE" ]; then
+  case "$RANGE" in
+    *..*) : ;;
+    *)
+      echo "check-doc-drift: --range value '$RANGE' is not <base>..<head>" >&2
+      exit 2
+      ;;
+  esac
+  range_base="${RANGE%%..*}"
+  range_head="${RANGE##*..}"
+  if [ -z "$range_base" ] || [ -z "$range_head" ] \
+    || ! git rev-parse --verify --quiet "${range_base}^{commit}" > /dev/null \
+    || ! git rev-parse --verify --quiet "${range_head}^{commit}" > /dev/null; then
+    echo "check-doc-drift: --range value '$RANGE' does not resolve to two commits" >&2
+    exit 2
+  fi
+fi
 
 BT='`'   # backtick literal, so the shell never tries to expand `...`
 
@@ -163,13 +202,21 @@ done < <(grep -E '^## ' CHANGELOG.md 2>/dev/null | sed -E 's/^## +//' \
 # 9. Feature release notes: an unpushed feat: commit must be accompanied by a
 #    CHANGELOG.md change somewhere in the unpushed range - a feature cannot
 #    ship without release notes. Fixes stay a judgment call (notable-only).
-#    Runs only when an upstream exists; fails open elsewhere (CI on a merged
-#    tree has no unpushed range to judge).
-if upstream="$(git rev-parse --abbrev-ref '@{u}' 2>/dev/null)"; then
-  feat_commits="$(git log --format='%h %s' "$upstream"..HEAD 2>/dev/null \
+#    With --range (validated above) the check runs unconditionally on that
+#    range - the CI job passes the PR's base..head. Otherwise it runs only
+#    when an upstream exists; fails open elsewhere (CI on a merged tree has
+#    no unpushed range to judge).
+check9_range=""
+if [ -n "$RANGE" ]; then
+  check9_range="$RANGE"
+elif upstream="$(git rev-parse --abbrev-ref '@{u}' 2>/dev/null)"; then
+  check9_range="$upstream..HEAD"
+fi
+if [ -n "$check9_range" ]; then
+  feat_commits="$(git log --format='%h %s' "$check9_range" 2>/dev/null \
     | grep -E '^[0-9a-f]+ feat[(!:]' || true)"
   if [ -n "$feat_commits" ] \
-    && ! git diff --name-only "$upstream"..HEAD 2>/dev/null | grep -qxF 'CHANGELOG.md'; then
+    && ! git diff --name-only "$check9_range" 2>/dev/null | grep -qxF 'CHANGELOG.md'; then
     add "[changelog] feat commit(s) about to push with no CHANGELOG.md entry in the range: $(printf '%s' "$feat_commits" | head -3 | tr '\n' ';')"
   fi
 fi

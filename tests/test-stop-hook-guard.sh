@@ -10,6 +10,20 @@ source "$SCRIPT_DIR/fixtures/with-story.sh"
 
 STOP_HOOK_SCRIPT="$SCRIPTS_DIR/stop-hook-guard.sh"
 
+# Session id for a test dir, matching stop-hook-guard.sh:19's computation for
+# the same input (echo keeps the trailing newline the hook's hash includes).
+# Linux-tool-first with an empty-check fallback: a piped `md5` before `||` can
+# never reach the fallback (a pipeline's exit status is its last command's),
+# which silently broke this file on GNU userland.
+session_id_for_dir() {
+  local id
+  id=$(echo "$1" | md5sum 2>/dev/null | cut -c1-8)
+  if [ -z "$id" ]; then
+    id=$(echo "$1" | md5 2>/dev/null | cut -c1-8)
+  fi
+  printf '%s' "$id"
+}
+
 # --- Tests ---
 
 echo "=== test-stop-hook-guard.sh ==="
@@ -27,7 +41,7 @@ CURRENT_STORY=""
 EOF
 
 # Clean up any existing marker for this test dir
-SESSION_ID=$(echo "$TEST_DIR" | md5 2>/dev/null | cut -c1-8 || echo "$TEST_DIR" | md5sum 2>/dev/null | cut -c1-8)
+SESSION_ID=$(session_id_for_dir "$TEST_DIR")
 rm -f "/tmp/craft-stop-suggested-${SESSION_ID}"
 
 JSON='{"stop_hook_active": false}'
@@ -53,10 +67,11 @@ EOF
 
 # Zero CURRENT_CHUNK so the guard reaches the Layer 2 persistence path this test asserts
 # (the fixture's CURRENT_CHUNK="1" triggers the Layer 1 mid-implementation block instead)
-sed -i '' 's/^CURRENT_CHUNK=.*/CURRENT_CHUNK="0"/' "$TEST_DIR/.craft/cycles/1-test-cycle/.state"
+sed -i.bak 's/^CURRENT_CHUNK=.*/CURRENT_CHUNK="0"/' "$TEST_DIR/.craft/cycles/1-test-cycle/.state"
+rm -f "$TEST_DIR/.craft/cycles/1-test-cycle/.state.bak"
 
 # Clean marker to ensure this is "first time"
-SESSION_ID=$(echo "$TEST_DIR" | md5 2>/dev/null | cut -c1-8 || echo "$TEST_DIR" | md5sum 2>/dev/null | cut -c1-8)
+SESSION_ID=$(session_id_for_dir "$TEST_DIR")
 rm -f "/tmp/craft-stop-suggested-${SESSION_ID}"
 
 JSON='{"stop_hook_active": false}'
@@ -106,10 +121,11 @@ CURRENT_STORY="test-story"
 EOF
 
 # Zero CURRENT_CHUNK so the guard reaches the Layer 2 marker-suppression path this test asserts
-sed -i '' 's/^CURRENT_CHUNK=.*/CURRENT_CHUNK="0"/' "$TEST_DIR/.craft/cycles/1-test-cycle/.state"
+sed -i.bak 's/^CURRENT_CHUNK=.*/CURRENT_CHUNK="0"/' "$TEST_DIR/.craft/cycles/1-test-cycle/.state"
+rm -f "$TEST_DIR/.craft/cycles/1-test-cycle/.state.bak"
 
 # Create a recent marker
-SESSION_ID=$(echo "$TEST_DIR" | md5 2>/dev/null | cut -c1-8 || echo "$TEST_DIR" | md5sum 2>/dev/null | cut -c1-8)
+SESSION_ID=$(session_id_for_dir "$TEST_DIR")
 touch "/tmp/craft-stop-suggested-${SESSION_ID}"
 
 JSON='{"stop_hook_active": false}'
@@ -134,7 +150,7 @@ begin_test "No .craft/ — exits 0 quietly"
 TEST_DIR=$(mktemp -d)
 
 # Clean marker
-SESSION_ID=$(echo "$TEST_DIR" | md5 2>/dev/null | cut -c1-8 || echo "$TEST_DIR" | md5sum 2>/dev/null | cut -c1-8)
+SESSION_ID=$(session_id_for_dir "$TEST_DIR")
 rm -f "/tmp/craft-stop-suggested-${SESSION_ID}"
 
 JSON='{"stop_hook_active": false}'
