@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="craft-template-version" content="4">
+<meta name="craft-template-version" content="5">
 <title>Craft Browser</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -84,6 +84,10 @@
     margin-bottom: 6px;
     flex: none;
   }
+  /* The line tiers down as it reads: the record's type keeps the accent,
+     the state word steps back, the date steps back further. */
+  #stage #panel .p-type .p-type-status { color: #9298a6; }
+  #stage #panel .p-type .p-type-date { color: #7b808e; }
   #stage #panel .p-title {
     font-size: 15px;
     font-weight: 600;
@@ -98,6 +102,9 @@
     margin-bottom: 12px;
     flex: none;
   }
+  /* The spark shows the record's full source, always - no reveal control.
+     Its line breaks carry meaning, so they render as written; overflow lives
+     in an inner scroll window rather than growing the panel past its height. */
   #stage #panel .p-summary {
     font-size: 12.5px;
     line-height: 1.5;
@@ -105,7 +112,14 @@
     margin-bottom: 12px;
     flex: none;
     overflow-wrap: anywhere;
+    white-space: pre-wrap;
+    overflow-y: auto;
+    max-height: 45vh;
+    overscroll-behavior: contain;
+    padding-right: 6px;
   }
+  #stage #panel .p-summary::-webkit-scrollbar { width: 4px; }
+  #stage #panel .p-summary::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 2px; }
   /* Section headers carry their own boundary: without the top rule and margin
      a chunk list and the Connections heading below it sit flush together. */
   #stage #panel .p-rel-label {
@@ -138,6 +152,50 @@
     overflow-wrap: anywhere;
   }
   #stage #panel .p-rel-item:first-of-type { border-top: none; }
+
+  /* Work rows: a status dot and the title on one flex line. text-indent is
+     pinned to 0 and the title wraps inside its own flex cell, so wrapped
+     lines align under the title text, never under the dot. */
+  #stage #panel .p-chunk {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5em;
+    text-indent: 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #c7cbd4;
+    padding: 4px 0;
+    border-top: 1px solid rgba(210, 215, 225, 0.08);
+  }
+  #stage #panel .p-chunk:first-of-type { border-top: none; }
+  /* The dot's resting look IS the pending state, so an unrecognized status
+     degrades to pending instead of an invisible marker. The margin centers
+     a 7px dot against the first 12.5px/1.5 text line. */
+  #stage #panel .p-chunk .p-chunk-dot {
+    box-sizing: border-box;
+    flex: none;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    margin-top: 0.45em;
+    border: 1px solid #6b7080;
+    opacity: 0.5;
+  }
+  #stage #panel .p-chunk .p-chunk-dot.is-active {
+    border: 1.5px solid #9fd8ff;
+    opacity: 1;
+  }
+  #stage #panel .p-chunk .p-chunk-dot.is-complete {
+    background: #c7cbd4;
+    border: none;
+    opacity: 1;
+  }
+  #stage #panel .p-chunk .p-chunk-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  #stage #panel .p-chunk.is-complete .p-chunk-title { opacity: 0.65; }
 
   /* Back is a character in the type line, not a control on the card: bare
      chevron in that line's own colour and size, no fill, no border, no
@@ -267,6 +325,83 @@
     line-height: 16px;
     overflow: hidden;
   }
+
+  /* The insight layer: glass chips pinned to the frame edges, composed over
+     the settled galaxy. The fill reads as a backdrop without paying for
+     blur; the only glow a chip gets is one inset top highlight - never a
+     drop-shadow, never a backdrop-filter. Entrance is opacity+transform
+     only, and the 0.6s ride is deliberately shorter than the calm window
+     the render loop grants after its last input, so the fade completes and
+     true stillness still arrives. */
+  #stage #cards {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  #stage #cards.shown { opacity: 1; transform: translateY(0); }
+  /* Chips accept the mouse only once revealed - the reveal itself fires at
+     true rest, so this is the calm gate: hover can never catch the bloom. */
+  #stage #cards.shown .card { pointer-events: auto; }
+  #stage #cards.suppressed .card { pointer-events: none; }
+  /* While the record panel owns the right edge, the insight layer bows out -
+     the mark pass reads this same class to stop drawing marks. Declared
+     after .shown so it wins when both classes are present. */
+  #stage #cards.suppressed { opacity: 0; }
+  /* Below desktop sizes the edge slots start eating the luminous core, so
+     the layer disappears entirely rather than crowd the sky. */
+  @media (max-width: 1099px), (max-height: 699px) {
+    #stage #cards { display: none; }
+  }
+  #stage #cards .card {
+    position: absolute;
+    width: 300px;
+    background: rgba(16,18,24,0.72);
+    border-radius: 11px;
+    padding: 13px 15px 14px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+    border: 1px solid transparent; /* per-card evidence hue at 0.35 alpha, set inline */
+    font-family: -apple-system, system-ui, 'Segoe UI', sans-serif;
+    font-weight: 450;
+    letter-spacing: 0em;
+    font-optical-sizing: auto;
+  }
+  #stage #cards .card .c-eyebrow {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 7px;
+  }
+  #stage #cards .card .c-eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+  /* The date badge rides the eyebrow's far end - graph-derived from the
+     quote-source node, never carried by the sidecar. */
+  #stage #cards .card .c-eyebrow .c-date { margin-left: auto; font-size: 9.5px; letter-spacing: 0.1em; opacity: 0.75; }
+  /* Right-pinned chips justify the machine-voice eyebrow to the frame edge;
+     the prose below stays left-aligned unconditionally - a right-aligned
+     body reads as a ragged left edge. */
+  #stage #cards .card.pin-right .c-eyebrow { justify-content: flex-end; }
+  #stage #cards .card .c-body {
+    font-size: 14px;
+    line-height: 1.5;
+    color: #e8eaef;
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
+  #stage #cards .card .c-witness {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: #83889a;
+    margin-top: 8px;
+    overflow-wrap: anywhere;
+  }
 </style>
 </head>
 <body>
@@ -285,17 +420,19 @@
     <div class="p-summary"></div>
     <div class="p-rels"></div>
   </div>
+  <div id="cards"></div>
   <div class="hint">drag a node to pin · drag empty space to pan · scroll to zoom · click to lock</div>
 </div>
 
 <script src="graph/build-status.js"></script>
 <script src="graph/graph.js"></script>
+<script src="graph/insights.js"></script>
 <script>
 'use strict';
 
 /* This page opens from file:// - every local file is its own opaque origin
    there, so the Fetch API and ES modules fail silently. Classic sibling
-   <script src> tags are the only load path that works, hence the two
+   <script src> tags are the only load path that works, hence the three
    tags above rather than any import. */
 const TAU = Math.PI * 2;
 const GRAPH = (window.CRAFT_GRAPH && window.CRAFT_GRAPH.nodes) ? window.CRAFT_GRAPH : { nodes: [], edges: [] };
@@ -305,6 +442,11 @@ const GRAPH = (window.CRAFT_GRAPH && window.CRAFT_GRAPH.nodes) ? window.CRAFT_GR
 // commit strip now, so the builder stopped emitting words nothing reads.
 const VOCAB = GRAPH.vocabulary || { statuses: {}, dial_outcomes: {}, types: {}, membership: [] };
 const MEMBERSHIP_KINDS = new Set(VOCAB.membership);
+// The insight sidecar is optional and hand-authored, so absent, stale and
+// malformed must all land in the same branch. A parse error inside a classic
+// script stays inside its own tag - a broken sidecar simply never assigns
+// the global and this guard sees undefined. No try/catch needed.
+const INSIGHTS = (window.CRAFT_INSIGHTS && window.CRAFT_INSIGHTS.version === 1 && Array.isArray(window.CRAFT_INSIGHTS.cards)) ? window.CRAFT_INSIGHTS : null;
 
 // The page cannot read .craft/'s mtime, so elapsed time since the last build
 // carries no information about whether the graph is current - only these
@@ -598,7 +740,8 @@ const typeCountWord = (t, count) => {
 // Neutral hue for a record type this page has never seen, so a future
 // type degrades gracefully instead of throwing on the first draw frame.
 const FALLBACK_TYPE = '__unknown__';
-const FALLBACK_RGB = hsl2rgb(0, 0, 55);
+const FALLBACK_HSL = [0, 0, 55];
+const FALLBACK_RGB = hsl2rgb(FALLBACK_HSL[0], FALLBACK_HSL[1], FALLBACK_HSL[2]);
 
 const SIZE_BUCKETS = [
   { key: 'dust', maxR: 11, bakeR: 12 },
@@ -652,14 +795,18 @@ function bakeAmbientGlow(rgb, size) {
 // max(1px, 0.08r), own hue +16 LIGHTNESS (not an RGB boost - a lightness
 // lift keeps the rim in-hue), 0.55 alpha. The rim carries most of the
 // "alive" read, so it stays quiet rather than hot.
+// Baked 4x supersampled - canvas size, radius, pad and rim width all scale
+// by SS, and the per-frame draw scales the sprite back down, so the rim
+// lands crisp instead of smearing across interpolated pixels.
 function bakeFlatCircle(rgb, bakeR, rimRgb) {
+  const SS = 4;
   const pad = 6;
-  const SZ = bakeR * 2 + pad * 2;
+  const SZ = (bakeR * 2 + pad * 2) * SS;
   const c = document.createElement('canvas'); c.width = SZ; c.height = SZ;
   const g = c.getContext('2d');
-  g.beginPath(); g.arc(SZ / 2, SZ / 2, bakeR, 0, TAU);
+  g.beginPath(); g.arc(SZ / 2, SZ / 2, bakeR * SS, 0, TAU);
   g.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},1)`; g.fill();
-  g.lineWidth = Math.max(1, bakeR * 0.08);
+  g.lineWidth = Math.max(1, bakeR * 0.08) * SS;
   g.strokeStyle = `rgba(${rimRgb[0]},${rimRgb[1]},${rimRgb[2]},0.55)`;
   g.stroke();
   return c;
@@ -712,6 +859,41 @@ const MESH_ALPHA_NEAR = 0.19;
 // A trackpad zoom stream fires many wheel events per second; a shorter
 // window would stutter the loop stopping and restarting between them.
 const CALM_MS = 900;
+// The chip fade and the mark fade share one clock. The mark fade keeps the
+// loop alive through requestFrame (pure scheduling, no input stamp) until it
+// completes, so the loop still reaches true stillness.
+const CARD_FADE_MS = 600;
+// The chips arrive on a fixed clock from the first painted frame - a load
+// delay, deliberately NOT chained to the physics reaching rest. Movement on
+// the page (a settle running long, a drag mid-entrance) must never hold the
+// insight layer hostage.
+const CARD_REVEAL_DELAY_MS = 3000;
+// Eyebrow badge months - uppercase to match the eyebrow's machine voice.
+const CARD_MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+// Hover warmth eases toward its target by this fraction per frame - the
+// bloom breathes in and out instead of snapping.
+const CARD_GLOW_EASE = 0.15;
+// Hover unlocks on a fixed clock from the first painted frame - a load
+// delay, deliberately NOT chained to the sim's energy. The early violent
+// fling (where a cursor over flying nodes strobes the glow and flickers the
+// pointer) is over well inside this window; after it, the slow glide is
+// gentle enough to point at long before true stillness. Named so the calm
+// point can be tuned live against the real page.
+const HOVER_CALM_MS = 1500;
+// Four fixed viewport slots for the insight chips, fractions of the frame
+// edges. Assignment happens once, at reveal, by giving each card the nearest
+// free slot to its evidence centroid in screen space - never recomputed
+// during pan, zoom or drag, so the composition stays quiet under a hand.
+const CARD_SLOTS = [
+  { side: 'left', x: 0.025, y: 0.064 },
+  { side: 'right', x: 0.025, y: 0.56 },
+  { side: 'left', x: 0.025, y: 0.70 },
+  { side: 'right', x: 0.0675, y: 0.28 },
+];
+// Below these viewport sizes the edge slots start eating the luminous core,
+// so the whole insight layer (chips and marks alike) stays hidden.
+const CARD_MIN_W = 1100, CARD_MIN_H = 700;
+function cardsViewportOk() { return window.innerWidth >= CARD_MIN_W && window.innerHeight >= CARD_MIN_H; }
 // window.NS and window.LT are page globals on purpose - the browser skill's
 // evaluate_script reaches them directly to try alternate values live.
 window.NS = window.NS || { cycleScale: 0.65 };
@@ -729,6 +911,13 @@ class GraphView {
   constructor(canvas, panel) {
     this.canvas = canvas;
     this.panel = panel;
+    this.cardsEl = document.getElementById('cards');
+    this.cardsShown = false;
+    this.cardsShownAt = 0;
+    this.hoverCardIndex = -1;
+    this.cardGlow = 0;
+    this.calm = false;
+    this.cardMeta = [];
     const { ctx, resize: resizeCanvas } = makeCanvasCtx(canvas);
     this.ctx = ctx;
     this._resizeCanvas = resizeCanvas;
@@ -757,6 +946,15 @@ class GraphView {
 
     // Slow-bloom entrance: slower alpha decay + higher damping + lighter
     // gravity = tighter spawn, grander expansion, floatier ~5s settle.
+    // Two decay profiles: the cinematic pair is for the entrance only. Applied
+    // to a drag's residual energy it holds the O(n^2) pass + full glow overdraw
+    // hot for ~5.5s per drag (measured), and overlapping drags never sleep - so
+    // drag release switches to the snappy pair (~2s cool-down) and replay()
+    // restores cinematic before each bloom.
+    // DECAY_CINEMATIC mirrors the damping/alphaDecay in the Sim constructor
+    // below (the locked-physics test pins that line verbatim).
+    this.DECAY_CINEMATIC = { damping: 0.94, alphaDecay: 0.025 };
+    this.DECAY_SNAPPY = { damping: 0.90, alphaDecay: 0.06 };
     this.sim = new Sim({ repulse: 60000, springK: 2.5, springLength: 110, damping: 0.94, gravity: 12, maxSpeed: 6000, alphaDecay: 0.025 });
     this.sim.nodes.forEach(n => this.shapeNode(n));
     // The single largest cluster anchor earns the brightest always-on glow -
@@ -799,7 +997,7 @@ class GraphView {
       this.ambientGlow[key] = bakeAmbientGlow(rgb, 256);
     };
     for (const t in TYPE_HSL) bake(t, TYPE_HSL[t]);
-    bake(FALLBACK_TYPE, [0, 0, 55]);
+    bake(FALLBACK_TYPE, FALLBACK_HSL);
   }
 
   // A record type this page has no hue for still resolves - to the baked
@@ -1013,14 +1211,24 @@ class GraphView {
 
   fillPanel(n) {
     const fmtDate = d => { if (!d) return ''; const dt = new Date(d + 'T00:00:00'); return isNaN(dt) ? d : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); };
-    const bits = [VOCAB.types[n.type] || n.type];
     // A dial's status slot holds a session outcome rather than a status -
     // its own vocabulary axis, worded from a different table.
     const statusWords = n.type === 'dial' ? VOCAB.dial_outcomes : VOCAB.statuses;
-    if (n.status) bits.push(statusWords[n.status] || n.status);
-    if (n.date) bits.push(fmtDate(n.date));
     const typeEl = this.panel.querySelector('.p-type');
-    typeEl.textContent = bits.join(' · ');
+    typeEl.textContent = '';
+    // Each bit is its own span so the line can tier its colours; the ' · '
+    // separators stay bare text nodes in the line's own colour.
+    const typeBit = (text, cls) => {
+      if (typeEl.childNodes.length) typeEl.appendChild(document.createTextNode(' · '));
+      if (!cls) { typeEl.appendChild(document.createTextNode(text)); return; }
+      const span = document.createElement('span');
+      span.className = cls;
+      span.textContent = text;
+      typeEl.appendChild(span);
+    };
+    typeBit(VOCAB.types[n.type] || n.type, '');
+    if (n.status) typeBit(statusWords[n.status] || n.status, 'p-type-status');
+    if (n.date) typeBit(fmtDate(n.date), 'p-type-date');
     // Back is a prefix character on the line that already says where you are,
     // shown only when there is a card behind this one. No container, no label.
     if (this.trail && this.trail.length) {
@@ -1034,15 +1242,37 @@ class GraphView {
     this.panel.querySelector('.p-title').textContent = n.label;
     this.panel.querySelector('.p-meta').textContent = n.degree + ' connection' + (n.degree === 1 ? '' : 's');
     const summaryEl = this.panel.querySelector('.p-summary');
+    // The summary paints instantly; the record's full source replaces it the
+    // moment its mirror arrives. No control, no second state - the spark is
+    // always the whole record, scrolling inside its own window.
     summaryEl.textContent = n.summary || '';
     summaryEl.style.display = n.summary ? '' : 'none';
+    summaryEl.scrollTop = 0;
+    if (n.summary) this.loadRecordText(n.id, text => {
+      // The panel may already show another record by the time the mirror
+      // arrives - never write into someone else's spark.
+      if (this.selectedNode !== n) return;
+      const full = text == null ? null : this.sourceSection(n.type, text);
+      if (full != null) summaryEl.textContent = full;
+    });
     const relsEl = this.panel.querySelector('.p-rels');
     relsEl.innerHTML = '';
     if (n.chunks && n.chunks.list && n.chunks.list.length) {
       const h = document.createElement('div'); h.className = 'p-rel-label';
       h.textContent = 'The work (' + n.chunks.complete + '/' + n.chunks.total + ' done)';
       relsEl.appendChild(h);
-      n.chunks.list.forEach(c => { const div = document.createElement('div'); div.className = 'p-rel-item'; div.textContent = c.number + '. ' + c.title; relsEl.appendChild(div); });
+      n.chunks.list.forEach(c => {
+        const row = document.createElement('div');
+        row.className = 'p-chunk' + (c.status === 'complete' ? ' is-complete' : '');
+        const dot = document.createElement('span');
+        dot.className = 'p-chunk-dot' + (c.status === 'complete' || c.status === 'active' ? ' is-' + c.status : '');
+        const title = document.createElement('span');
+        title.className = 'p-chunk-title';
+        title.textContent = c.title || '';
+        row.appendChild(dot);
+        row.appendChild(title);
+        relsEl.appendChild(row);
+      });
     }
     const rels = this.sim.adj.get(n.id);
     if (rels.length) {
@@ -1051,6 +1281,55 @@ class GraphView {
       const view = relsEl.querySelector('.p-strip-view[data-open-at-end]');
       if (view) { view.scrollLeft = view.scrollWidth; if (this._stripFades) this._stripFades(); }
     }
+  }
+
+  // The full text behind the card's summary line: each record type names
+  // the section its summary was drawn from; a type with no such heading
+  // reads as its whole body after the frontmatter.
+  sourceSection(type, text) {
+    const body = String(text).replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
+    const titles = { story: 'Spark', fix: 'Symptom', tweak: 'Request', mockup: 'Brief' };
+    const wanted = titles[type];
+    if (!wanted) return body.trim() || null;
+    const lines = body.split('\n');
+    const out = [];
+    let inside = false;
+    for (const line of lines) {
+      if (/^## /.test(line)) {
+        if (inside) break;
+        inside = line.slice(3).trim() === wanted;
+        continue;
+      }
+      if (inside) out.push(line);
+    }
+    const section = out.join('\n').trim();
+    return section || null;
+  }
+
+  // On-demand record mirror load through a sibling script tag - the only
+  // load path that works from file:// (see the top-of-page note). Each
+  // mirror registers itself on window.CRAFT_RECORDS; a mirror already
+  // registered is never requested twice.
+  loadRecordText(id, cb) {
+    const have = window.CRAFT_RECORDS && window.CRAFT_RECORDS[id];
+    if (have != null) { cb(have); return; }
+    // One in-flight tag per id: rapid re-clicks while the mirror is still
+    // arriving queue their callbacks instead of appending duplicate tags.
+    this._mirrorWaiters = this._mirrorWaiters || {};
+    if (this._mirrorWaiters[id]) { this._mirrorWaiters[id].push(cb); return; }
+    this._mirrorWaiters[id] = [cb];
+    const settle = () => {
+      const records = window.CRAFT_RECORDS || {};
+      const text = records[id] != null ? records[id] : null;
+      const waiters = this._mirrorWaiters[id] || [];
+      delete this._mirrorWaiters[id];
+      waiters.forEach(fn => fn(text));
+    };
+    const tag = document.createElement('script');
+    tag.src = 'graph/records/' + id + '.js';
+    tag.onload = settle;
+    tag.onerror = settle;
+    document.head.appendChild(tag);
   }
 
   resize() {
@@ -1079,17 +1358,162 @@ class GraphView {
     this.requestRender();
   }
 
+  // ---- the insight layer -----------------------------------------------
+  // Content and evidence come from the sidecar; geometry and chrome are the
+  // page's. Evidence ids resolve against the live graph - an id that no
+  // longer resolves loses only its marks, never the card: the wit survives,
+  // the pointer goes quiet.
+  resolveInsightCards() {
+    if (!INSIGHTS) return [];
+    return INSIGHTS.cards.filter(c => c && typeof c === 'object').slice(0, 4).map(c => {
+      const ids = Array.isArray(c.evidence_node_ids) ? c.evidence_node_ids : [];
+      const nodes = ids
+        .map(id => this.sim.idx.has(id) ? this.sim.nodes[this.sim.idx.get(id)] : null)
+        .filter(Boolean);
+      return { body: String(c.body || ''), witness: String(c.witness || ''), nodes };
+    }).filter(c => c.body);
+  }
+
+  // Hue is derived from the live type of the first RESOLVING evidence node,
+  // never asserted by the sidecar - the chip's chrome IS its citation, so it
+  // cannot cite a type the graph disagrees with. No surviving evidence takes
+  // the same neutral fallback an unknown node type does.
+  cardHsl(card) {
+    return (card.nodes.length && TYPE_HSL[card.nodes[0].type]) || FALLBACK_HSL;
+  }
+
+  buildCards(cards) {
+    const w = window.innerWidth, h = window.innerHeight;
+    this.cardsEl.innerHTML = '';
+    this.cardMeta = [];
+    const free = CARD_SLOTS.map((s, i) => i);
+    cards.forEach((card, ci) => {
+      // Evidence centroid in screen space - the same projection expression
+      // the label pass uses, so there is exactly one mapping to drift.
+      let cx = w / 2, cy = h / 2;
+      if (card.nodes.length) {
+        let sx = 0, sy = 0;
+        for (const n of card.nodes) {
+          sx += (n.x - this.camera.x) * this.camera.scale + w / 2;
+          sy += (n.y - this.camera.y) * this.camera.scale + h / 2;
+        }
+        cx = sx / card.nodes.length; cy = sy / card.nodes.length;
+      }
+      // Greedy nearest free slot, so each chip sits closest to its own
+      // evidence.
+      let best = free[0], bestD = Infinity;
+      for (const i of free) {
+        const s = CARD_SLOTS[i];
+        const px = s.side === 'left' ? s.x * w : w - s.x * w;
+        const d = Math.hypot(px - cx, s.y * h - cy);
+        if (d < bestD) { bestD = d; best = i; }
+      }
+      free.splice(free.indexOf(best), 1);
+      const slot = CARD_SLOTS[best];
+      const hsl = this.cardHsl(card);
+      const el = document.createElement('div');
+      el.className = 'card' + (slot.side === 'right' ? ' pin-right' : '');
+      el.style[slot.side] = (slot.x * 100) + '%';
+      el.style.top = (slot.y * 100) + '%';
+      el.style.borderColor = `hsla(${hsl[0]},${hsl[1]}%,${hsl[2]}%,0.35)`;
+      const eyebrow = document.createElement('div');
+      eyebrow.className = 'c-eyebrow';
+      eyebrow.style.color = `hsl(${hsl[0]},${hsl[1]}%,${Math.min(90, hsl[2] + 10)}%)`;
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      dot.style.background = `hsl(${hsl[0]},${hsl[1]}%,${hsl[2]}%)`;
+      const obs = document.createTextNode('Observation ' + String(ci + 1).padStart(2, '0'));
+      // The dot sits at the frame-facing edge: before the text on a
+      // left-pinned chip, after it on a right-pinned one.
+      if (slot.side === 'right') { eyebrow.appendChild(obs); eyebrow.appendChild(dot); }
+      else { eyebrow.appendChild(dot); eyebrow.appendChild(obs); }
+      // The quote-source node's date closes the row on every chip - the
+      // auto margin owns the far end regardless of pin side.
+      const src = card.nodes[0];
+      if (src && src.date) {
+        const parts = String(src.date).split('-');
+        const month = CARD_MONTHS[(+parts[1] || 1) - 1];
+        if (month && parts[2]) {
+          const dateEl = document.createElement('span');
+          dateEl.className = 'c-date';
+          dateEl.textContent = month + ' ' + (+parts[2]);
+          eyebrow.appendChild(dateEl);
+        }
+      }
+      el.appendChild(eyebrow);
+      const body = document.createElement('div');
+      body.className = 'c-body';
+      body.textContent = card.body;
+      el.appendChild(body);
+      if (card.witness) {
+        const witness = document.createElement('div');
+        witness.className = 'c-witness';
+        witness.textContent = 'witnessed by ' + card.witness;
+        el.appendChild(witness);
+      }
+      // Hover is the chip's only pointer verb: it warms the quote-source
+      // node across the sky (see the mark pass) and nothing else.
+      el.addEventListener('mouseenter', () => { this.hoverCardIndex = ci; this.requestRender(); });
+      el.addEventListener('mouseleave', () => { if (this.hoverCardIndex === ci) this.hoverCardIndex = -1; this.requestRender(); });
+      this.cardsEl.appendChild(el);
+      // Height is measured once here - the chip never changes size, so the
+      // per-frame mark pass can anchor without touching layout again.
+      this.cardMeta.push({ card, slot, hsl, el, h: el.offsetHeight });
+    });
+  }
+
+  // Fires from the render loop once CARD_REVEAL_DELAY_MS has elapsed since
+  // the first painted frame - a fixed load delay, independent of the physics.
+  // The requestFrame kicks the fade's first frame; the mark fade keeps the
+  // loop alive until it completes, and stillness then returns.
+  revealCards() {
+    // The viewport bail precedes the latch: a settle below the size floor
+    // leaves the reveal armed, so enlarging the window fires it on the next
+    // rest frame instead of never.
+    if (!this.cardsEl || !cardsViewportOk()) return;
+    this.cardsShown = true;
+    const cards = this.resolveInsightCards();
+    if (!cards.length) return;
+    this.buildCards(cards);
+    this.cardsShownAt = performance.now();
+    void this.cardsEl.offsetWidth; // commit resting styles so the class toggle transitions
+    this.cardsEl.classList.add('shown');
+    this.requestFrame();
+  }
+
+  // One seam for the record panel's visibility, so the insight layer bows
+  // out and returns in the same breath - the composed frame never holds two
+  // competing focus objects on the right edge.
+  setPanelVisible(on) {
+    if (this.panel) this.panel.classList.toggle('visible', on);
+    if (this.cardsEl) this.cardsEl.classList.toggle('suppressed', on);
+  }
+
   replay() {
     const w = window.innerWidth, h = window.innerHeight;
     this.sim.resizeHome(w, h);
     seedCompactCloud(this.sim.nodes, w / 2, h / 2, 0.06);
+    // A drag may have left the sim on the snappy cool-down profile; the
+    // entrance always blooms on the cinematic one.
+    this.sim.opts.damping = this.DECAY_CINEMATIC.damping;
+    this.sim.alphaDecay = this.DECAY_CINEMATIC.alphaDecay;
     this.sim.alpha = 1;
     this.sim.alphaTarget = 0;
     this.selectedNode = null;
     this.hoverNode = null;
     this.dragNode = null;
     this.dragCandidate = null;
-    if (this.panel) this.panel.classList.remove('visible');
+    this.setPanelVisible(false);
+    // Clearing cardsShown re-arms the reveal, so the whole choreography -
+    // bloom, settle, card entrance - runs again from the top. The hover
+    // calm latch re-arms with it, so hover goes quiet for the re-run too.
+    this.cardsShown = false;
+    this.cardsShownAt = 0;
+    this.hoverCardIndex = -1;
+    this.cardGlow = 0;
+    this.calm = false;
+    this.cardMeta = [];
+    if (this.cardsEl) { this.cardsEl.classList.remove('shown'); this.cardsEl.innerHTML = ''; }
     this.entranceStart = 0;
     this.requestRender();
   }
@@ -1142,7 +1566,10 @@ class GraphView {
           this.camera.y = this.panStartCam.y - dy / this.camera.scale;
         }
       } else {
-        this.hoverNode = hitTestNode(this.sim.nodes, wp.x, wp.y);
+        // Hover stays quiet while nodes are still flying - the gate lifts
+        // once motion calms into the final drift (see the tick loop's
+        // HOVER_CALM_MS latch), and Replay re-arms it.
+        this.hoverNode = this.calm ? hitTestNode(this.sim.nodes, wp.x, wp.y) : null;
         canvas.style.cursor = this.hoverNode ? 'pointer' : 'default';
       }
     });
@@ -1151,6 +1578,10 @@ class GraphView {
       if (this.dragging && this.dragNode) {
         this.dragNode.fx = null; this.dragNode.fy = null;
         this.sim.alphaTarget = 0;
+        // Post-drag cool-down runs on the snappy profile: the cinematic decay
+        // is an entrance treatment, not a price every drag should pay.
+        this.sim.opts.damping = this.DECAY_SNAPPY.damping;
+        this.sim.alphaDecay = this.DECAY_SNAPPY.alphaDecay;
       } else if (this.panning) {
         // pan release - camera state just stays where it is, nothing to undo
       } else if (this.dragCandidate) {
@@ -1160,11 +1591,11 @@ class GraphView {
         // so it starts the card's back-trail over rather than extending it.
         this.trail = [];
         if (this.selectedNode) this.fillPanel(this.selectedNode);
-        if (this.panel) this.panel.classList.toggle('visible', !!this.selectedNode);
+        this.setPanelVisible(!!this.selectedNode);
       } else if (this.panel && this.panStartScreen) {
         // a real empty-space click (never moved past the pan threshold) = deselect
         this.selectedNode = null;
-        this.panel.classList.remove('visible');
+        this.setPanelVisible(false);
       }
       this.dragCandidate = null; this.dragging = false; this.dragNode = null;
       this.panStartScreen = null; this.panStartCam = null;
@@ -1284,6 +1715,64 @@ class GraphView {
     }
     ctx.restore(); // back to screen space - DPR-scaled, no camera transform
 
+    // Provenance marks: a thin standoff ring around each chip's QUOTE-SOURCE
+    // node - the first evidence entry, whose order the sidecar contract makes
+    // normative (it already keys the witness; here it keys the ring, the
+    // hover warmth, and the eyebrow date). No leader lines: the connection
+    // is the hover - resting the mouse on a chip warms its node across the
+    // sky, and the warmth breathes out again on leave. Every 1px hue stroke
+    // rides a 3px dark casing on the same path - the label-halo idiom - and
+    // positions recompute from live node state every frame, so a mark never
+    // drifts during pan or zoom. Evidence that stopped resolving simply
+    // draws nothing: the chip stays, the pointer goes quiet.
+    if (this.cardsShown && this.cardMeta.length && cardsViewportOk() &&
+        this.cardsEl && !this.cardsEl.classList.contains('suppressed')) {
+      const markAlpha = clamp((performance.now() - this.cardsShownAt) / CARD_FADE_MS, 0, 1);
+      // The mark fade schedules its own frames until complete - internal
+      // animation, not input.
+      if (markAlpha < 1) this.requestFrame();
+      if (markAlpha > 0) {
+        // The warmth eases toward its target each frame; while it is still
+        // travelling, keep the loop alive so the breath completes.
+        const glowTarget = this.hoverCardIndex >= 0 ? 1 : 0;
+        this.cardGlow += (glowTarget - this.cardGlow) * CARD_GLOW_EASE;
+        if (Math.abs(glowTarget - this.cardGlow) > 0.01) this.requestFrame();
+        else this.cardGlow = glowTarget;
+        ctx.save();
+        ctx.globalAlpha = markAlpha;
+        const CASING = 'rgba(8,9,12,0.65)';
+        for (let mi = 0; mi < this.cardMeta.length; mi++) {
+          const meta = this.cardMeta[mi];
+          const evidence = meta.card.nodes;
+          if (!evidence.length) continue;
+          const src = evidence[0];
+          const nx = Math.round((src.x - this.camera.x) * this.camera.scale + w / 2);
+          const ny = Math.round((src.y - this.camera.y) * this.camera.scale + h / 2);
+          const r = Math.round(Math.max(12, src.hw * this.camera.scale * 1.35 + 6));
+          const g = this.hoverCardIndex === mi ? this.cardGlow : 0;
+          // Hover warmth: a soft radial bloom under the ring, in the chip's
+          // own hue - drawn first so the cased ring stays crisp above it.
+          if (g > 0.01) {
+            const glowR = r * 2.8;
+            const grad = ctx.createRadialGradient(nx, ny, r * 0.3, nx, ny, glowR);
+            grad.addColorStop(0, `hsla(${meta.hsl[0]},${meta.hsl[1]}%,${Math.min(85, meta.hsl[2] + 15)}%,${0.4 * g})`);
+            grad.addColorStop(1, `hsla(${meta.hsl[0]},${meta.hsl[1]}%,${meta.hsl[2]}%,0)`);
+            ctx.beginPath(); ctx.arc(nx, ny, glowR, 0, TAU);
+            ctx.fillStyle = grad; ctx.fill();
+          }
+          // Reticle: casing first, hue second, same path. The hue stroke
+          // thickens and brightens with the hover warmth.
+          ctx.beginPath(); ctx.arc(nx, ny, r, 0, TAU);
+          ctx.lineWidth = 3; ctx.strokeStyle = CASING; ctx.stroke();
+          ctx.beginPath(); ctx.arc(nx, ny, r, 0, TAU);
+          ctx.lineWidth = 1 + g * 0.8;
+          ctx.strokeStyle = `hsla(${meta.hsl[0]},${meta.hsl[1]}%,${Math.min(85, meta.hsl[2] + g * 12)}%,${0.55 + g * 0.35})`;
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+    }
+
     // Screen-space label pass - constant 11px size at every zoom. Suppression
     // uses each candidate's real measured text bounds against an AABB of
     // already-placed higher-priority labels, not a fixed grid.
@@ -1319,6 +1808,14 @@ class GraphView {
     if (!this.rafId) this.rafId = requestAnimationFrame(this.tick);
   }
 
+  // Pure frame scheduling for the page's OWN animations (card fades, glow
+  // easing). Unlike requestRender it does not stamp the input timer, so an
+  // internal ease can never masquerade as user activity and extend the calm
+  // window - the loop parks the moment the animation truly finishes.
+  requestFrame() {
+    if (!this.rafId) this.rafId = requestAnimationFrame(this.tick);
+  }
+
   tick(now) {
     this.rafId = null;
     if (!this.entranceStart) this.entranceStart = now;
@@ -1336,6 +1833,17 @@ class GraphView {
     }
     const still = entranceActive || !this.sim.isAtRest() || this.dragging || this.panning || this.interactionActive;
     if (still) this.rafId = requestAnimationFrame(this.tick);
+    // The hover gate lifts here, on the load clock rather than the sim's
+    // energy: once the entrance's violent fling window has passed, pointing
+    // at nodes feels natural again. Latched - later re-heats (a drag warms
+    // the sim back up) never re-close it; only Replay does.
+    if (!entranceActive && (now - this.entranceStart) > HOVER_CALM_MS) this.calm = true;
+    // The insight reveal keys on a fixed load-delay clock from the first
+    // painted frame - never on the physics: rest timing is a rendering
+    // concern, and movement on the page must not delay the insight layer.
+    // It runs after the frame's scheduling decision so its requestFrame
+    // never races the still-guarded reschedule above.
+    if (!entranceActive && !this.cardsShown && (now - this.entranceStart) > CARD_REVEAL_DELAY_MS) this.revealCards();
   }
 }
 

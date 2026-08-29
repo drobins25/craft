@@ -79,6 +79,27 @@ All output lands in `<root>/.craft/graph/`, loadable from `file://` via
   bash on every invocation - including on a machine with no python3 - so a
   staleness banner is always renderable. This is the only output that
   carries a timestamp.
+- **`insights.js`** (optional, AUTHORED - the one file in `.craft/graph/`
+  the builder neither writes, validates, nor deletes; `sweep_orphans` is
+  scoped to `records/` and never touches a graph-root sibling) assigns
+  `window.CRAFT_INSIGHTS` on a single line:
+  `window.CRAFT_INSIGHTS = {"version":1,"generated_at":"<ISO8601>","graph_sha":"<sha256 of graph.js at authoring time>","cards":[{"body":"<string>","witness":"<attribution string, e.g. the muse>","evidence_node_ids":["<node id>"]}],"history":["<prior card body>"]};`
+  - `version` (integer, currently 1) - the page gates on it exactly the way
+    it gates on `graph.js`'s version; a mismatch renders no cards.
+  - `cards` holds 3-4 entries. Each carries content and evidence ONLY:
+    `body` (the insight prose), `witness` (an attribution voice string the
+    page renders verbatim after `witnessed by `), and `evidence_node_ids`
+    (node ids present in `graph.js` at authoring time). The sidecar carries
+    NO hue, NO pin/corner, NO eyebrow text and NO record type - the page
+    derives all chrome from the live graph, so a card can never cite a type
+    the graph disagrees with.
+  - `history` holds at most 8 prior card bodies, most recent first, so a
+    regeneration can avoid repeating itself.
+  - Freshness is a sha question, never a clock one:
+    `insights-check.sh --check --root <r>` prints
+    `VERDICT=missing|stale|fresh` by comparing `graph.js`'s sha256 against
+    the receipt at `.craft/graph/.insights.sha256` (written by `--stamp`
+    after authoring). Both modes exit 0 on every path.
 
 ## Layout
 

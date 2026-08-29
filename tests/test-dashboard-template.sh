@@ -90,7 +90,10 @@ assert_file_contains "radial glow stop at 0.8" "rgba(\${cs},0.8)" "$TEMPLATE"
 assert_file_contains "radial glow stop at 0.26 / 0.45" "0.45, \`rgba(\${cs},0.26)\`" "$TEMPLATE"
 assert_file_contains "radial glow stop at 0 / 1" "1, \`rgba(\${cs},0)\`" "$TEMPLATE"
 assert_file_contains "flat circle pad is 6" "const pad = 6;" "$TEMPLATE"
-assert_file_contains "flat circle rim width max(1px, 0.08r)" "Math.max(1, bakeR \\* 0.08)" "$TEMPLATE"
+assert_file_contains "fill sprites bake 4x supersampled" "const SS = 4;" "$TEMPLATE"
+assert_file_contains "bake canvas dimensions scale by the supersample" "(bakeR \\* 2 + pad \\* 2) \\* SS" "$TEMPLATE"
+assert_file_contains "bake radius scales by the supersample" "bakeR \\* SS, 0, TAU" "$TEMPLATE"
+assert_file_contains "flat circle rim width max(1px, 0.08r), scaled by the supersample" "Math.max(1, bakeR \\* 0.08) \\* SS" "$TEMPLATE"
 assert_file_contains "flat circle rim is own hue +16 lightness at 0.55 alpha" "rimRgb\\[2\\]},0.55)" "$TEMPLATE"
 assert_file_contains "vignette inner radius 0.22" "Math.min(w, h) \* 0.22" "$TEMPLATE"
 assert_file_contains "vignette outer radius 1.05" "Math.max(w, h) \\* 1.05" "$TEMPLATE"
@@ -199,7 +202,7 @@ assert_contains "the Connections label is only created when a relation exists" "
 begin_test "no requestAnimationFrame is scheduled unconditionally"
 assert_file_not_contains "no unconditional self-rescheduling loop" "requestAnimationFrame(this.loop)" "$TEMPLATE"
 RAF_CALL_COUNT=$(grep -c "requestAnimationFrame(" "$TEMPLATE")
-assert_eq "exactly two requestAnimationFrame call sites (requestRender, tick)" "2" "$RAF_CALL_COUNT"
+assert_eq "exactly three requestAnimationFrame call sites (requestRender, requestFrame, tick)" "3" "$RAF_CALL_COUNT"
 assert_file_contains "the request-side call is guarded by a pending-frame check" "if (!this.rafId) this.rafId = requestAnimationFrame(this.tick);" "$TEMPLATE"
 assert_file_contains "the loop-side call is guarded by the still flag" "if (still) this.rafId = requestAnimationFrame(this.tick);" "$TEMPLATE"
 
@@ -215,10 +218,12 @@ REST_THRESHOLD_COUNT=$(grep -c "0.0006" "$TEMPLATE")
 assert_eq "the 0.0006 rest threshold appears exactly once" "1" "$REST_THRESHOLD_COUNT"
 assert_file_contains "the loop reads rest through the shared predicate" "!this.sim.isAtRest()" "$TEMPLATE"
 
-# --- Test 19: every input path calls requestRender ---
+# --- Test 19: every input path calls requestRender; internal animations use requestFrame ---
 begin_test "every input path calls requestRender"
 REQUEST_RENDER_COUNT=$(grep -c "this.requestRender();" "$TEMPLATE")
-assert_eq "requestRender is called from every input site (mousedown, mousemove, release, mouseleave, wheel, resize, replay, goTo, goBack)" "9" "$REQUEST_RENDER_COUNT"
+assert_eq "requestRender is called from every input site (mousedown, mousemove, release, mouseleave, wheel, resize, replay, goTo, goBack, chip enter/leave)" "11" "$REQUEST_RENDER_COUNT"
+REQUEST_FRAME_COUNT=$(grep -c "this.requestFrame();" "$TEMPLATE")
+assert_eq "requestFrame is called from every internal-animation site (revealCards, mark fade, warmth easing)" "3" "$REQUEST_FRAME_COUNT"
 
 # --- Test 20: both controls exist ---
 begin_test "both controls exist"
@@ -300,10 +305,20 @@ assert_file_contains "the panel reads type words off the emitted vocabulary" "VO
 assert_file_contains "the panel reads status words off the emitted vocabulary" "VOCAB.statuses" "$TEMPLATE"
 assert_file_contains "the panel reads dial outcome words off the emitted vocabulary" "VOCAB.dial_outcomes" "$TEMPLATE"
 
-# --- Test 32: the page still loads data through exactly two sibling script tags ---
-begin_test "the page still loads data through exactly two sibling script tags"
+# --- Test 32: the page still loads data through exactly three sibling script tags ---
+begin_test "the page still loads data through exactly three sibling script tags"
 SCRIPT_SRC_COUNT=$(grep -c '<script src=' "$TEMPLATE")
-assert_eq "exactly two script src tags" "2" "$SCRIPT_SRC_COUNT"
+assert_eq "exactly three script src tags" "3" "$SCRIPT_SRC_COUNT"
+assert_file_contains "insights.js sibling script tag present" 'src="graph/insights.js"' "$TEMPLATE"
+GRAPH_TAG_LINE=$(grep -n 'src="graph/graph.js"' "$TEMPLATE" | head -1 | cut -d: -f1)
+INSIGHTS_TAG_LINE=$(grep -n 'src="graph/insights.js"' "$TEMPLATE" | head -1 | cut -d: -f1)
+if [ -n "$GRAPH_TAG_LINE" ] && [ -n "$INSIGHTS_TAG_LINE" ] && [ "$GRAPH_TAG_LINE" -lt "$INSIGHTS_TAG_LINE" ]; then
+  echo "  PASS: insights.js loads after graph.js"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: insights.js loads after graph.js"
+  FAIL=$((FAIL + 1))
+fi
 
 # --- Test 33: an unrecognised status falls through to the stored value ---
 begin_test "an unrecognised status falls through to the stored value"
@@ -316,5 +331,249 @@ assert_file_contains "the notice tells the user to run /craft:dashboard" "/craft
 # --- Test 35: the data-version notice no longer tells the user to refresh ---
 begin_test "the data-version notice no longer tells the user to refresh"
 assert_file_not_contains "the stale 'Refresh to try again' notice is gone" "Refresh to try again" "$TEMPLATE"
+
+# --- Test 36: the sidecar guard uses the shipped absent-or-malformed idiom ---
+begin_test "the sidecar guard uses the shipped absent-or-malformed idiom"
+assert_file_contains "guard reads window.CRAFT_INSIGHTS through a conjunction" "window.CRAFT_INSIGHTS && window.CRAFT_INSIGHTS.version === 1" "$TEMPLATE"
+assert_file_contains "guard checks cards is an array" "Array.isArray(window.CRAFT_INSIGHTS.cards)" "$TEMPLATE"
+assert_file_not_contains "no try/catch wraps the sidecar read" "try {" "$TEMPLATE"
+assert_file_contains "the per-card pass drops null and non-object entries" "filter(c => c && typeof c === 'object')" "$TEMPLATE"
+
+# --- Test 37: card surface constants match the ruled values ---
+begin_test "card surface constants match the ruled values"
+CARD_CSS=$(awk '/#stage #cards .card \{/,/^  \}/' "$TEMPLATE")
+assert_contains "card fill is the glass value" "background: rgba(16,18,24,0.72);" "$CARD_CSS"
+assert_contains "card radius is 11px" "border-radius: 11px;" "$CARD_CSS"
+assert_contains "card padding matches" "padding: 13px 15px 14px;" "$CARD_CSS"
+assert_contains "the inset top highlight is the only card glow" "box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);" "$CARD_CSS"
+assert_contains "card width is 300px" "width: 300px;" "$CARD_CSS"
+assert_file_contains "the border carries the evidence hue at 0.35 alpha" '%,0.35)' "$TEMPLATE"
+assert_contains "card face is the zero-download system stack" "font-family: -apple-system, system-ui, 'Segoe UI', sans-serif;" "$CARD_CSS"
+assert_contains "card weight is 450" "font-weight: 450;" "$CARD_CSS"
+assert_contains "card tracking is 0em" "letter-spacing: 0em;" "$CARD_CSS"
+assert_contains "optical sizing is auto" "font-optical-sizing: auto;" "$CARD_CSS"
+
+# --- Test 38: eyebrow, body and witness typography match the ruled values ---
+begin_test "eyebrow, body and witness typography match the ruled values"
+EYEBROW_CSS=$(awk '/#stage #cards .card .c-eyebrow \{/,/^  \}/' "$TEMPLATE")
+assert_contains "eyebrow is mono" 'ui-monospace, "SF Mono", Menlo, Consolas, monospace' "$EYEBROW_CSS"
+assert_contains "eyebrow is 11px" "font-size: 11px;" "$EYEBROW_CSS"
+assert_contains "eyebrow tracking is 0.14em" "letter-spacing: 0.14em;" "$EYEBROW_CSS"
+assert_contains "eyebrow is uppercase" "text-transform: uppercase;" "$EYEBROW_CSS"
+assert_contains "eyebrow lays out as flex with a 6px gap" "gap: 6px;" "$EYEBROW_CSS"
+assert_file_contains "the eyebrow dot is 6px round" '.c-eyebrow .dot { width: 6px; height: 6px; border-radius: 50%;' "$TEMPLATE"
+assert_file_contains "eyebrow colour lifts the hue by 10 lightness" "Math.min(90, hsl\[2\] + 10)" "$TEMPLATE"
+BODY_CSS=$(awk '/#stage #cards .card .c-body \{/,/^  \}/' "$TEMPLATE")
+assert_contains "body is 14px" "font-size: 14px;" "$BODY_CSS"
+assert_contains "body line-height is 1.5" "line-height: 1.5;" "$BODY_CSS"
+assert_contains "body colour is #e8eaef" "color: #e8eaef;" "$BODY_CSS"
+WITNESS_CSS=$(awk '/#stage #cards .card .c-witness \{/,/^  \}/' "$TEMPLATE")
+assert_contains "witness line is mono" 'ui-monospace, "SF Mono", Menlo, Consolas, monospace' "$WITNESS_CSS"
+assert_contains "witness line is 11px" "font-size: 11px;" "$WITNESS_CSS"
+
+# --- Test 39: card prose is left-aligned unconditionally ---
+begin_test "card prose is left-aligned unconditionally"
+assert_contains "the body rule pins text-align left" "text-align: left;" "$BODY_CSS"
+assert_not_contains "no right-aligned prose in the body rule" "text-align: right" "$BODY_CSS"
+assert_file_contains "right-pinned cards justify only the eyebrow" ".card.pin-right .c-eyebrow { justify-content: flex-end; }" "$TEMPLATE"
+
+# --- Test 40: no drop-shadow, blur or backdrop-filter on the card ---
+begin_test "no drop-shadow, blur or backdrop-filter on the card"
+assert_not_contains "no backdrop-filter in the card rule" "backdrop-filter" "$CARD_CSS"
+assert_not_contains "no filter property in the card rule" "filter:" "$CARD_CSS"
+CARD_SHADOWS=$(echo "$CARD_CSS" | grep "box-shadow" || true)
+NON_INSET_SHADOWS=$(echo "$CARD_SHADOWS" | grep -v "inset" || true)
+assert_eq "every card box-shadow is inset" "" "$NON_INSET_SHADOWS"
+
+# --- Test 41: the witness footer renders from the sidecar ---
+begin_test "the witness footer renders from the sidecar"
+assert_file_contains "the witnessed by prefix is rendered" "'witnessed by ' + card.witness" "$TEMPLATE"
+assert_file_contains "an empty witness skips the footer entirely" "if (card.witness) {" "$TEMPLATE"
+
+# --- Test 42: slot insets match the ported plate percentages ---
+begin_test "slot insets match the ported plate percentages"
+SLOTS_BLOCK=$(awk '/const CARD_SLOTS = \[/,/^\];/' "$TEMPLATE")
+assert_contains "slot 1 is left 2.5% top 6.4%" "side: 'left', x: 0.025, y: 0.064" "$SLOTS_BLOCK"
+assert_contains "slot 2 is right 2.5% top 56%" "side: 'right', x: 0.025, y: 0.56" "$SLOTS_BLOCK"
+assert_contains "slot 3 is left 2.5% top 70%" "side: 'left', x: 0.025, y: 0.70" "$SLOTS_BLOCK"
+assert_contains "slot 4 is right 6.75% top 28%" "side: 'right', x: 0.0675, y: 0.28" "$SLOTS_BLOCK"
+assert_file_contains "the layer hides below the desktop floor" "CARD_MIN_W = 1100, CARD_MIN_H = 700" "$TEMPLATE"
+
+# --- Test 43: reveal keys off a fixed load delay, never the physics ---
+begin_test "reveal keys off a fixed load delay, never the physics"
+REVEAL_LINE=$(grep "this.revealCards();" "$TEMPLATE")
+assert_contains "the reveal condition names the load-delay clock" "CARD_REVEAL_DELAY_MS" "$REVEAL_LINE"
+assert_not_contains "the reveal condition does not name isAtRest()" "this.sim.isAtRest()" "$REVEAL_LINE"
+assert_not_contains "entranceGlobalAlpha is not in the reveal path" "entranceGlobalAlpha" "$REVEAL_LINE"
+assert_file_contains "the reveal delay constant is defined" "const CARD_REVEAL_DELAY_MS = 3000;" "$TEMPLATE"
+REVEAL_FN=$(awk '/  revealCards\(\) \{/,/^  \}/' "$TEMPLATE")
+assert_contains "the reveal path schedules a frame without stamping input" "this.requestFrame();" "$REVEAL_FN"
+REVEAL_RR_COUNT=$(echo "$REVEAL_FN" | grep -c "this.requestRender();" || true)
+assert_eq "the reveal path never calls requestRender" "0" "$REVEAL_RR_COUNT"
+LATCH_ORDER=$(echo "$REVEAL_FN" | awk '/cardsViewportOk\(\)/{if (!b) b=NR} /this.cardsShown = true/{if (!l) l=NR} END{print (b && l && b < l) ? "bail-first" : "latch-first"}')
+assert_eq "the viewport bail precedes the reveal latch" "bail-first" "$LATCH_ORDER"
+
+# --- Test 44: replay resets the card reveal flag ---
+begin_test "replay resets the card reveal flag"
+REPLAY_FN=$(awk '/  replay\(\) \{/,/^  \}/' "$TEMPLATE")
+assert_contains "replay clears cardsShown" "this.cardsShown = false;" "$REPLAY_FN"
+assert_contains "replay removes the shown class" "classList.remove('shown')" "$REPLAY_FN"
+
+# --- Test 45: the panel and the card layer share one visibility seam ---
+begin_test "the panel and the card layer share one visibility seam"
+SEAM_FN=$(awk '/  setPanelVisible\(on\) \{/,/^  \}/' "$TEMPLATE")
+assert_contains "the seam toggles the panel" "this.panel.classList.toggle('visible', on)" "$SEAM_FN"
+assert_contains "the seam suppresses the card layer" "classList.toggle('suppressed', on)" "$SEAM_FN"
+DIRECT_PANEL_TOGGLES=$(grep -c "panel.classList.toggle('visible'" "$TEMPLATE")
+assert_eq "the panel visible class is toggled only inside the seam" "1" "$DIRECT_PANEL_TOGGLES"
+
+# --- Test 46: reticles are canvas strokes, not SVG ---
+begin_test "reticles are canvas strokes, not SVG"
+assert_file_not_contains "no createElementNS" "createElementNS" "$TEMPLATE"
+assert_file_not_contains "no SVG namespace url can exist (http:// gate re-run)" "http://" "$TEMPLATE"
+MARK_PASS=$(awk '/Provenance marks:/,/Screen-space label pass/' "$TEMPLATE")
+assert_contains "the mark pass strokes with ctx.stroke" "ctx.stroke();" "$MARK_PASS"
+
+# --- Test 47: every hue stroke rides a casing stroke ---
+begin_test "every hue stroke rides a casing stroke"
+assert_contains "the casing colour is the locked dark value" "rgba(8,9,12,0.65)" "$MARK_PASS"
+CASING_WIDTH_COUNT=$(echo "$MARK_PASS" | grep -c "ctx.lineWidth = 3; ctx.strokeStyle = CASING; ctx.stroke();")
+assert_eq "the 3px casing stroke is drawn once, for the reticle" "1" "$CASING_WIDTH_COUNT"
+FIRST_CASING_LINE=$(echo "$MARK_PASS" | grep -n "strokeStyle = CASING" | head -1 | cut -d: -f1)
+FIRST_HUE_LINE=$(echo "$MARK_PASS" | grep -n "strokeStyle = \`hsla(\${meta.hsl\[0\]}" | head -1 | cut -d: -f1)
+if [ -n "$FIRST_CASING_LINE" ] && [ -n "$FIRST_HUE_LINE" ] && [ "$FIRST_CASING_LINE" -lt "$FIRST_HUE_LINE" ]; then
+  echo "  PASS: the casing stroke precedes the hue stroke"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: the casing stroke precedes the hue stroke (casing=$FIRST_CASING_LINE hue=$FIRST_HUE_LINE)"
+  FAIL=$((FAIL + 1))
+fi
+
+# --- Test 48: the reticle alpha and hover warmth match the locked values ---
+begin_test "the reticle alpha and hover warmth match the locked values"
+assert_contains "the resting reticle hue rides at 0.55 alpha, warming by g*0.35" '0.55 + g \* 0.35' "$MARK_PASS"
+assert_contains "the hover bloom centre peaks at 0.4 alpha" '0.4 \* g' "$MARK_PASS"
+assert_contains "the bloom reaches 2.8 radii" 'r \* 2.8' "$MARK_PASS"
+assert_contains "the warmed ring thickens by g*0.8" '1 + g \* 0.8' "$MARK_PASS"
+assert_file_contains "the warmth eases by the named per-frame fraction" "const CARD_GLOW_EASE = 0.15;" "$TEMPLATE"
+
+# --- Test 49: reticle standoff uses the locked 1.35 ratio ---
+begin_test "reticle standoff uses the locked 1.35 ratio"
+assert_contains "the radius expression carries the 1.35 standoff" "this.camera.scale \* 1.35 + 6" "$MARK_PASS"
+assert_contains "the standoff floors at 12" "Math.max(12," "$MARK_PASS"
+
+# --- Test 50: the card fade completes inside the calm window ---
+begin_test "the card fade completes inside the calm window"
+FADE_MS=$(grep -o 'const CARD_FADE_MS = [0-9]*' "$TEMPLATE" | grep -o '[0-9]*')
+CALM=$(grep -o 'const CALM_MS = [0-9]*' "$TEMPLATE" | grep -o '[0-9]*')
+if [ -n "$FADE_MS" ] && [ -n "$CALM" ] && [ "$FADE_MS" -lt "$CALM" ]; then
+  echo "  PASS: CARD_FADE_MS ($FADE_MS) is strictly below CALM_MS ($CALM)"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: CARD_FADE_MS ($FADE_MS) must be strictly below CALM_MS ($CALM)"
+  FAIL=$((FAIL + 1))
+fi
+assert_file_contains "the mark alpha ramps off the reveal clock" "(performance.now() - this.cardsShownAt) / CARD_FADE_MS" "$TEMPLATE"
+
+# --- Test 51: no shadowBlur enters the file with the mark pass present ---
+begin_test "no shadowBlur enters the file with the mark pass present"
+assert_file_not_contains "no shadowBlur (re-run against the enlarged file)" "shadowBlur" "$TEMPLATE"
+
+# --- Test 52: marks draw only while cards are shown and the panel is closed ---
+begin_test "marks draw only while cards are shown and the panel is closed"
+assert_contains "the mark pass gates on cardsShown" "this.cardsShown && this.cardMeta.length" "$MARK_PASS"
+assert_contains "the mark pass gates on the suppressed class" "classList.contains('suppressed')" "$MARK_PASS"
+assert_contains "the mark pass gates on the desktop viewport floor" "cardsViewportOk()" "$MARK_PASS"
+assert_contains "a card with no resolving evidence draws no marks" "if (!evidence.length) continue;" "$MARK_PASS"
+
+# --- Test 53: one ring per card on the quote-source node; hover warms it; no leader lines ---
+begin_test "one ring per card on the quote-source node; hover warms it; no leader lines"
+assert_contains "the ring targets the first evidence entry - the quote source" "const src = evidence\[0\];" "$MARK_PASS"
+RETICLE_ARC_COUNT=$(echo "$MARK_PASS" | grep -c "ctx.arc(nx, ny, r, 0, TAU)")
+assert_eq "exactly one reticle ring per card (casing + hue arcs on the quote-source node)" "2" "$RETICLE_ARC_COUNT"
+assert_not_contains "no nearest-node selection survives in the mark pass" "nearD" "$MARK_PASS"
+assert_not_contains "no leader line survives in the mark pass" "ctx.moveTo(ax, ay)" "$MARK_PASS"
+assert_not_contains "no dot terminal survives in the mark pass" "ctx.arc(ex, ey" "$MARK_PASS"
+assert_contains "hover warmth is a radial bloom under the ring" "ctx.createRadialGradient(nx, ny, r \\* 0.3" "$MARK_PASS"
+assert_file_contains "chips accept the mouse only once revealed" "#stage #cards.shown .card { pointer-events: auto; }" "$TEMPLATE"
+assert_file_contains "a suppressed layer gives the mouse back" "#stage #cards.suppressed .card { pointer-events: none; }" "$TEMPLATE"
+assert_file_contains "hovering a chip warms its node" "this.hoverCardIndex = ci;" "$TEMPLATE"
+assert_file_contains "leaving a chip releases the warmth" "this.hoverCardIndex === ci) this.hoverCardIndex = -1;" "$TEMPLATE"
+
+# --- Test 53b: the eyebrow date badge derives from the quote-source node ---
+begin_test "the eyebrow date badge derives from the quote-source node"
+assert_file_contains "the badge element rides the eyebrow" "dateEl.className = 'c-date';" "$TEMPLATE"
+assert_file_contains "the badge takes the far end via the auto margin" ".c-eyebrow .c-date { margin-left: auto; font-size: 9.5px; letter-spacing: 0.1em; opacity: 0.75; }" "$TEMPLATE"
+assert_file_contains "the month renders from the uppercase table" "const CARD_MONTHS = \['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'\];" "$TEMPLATE"
+assert_file_contains "the badge reads the first evidence node's date" "const src = card.nodes\[0\];" "$TEMPLATE"
+
+# --- Test 54: work rows carry a status dot, never a number ---
+begin_test "work rows carry a status dot, never a number"
+FILLPANEL_NOW=$(awk '/fillPanel\(n\) \{/,/^  \}/' "$TEMPLATE")
+assert_not_contains "no ordinal prefix renders in a work row" "c.number" "$FILLPANEL_NOW"
+assert_contains "each work row carries a status dot element" "p-chunk-dot" "$FILLPANEL_NOW"
+assert_contains "a completed row is classed for its faded title" "' is-complete'" "$FILLPANEL_NOW"
+CHUNK_ROW_CSS=$(awk '/#stage #panel .p-chunk \{/,/^  \}/' "$TEMPLATE")
+assert_contains "work rows lay out as flex" "display: flex;" "$CHUNK_ROW_CSS"
+assert_contains "work rows use the ruled 0.5em gap" "gap: 0.5em;" "$CHUNK_ROW_CSS"
+assert_contains "text-indent is pinned to 0" "text-indent: 0;" "$CHUNK_ROW_CSS"
+CHUNK_DOT_CSS=$(awk '/#stage #panel .p-chunk .p-chunk-dot \{/,/^  \}/' "$TEMPLATE")
+assert_contains "the dot is 7px wide" "width: 7px;" "$CHUNK_DOT_CSS"
+assert_contains "the dot is 7px tall" "height: 7px;" "$CHUNK_DOT_CSS"
+assert_contains "the resting dot is the pending 1px ring" "border: 1px solid #6b7080;" "$CHUNK_DOT_CSS"
+assert_contains "the pending ring rides at 0.5 opacity" "opacity: 0.5;" "$CHUNK_DOT_CSS"
+assert_file_contains "the active dot is a 1.5px accent ring" "border: 1.5px solid #9fd8ff;" "$TEMPLATE"
+assert_file_contains "the complete dot fills solid" "background: #c7cbd4;" "$TEMPLATE"
+assert_file_contains "a completed row's title fades to 0.65" "p-chunk.is-complete .p-chunk-title { opacity: 0.65; }" "$TEMPLATE"
+
+# --- Test 55: the spark is always the whole record, scrolling in its own window ---
+begin_test "the spark is always the whole record, scrolling in its own window"
+assert_file_not_contains "no reveal control survives in the markup" 'class="p-more"' "$TEMPLATE"
+assert_file_not_contains "no line clamp survives" "webkit-line-clamp" "$TEMPLATE"
+assert_file_not_contains "no clamped state survives" "is-clamped" "$TEMPLATE"
+assert_file_not_contains "no expanded state survives - there is only one state" "is-expanded" "$TEMPLATE"
+SUMMARY_CSS=$(awk '/#stage #panel .p-summary \{/,/^  \}/' "$TEMPLATE")
+assert_contains "the spark scrolls inside its own window" "overflow-y: auto;" "$SUMMARY_CSS"
+assert_contains "the window caps at 45vh" "max-height: 45vh;" "$SUMMARY_CSS"
+assert_contains "the scroll is contained - it never flings the page" "overscroll-behavior: contain;" "$SUMMARY_CSS"
+assert_contains "the source's line breaks render as written" "white-space: pre-wrap;" "$SUMMARY_CSS"
+assert_file_contains "the scrollbar is the slim 4px thumb" "p-summary::-webkit-scrollbar { width: 4px; }" "$TEMPLATE"
+assert_file_contains "the full source loads the moment the panel opens" "if (n.summary) this.loadRecordText(n.id, text => {" "$TEMPLATE"
+assert_file_contains "a fresh record starts scrolled to the top" "summaryEl.scrollTop = 0;" "$TEMPLATE"
+
+# --- Test 56: the full text loads through the sibling-script idiom ---
+begin_test "the full text loads through the sibling-script idiom"
+assert_file_contains "the mirror path is built from the graph subdirectory" "'graph/records/' + id + '.js'" "$TEMPLATE"
+assert_file_contains "a failed mirror load degrades instead of breaking" "tag.onerror" "$TEMPLATE"
+assert_file_contains "rapid re-opens queue on one in-flight tag per id" "_mirrorWaiters\[id\].push(cb)" "$TEMPLATE"
+assert_file_contains "the arrival only writes into the panel it was asked for" "if (this.selectedNode !== n) return;" "$TEMPLATE"
+
+# --- Test 57: the type line tiers its colours through spans ---
+begin_test "the type line tiers its colours through spans"
+assert_file_contains "the status span steps back" "p-type-status { color: #9298a6; }" "$TEMPLATE"
+assert_file_contains "the date span steps back further" "p-type-date { color: #7b808e; }" "$TEMPLATE"
+assert_contains "the status word renders into its own span" "'p-type-status'" "$FILLPANEL_NOW"
+assert_contains "the date renders into its own span" "'p-type-date'" "$FILLPANEL_NOW"
+assert_contains "the separator stays the bare middle dot" "' · '" "$FILLPANEL_NOW"
+
+# --- Test 58: the back control keeps its ruled bare style ---
+begin_test "the back control keeps its ruled bare style"
+P_BACK_CSS=$(awk '/#stage #panel .p-back \{/,/^  \}/' "$TEMPLATE")
+assert_contains "the back control stays fully unstyled" "all: unset;" "$P_BACK_CSS"
+assert_not_contains "no border crept onto the back control" "border" "$P_BACK_CSS"
+assert_not_contains "no background crept onto the back control" "background" "$P_BACK_CSS"
+
+# --- Test 59: hover arms at calm - after the fling, before full rest ---
+begin_test "hover arms at calm - after the fling, before full rest"
+assert_file_contains "the hover hit-test rides the calm latch" "this.calm ? hitTestNode" "$TEMPLATE"
+assert_file_contains "the calm point is one named tunable constant" "const HOVER_CALM_MS = 1500;" "$TEMPLATE"
+CALM_LINE=$(grep "this.calm = true;" "$TEMPLATE")
+CALM_LINE_COUNT=$(echo "$CALM_LINE" | grep -c "this.calm = true;")
+assert_eq "the latch is armed at exactly one site" "1" "$CALM_LINE_COUNT"
+assert_contains "the latch arms on the load clock" "(now - this.entranceStart) > HOVER_CALM_MS" "$CALM_LINE"
+assert_not_contains "the latch is not chained to the physics energy" "this.sim.alpha" "$CALM_LINE"
+assert_not_contains "the latch does not wait for full rest" "isAtRest" "$CALM_LINE"
+REPLAY_REARM=$(awk '/  replay\(\) \{/,/^  \}/' "$TEMPLATE")
+assert_contains "replay re-arms the hover gate alongside the card reveal" "this.calm = false;" "$REPLAY_REARM"
 
 finish_tests "test-dashboard-template.sh"

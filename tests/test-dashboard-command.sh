@@ -80,6 +80,67 @@ begin_test "the edited-copy offer names the backup path"
 assert_file_contains "backup path named in the behind branch" '\.craft/dashboard-backup\.html' "$CMD_FILE"
 echo ""
 
+begin_test "the mining step sits between the rebuild and the open"
+MINE_LINE=$(grep -n 'insights-check\.sh --check' "$CMD_FILE" | head -1 | cut -d: -f1)
+REBUILD_LINE=$(grep -n 'dashboard-run\.sh --root' "$CMD_FILE" | head -1 | cut -d: -f1)
+OPEN_LINE=$(grep -n 'open "\$PAGE"' "$CMD_FILE" | head -1 | cut -d: -f1)
+if [ -n "$MINE_LINE" ] && [ -n "$REBUILD_LINE" ] && [ -n "$OPEN_LINE" ] \
+  && [ "$REBUILD_LINE" -lt "$MINE_LINE" ] && [ "$MINE_LINE" -lt "$OPEN_LINE" ]; then
+  echo "  PASS: rebuild ($REBUILD_LINE) precedes mining ($MINE_LINE) precedes open ($OPEN_LINE)"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: expected rebuild < mining < open, got rebuild=$REBUILD_LINE mining=$MINE_LINE open=$OPEN_LINE"
+  FAIL=$((FAIL + 1))
+fi
+echo ""
+
+begin_test "the mining step gates on the freshness verdict"
+MINING_STEP=$(sed -n '/### Step 2.5/,/### Step 3/p' "$CMD_FILE")
+assert_contains "the step runs insights-check.sh" 'insights-check\.sh' "$MINING_STEP"
+assert_contains "the step names the stale verdict" 'VERDICT=stale' "$MINING_STEP"
+assert_contains "the step names the missing verdict" 'VERDICT=missing' "$MINING_STEP"
+assert_contains "the fresh verdict does nothing and says nothing" 'say nothing' "$MINING_STEP"
+assert_contains "the step is silent on every path" 'silent on every path' "$MINING_STEP"
+assert_contains "the step stamps after authoring" 'insights-check\.sh --stamp' "$MINING_STEP"
+echo ""
+
+begin_test "the mining reference is anchored in the substitution form"
+assert_file_contains "the reference anchor is present" '\${CLAUDE_PLUGIN_ROOT}/commands/references/insight-mining\.md' "$CMD_FILE"
+assert_file_exists "the anchored reference exists" "$PLUGIN_ROOT/commands/references/insight-mining.md"
+echo ""
+
+REF_FILE="$PLUGIN_ROOT/commands/references/insight-mining.md"
+
+begin_test "the register rules are present in the reference"
+assert_file_contains "second person is binding" 'Second person' "$REF_FILE"
+assert_file_contains "the affectionate-roast rule is binding" 'Affectionate roast, never snark' "$REF_FILE"
+assert_file_contains "no bare number as the whole card" 'Never a bare number as the whole card' "$REF_FILE"
+assert_file_contains "one fact plus one turn of phrase per card" 'One specific fact PLUS one turn of phrase' "$REF_FILE"
+assert_file_contains "no gamified cheer" 'No gamified cheer' "$REF_FILE"
+echo ""
+
+begin_test "the structural evidence rule is stated as a hard gate"
+assert_file_contains "a card must cite an evidence id present in graph.js" 'cites at least one `evidence_node_ids` entry that exists in `graph\.js`' "$REF_FILE"
+assert_file_contains "an uncitable card is discarded, never softened" 'discarded - never softened' "$REF_FILE"
+assert_file_contains "too little material writes no sidecar" 'fewer than 3 mirror-backed cards gets NO sidecar' "$REF_FILE"
+echo ""
+
+begin_test "the witness assignment rule is present in the reference"
+assert_file_contains "the conductor is in the roster" 'the conductor' "$REF_FILE"
+assert_file_contains "the muse is in the roster" 'the muse' "$REF_FILE"
+assert_file_contains "the alchemist is in the roster" 'the alchemist' "$REF_FILE"
+assert_file_contains "riff is in the roster" '| riff | `riff` |' "$REF_FILE"
+assert_file_contains "cycle/story/planning map to the conductor" 'cycle / story / planning | `the conductor`' "$REF_FILE"
+assert_file_contains "fix/tweak/dial map to the alchemist" 'fix / tweak / dial | `the alchemist`' "$REF_FILE"
+assert_file_contains "the mapping keys off the first evidence node type" 'FIRST evidence node' "$REF_FILE"
+echo ""
+
+begin_test "the existing command surface is unchanged"
+assert_file_contains "the Step 5 offer is untouched" 'Want to hear the weirdest thing you ever did in here? Just ask\.' "$CMD_FILE"
+assert_file_contains "the reveal text is untouched" "your project's second brain" "$CMD_FILE"
+assert_file_contains "the degraded sentence is untouched" "the rebuild didn't finish" "$CMD_FILE"
+echo ""
+
 begin_test "check-doc-drift finds no structural drift from the new command"
 # check-doc-drift.sh also carries a repo-wide "unpushed feat: needs a
 # CHANGELOG entry" gate (finding 9) that is pre-existing and, per this

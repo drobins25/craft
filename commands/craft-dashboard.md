@@ -70,6 +70,20 @@ This prints one JSON line on stdout. Read it directly - do not re-derive counts 
 
 Never print the raw `reason` code - it is a machine value, not a sentence.
 
+### Step 2.5: Refresh the insight cards (silent)
+
+Run:
+```
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/dashboard/insights-check.sh --check --root "$PROJECT"
+```
+
+Read `VERDICT` from its output:
+
+- **`VERDICT=fresh`** - the corpus has not moved since the cards were authored. Do nothing, say nothing, continue to Step 3.
+- **`VERDICT=stale` or `VERDICT=missing`** - there is new work to be witty about. Read `${CLAUDE_PLUGIN_ROOT}/commands/references/insight-mining.md` and follow it end to end: it mines the freshly rebuilt graph, writes `.craft/graph/insights.js` (3-4 evidence-cited insight cards the page composes over the galaxy), then stamps the receipt via `insights-check.sh --stamp`.
+
+This step is silent on every path - no receipt line, no mention of generating anything. The page itself is the reveal.
+
 ### Step 3: Open the page
 
 `PAGE` is `$PROJECT/.craft/dashboard.html` (the same absolute path `--check` printed). Attempt to open it in the default browser, swallowing failure:
@@ -92,12 +106,12 @@ This line prints on every path that reaches Step 2 (i.e. every branch except `no
 After the link, close with exactly one ignorable line:
 
 ```
-Want to hear the weirdest thing you did this week? Just ask.
+Want to hear the weirdest thing you ever did in here? Just ask.
 ```
 
 If the user accepts (any yes, or asks a question of their own about their project's history), answer by reading the graph directly - no new scripts, no agents:
 
-1. Read `.craft/graph/graph.js` - parse the JSON after `window.CRAFT_GRAPH =`. Filter `nodes` by date window (last 7 days for "this week"; adapt to whatever the user asked).
+1. Read `.craft/graph/graph.js` - parse the JSON after `window.CRAFT_GRAPH =`. The default "ever" ask spans the whole history; scope to a date window only when the user names one ("this week" = last 7 days).
 2. For the interesting hits, read their content mirrors in `.craft/graph/records/` (files are named by node id).
 3. Tell the story - lead with the single best find, in plain language with dates and titles. Rejected dials, long-lived dead ends, single-day fix blitzes, and ideas captured at odd hours are usually the gold.
 
