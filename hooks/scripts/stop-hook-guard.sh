@@ -24,6 +24,17 @@ if [ -z "$SESSION_ID" ]; then
   SESSION_ID=$(echo "$PWD" | md5 2>/dev/null | cut -c1-8)
 fi
 
+# File mtime, portable. Linux-tool-first with an empty-check fallback: GNU's
+# `stat -f %m FILE` is NOT a clean failure - it dumps a filesystem report to
+# stdout before the || fallback fires, so a mac-first || chain captures garbage
+# on Linux. BSD stat -c fails with empty stdout, so this order is safe both ways.
+mtime_of() {
+  local t
+  t=$(stat -c %Y "$1" 2>/dev/null)
+  [ -n "$t" ] || t=$(stat -f %m "$1" 2>/dev/null)
+  printf '%s' "$t"
+}
+
 # Resolve project root for state checks
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/find-workshop.sh" 2>/dev/null || exit 0
@@ -32,22 +43,77 @@ if [ -z "$PROJECT_ROOT" ] || [ ! -d "${PROJECT_ROOT}.craft" ]; then
   exit 0
 fi
 
+# Load craft state once so every layer can speak the full status line
+CYCLE_TITLE=""; ACTIVE_CYCLE=""; CURRENT_STORY=""; CURRENT_CHUNK=""; TOTAL_CHUNKS=""
+[ -f "${PROJECT_ROOT}.craft/.global-state" ] && source "${PROJECT_ROOT}.craft/.global-state"
+CYCLE_STATE_FILE="${PROJECT_ROOT}.craft/cycles/${ACTIVE_CYCLE}/.state"
+[ -n "$ACTIVE_CYCLE" ] && [ -f "$CYCLE_STATE_FILE" ] && source "$CYCLE_STATE_FILE"
+if [ -n "$ACTIVE_CYCLE" ] && [ -f "${PROJECT_ROOT}.craft/cycles/${ACTIVE_CYCLE}/cycle.yaml" ]; then
+  CYCLE_TITLE=$(grep "^title:" "${PROJECT_ROOT}.craft/cycles/${ACTIVE_CYCLE}/cycle.yaml" 2>/dev/null | sed 's/title: *//' | tr -d '"')
+fi
+[ -z "$CYCLE_TITLE" ] && CYCLE_TITLE="$ACTIVE_CYCLE"
+
+# Progress dial: quarter-rounded COMPLETED chunks (CURRENT_CHUNK is the one in
+# progress, so completed = CURRENT_CHUNK - 1). ◔ floor while work is in motion -
+# the dial never shows empty on an active story; ○ is reserved for set-down.
+dial_glyph() {
+  local done=$(( ${CURRENT_CHUNK:-1} - 1 )) total=${TOTAL_CHUNKS:-0} q
+  if ! [ "$total" -gt 0 ] 2>/dev/null; then printf '◔'; return; fi
+  q=$(( done * 4 / total ))
+  case $q in
+    0|1) printf '◔' ;;
+    2)   printf '◑' ;;
+    3)   printf '◕' ;;
+    *)   printf '●' ;;
+  esac
+}
+
+# The "Crafting" lead: brand verb + story + cycle + position, only while in motion
+crafting_prefix() {
+  if [ -n "$CURRENT_STORY" ]; then
+    printf '%s Crafting: %s · [%s] · chunk %s of %s' \
+      "$(dial_glyph)" "$CURRENT_STORY" "$CYCLE_TITLE" "${CURRENT_CHUNK:-?}" "${TOTAL_CHUNKS:-?}"
+  else
+    printf '◔ Crafting'
+  fi
+}
+
+# Write gate: read the live value every stop - the same variable every gate
+# open/close writes through update-global-state.sh (sourced above).
+gate_open() { [ "${CRAFT_WRITE_ENABLED:-}" = "true" ]; }
+
+# Set-down lines carry the forgotten-gate warning only while the gate is open
+GATE_SUFFIX=""
+gate_open && GATE_SUFFIX=" · ⚠ write gate open"
+
+# Adhoc flavor: which records folder got a file since the gate opened -
+# the word only, never a record name. Ambiguous or none: plain Adhoc.
+gate_flavor() {
+  local marker="${PROJECT_ROOT}.craft/.active-fix" f t
+  [ -f "$marker" ] || { printf 'Adhoc'; return; }
+  f=$(find "${PROJECT_ROOT}.craft/fixes" -name '*.md' -newer "$marker" 2>/dev/null | head -1)
+  t=$(find "${PROJECT_ROOT}.craft/tweaks" -name '*.md' -newer "$marker" 2>/dev/null | head -1)
+  if [ -n "$t" ] && [ -z "$f" ]; then printf 'Tweak'
+  elif [ -n "$f" ] && [ -z "$t" ]; then printf 'Fix'
+  else printf 'Adhoc'; fi
+}
+
 # --- Layer 0: Breadcrumb continuation ---
 # If a skill left a breadcrumb before invoking a nested skill,
 # block the stop and inject the continuation instruction.
 # Breadcrumbs are one-shot (deleted after reading) with a 30-min TTL.
 BREADCRUMB="${PROJECT_ROOT}.craft/.continuation"
 if [ -f "$BREADCRUMB" ]; then
-  CRUMB_AGE=$(($(date +%s) - $(stat -f %m "$BREADCRUMB" 2>/dev/null || stat -c %Y "$BREADCRUMB" 2>/dev/null)))
+  CRUMB_AGE=$(($(date +%s) - $(mtime_of "$BREADCRUMB")))
   if [ "$CRUMB_AGE" -lt 1800 ]; then
-    ACTION=$(grep '^ACTION:' "$BREADCRUMB" | sed 's/^ACTION: //')
+    ACTION=$(grep '^ACTION:' "$BREADCRUMB" | sed 's/^ACTION: //' | tr -d '"')
     SKILL=$(grep '^SKILL:' "$BREADCRUMB" | sed 's/^SKILL: //')
     ARGS=$(grep '^ARGS:' "$BREADCRUMB" | sed 's/^ARGS: //')
     rm -f "$BREADCRUMB"
-    if [ -n "$SKILL" ] && [ -n "$ARGS" ]; then
-      echo "{\"systemMessage\": \"BLOCKED: You tried to stop mid-chain. ${ACTION}\\n\\nEXECUTE NOW: Invoke the Skill tool with skill=\\\"${SKILL}\\\" and args=\\\"${ARGS}\\\"\\n\\nThis is not optional. The story is incomplete. Output ONLY the Skill tool call — no text, no summary, no explanation.\"}"
+    if [ -n "$SKILL" ]; then
+      echo "{\"systemMessage\": \"$(crafting_prefix) · handing off → ${SKILL} · ${ACTION}\"}"
     else
-      echo "{\"systemMessage\": \"BLOCKED: You tried to stop mid-chain. ${ACTION}\\n\\nContinue IMMEDIATELY. Output ONLY the next tool call — no text, no summary, no explanation.\"}"
+      echo "{\"systemMessage\": \"$(crafting_prefix) · mid-handoff · ${ACTION}\"}"
     fi
     exit 0
   else
@@ -75,18 +141,18 @@ if [ -f "${PROJECT_ROOT}.craft/.global-state" ]; then
 
         # Check if we already tried to continue recently (2-minute window)
         if [ -f "$CHUNK_MARKER" ]; then
-          MARKER_AGE=$(($(date +%s) - $(stat -f %m "$CHUNK_MARKER" 2>/dev/null || stat -c %Y "$CHUNK_MARKER" 2>/dev/null)))
+          MARKER_AGE=$(($(date +%s) - $(mtime_of "$CHUNK_MARKER")))
           if [ "$MARKER_AGE" -lt 120 ]; then
             # Second stop within 2 minutes — allow it (prevents infinite loops)
             rm -f "$CHUNK_MARKER"
-            echo "{\"systemMessage\": \"Stopping mid-implementation. Story '${CURRENT_STORY}' chunk ${CURRENT_CHUNK}/${TOTAL_CHUNKS} in progress. Use /craft:story-continue to resume.\"}"
+            echo "{\"systemMessage\": \"○ ${CURRENT_STORY} set down · [${CYCLE_TITLE}] · chunk ${CURRENT_CHUNK} of ${TOTAL_CHUNKS} · /craft:story-continue${GATE_SUFFIX}\"}"
             exit 0
           fi
         fi
 
-        # First stop attempt — inject continuation instruction
+        # First stop attempt — status stamp (the pulse line)
         touch "$CHUNK_MARKER"
-        echo "{\"systemMessage\": \"BLOCKED: You tried to stop mid-implementation (chunk ${CURRENT_CHUNK}/${TOTAL_CHUNKS} of '${CURRENT_STORY}'). The validate-chunk skill told you the next action. Execute it NOW — checkpoint, implementer agent, validate-chunk. Output ONLY the next tool call.\"}"
+        echo "{\"systemMessage\": \"$(crafting_prefix)\"}"
         exit 0
       fi
     fi
@@ -96,11 +162,22 @@ fi
 # --- Layer 2: Active story persistence warning ---
 # No chunks in progress, but story is active — warn user
 
+# Adhoc rail: an open gate with no active story stamps every stop,
+# bypassing the warn-once marker - the rail must never be suppressed.
+if gate_open && [ -z "$CURRENT_STORY" ]; then
+  if [ -f "${PROJECT_ROOT}.craft/.active-fix" ]; then
+    echo "{\"systemMessage\": \"◔ $(gate_flavor) in flight · ⚠ write gate open\"}"
+  else
+    echo "{\"systemMessage\": \"⚠ write gate open · unclaimed\"}"
+  fi
+  exit 0
+fi
+
 MARKER_FILE="/tmp/craft-stop-suggested-${SESSION_ID}"
 
 # Check if marker exists and is recent (less than 5 minutes old)
 if [[ -f "$MARKER_FILE" ]]; then
-  MARKER_AGE=$(($(date +%s) - $(stat -f %m "$MARKER_FILE" 2>/dev/null || stat -c %Y "$MARKER_FILE" 2>/dev/null)))
+  MARKER_AGE=$(($(date +%s) - $(mtime_of "$MARKER_FILE")))
   if [[ $MARKER_AGE -lt 300 ]]; then
     # Already suggested recently, allow stop
     exit 0
@@ -113,7 +190,7 @@ touch "$MARKER_FILE"
 if [ -f "${PROJECT_ROOT}.craft/.global-state" ]; then
   source "${PROJECT_ROOT}.craft/.global-state"
   if [ -n "$CURRENT_STORY" ]; then
-    echo "{\"systemMessage\": \"Active story '${CURRENT_STORY}' will persist. Use /craft:story-continue to resume.\"}"
+    echo "{\"systemMessage\": \"○ ${CURRENT_STORY} set down · [${CYCLE_TITLE}] · /craft:story-continue${GATE_SUFFIX}\"}"
     exit 0
   fi
 fi

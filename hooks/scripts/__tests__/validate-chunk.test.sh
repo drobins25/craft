@@ -74,7 +74,8 @@ MOCK_PASSED=$(cat <<'EOF'
 | Tests + Coverage | PASS |
 | Design Tokens | SKIP |
 
-**Fix count:** 0 | No fixes requiredEOF
+**Fix count:** 0 | No fixes required
+EOF
 )
 
 # Partial — warnings only, non-final chunk
@@ -190,7 +191,8 @@ MOCK_STORY_FINAL=$(cat <<'EOF'
 | Design Tokens | SKIP |
 | Citation Scan | PASS |
 
-**Fix count:** 0 | No fixes requiredEOF
+**Fix count:** 0 | No fixes required
+EOF
 )
 
 # Final chunk — lint/any-types escalated to FAIL
@@ -252,7 +254,8 @@ MOCK_ALL_SKIP=$(cat <<'EOF'
 | Tests + Coverage | SKIP |
 | Design Tokens | SKIP |
 
-**Fix count:** 0 | No fixes requiredEOF
+**Fix count:** 0 | No fixes required
+EOF
 )
 
 # Multiple errors
