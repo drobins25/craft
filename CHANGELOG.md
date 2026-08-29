@@ -2,6 +2,17 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.5.0 - 2026-08-29
+
+Craft has a face now. Everything craft has been writing down since your first init - the stories, fixes, tweaks, mockups, dials, riffs, notes - was always a graph waiting to be seen. This release ships the Craft Browser: one page, no server, no setup, that renders the life of your project the way Obsidian renders a vault. It was built entirely through the flows it renders, and its first graph includes its own birth.
+
+- Added `/craft:dashboard`: open your whole project as a living graph - every record a glowing node, every lineage an edge, cycle hubs in gold, with a slow cinematic entrance dialed live against real data. The data rebuilds itself as you work, so the page is never stale, and when the shipped page design moves ahead of yours, opening it offers the update.
+- Added a reading panel: click a record and read it right there - the story's own words in a recessed serif well, its work list tucked behind a disclosure, the panel inked in that record's hue.
+- Added insight cards: observations craft mined while building your work surface as cards pinned over the graph, so the dashboard doesn't just show what happened - it shows what craft noticed.
+- Changed what cards say: plain words from your project, never machine values or internal field names.
+- Added a citation guard: code that ships to your project can no longer carry craft's internal planning vocabulary in its comments - your codebase reads like yours, not like a session transcript.
+- Fixed a crashed session leaving the write gate stuck open, and the dashboard occasionally printing a link that only worked from one directory.
+
 ## 2.4.2 - 2026-08-11
 
 - Changed riff's finale to three words that need no explanation: when a direction lands, Claude calls "That's a riff!" and starts building. Each session's one-of-a-kind word still gets its honor - it names the riff memory alongside a plain few words about what you built, so the notes shelf reads like a history of wins instead of a list of riddles.
