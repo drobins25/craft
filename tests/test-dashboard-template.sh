@@ -194,7 +194,7 @@ assert_file_contains "the panel has a summary line element" "p-summary" "$TEMPLA
 begin_test "the panel renders exactly one Connections label, gated on having relations"
 assert_file_not_contains "no static Connections label in the panel markup" '<div class="p-rel-label">Connections</div>' "$TEMPLATE"
 FILLPANEL_BLOCK=$(awk '/fillPanel\(n\) \{/,/^  \}/' "$TEMPLATE")
-REL_LABEL_COUNT=$(echo "$FILLPANEL_BLOCK" | grep -c "className = 'p-rel-label'")
+REL_LABEL_COUNT=$(echo "$FILLPANEL_BLOCK" | grep -c "className = 'p-rel-label")
 assert_eq "fillPanel creates exactly two p-rel-label elements (work, connections)" "2" "$REL_LABEL_COUNT"
 assert_contains "the Connections label is only created when a relation exists" "if (rels.length)" "$FILLPANEL_BLOCK"
 
@@ -534,9 +534,9 @@ assert_file_not_contains "no clamped state survives" "is-clamped" "$TEMPLATE"
 assert_file_not_contains "no expanded state survives - there is only one state" "is-expanded" "$TEMPLATE"
 SUMMARY_CSS=$(awk '/#stage #panel .p-summary \{/,/^  \}/' "$TEMPLATE")
 assert_contains "the spark scrolls inside its own window" "overflow-y: auto;" "$SUMMARY_CSS"
-assert_contains "the window caps at 45vh" "max-height: 45vh;" "$SUMMARY_CSS"
+assert_contains "the reading window caps at 36vh" "max-height: 36vh;" "$SUMMARY_CSS"
 assert_contains "the scroll is contained - it never flings the page" "overscroll-behavior: contain;" "$SUMMARY_CSS"
-assert_contains "the source's line breaks render as written" "white-space: pre-wrap;" "$SUMMARY_CSS"
+assert_contains "the record reads in the serif reading voice" 'font-family: Charter, "Iowan Old Style", Georgia, serif;' "$SUMMARY_CSS"
 assert_file_contains "the scrollbar is the slim 4px thumb" "p-summary::-webkit-scrollbar { width: 4px; }" "$TEMPLATE"
 assert_file_contains "the full source loads the moment the panel opens" "if (n.summary) this.loadRecordText(n.id, text => {" "$TEMPLATE"
 assert_file_contains "a fresh record starts scrolled to the top" "summaryEl.scrollTop = 0;" "$TEMPLATE"
@@ -575,5 +575,157 @@ assert_not_contains "the latch is not chained to the physics energy" "this.sim.a
 assert_not_contains "the latch does not wait for full rest" "isAtRest" "$CALM_LINE"
 REPLAY_REARM=$(awk '/  replay\(\) \{/,/^  \}/' "$TEMPLATE")
 assert_contains "replay re-arms the hover gate alongside the card reveal" "this.calm = false;" "$REPLAY_REARM"
+
+# --- Test 60: the record reads in a lit well over a distinct deck ---
+begin_test "the record reads in a lit well over a distinct deck"
+assert_file_contains "the well wraps the summary in the static markup" '<div class="p-summary-well"><div class="p-summary" tabindex="0"></div></div>' "$TEMPLATE"
+WELL_CSS=$(awk '/#stage #panel .p-summary-well \{/,/^  \}/' "$TEMPLATE")
+assert_contains "the well is its own recessed layer" "background: rgba(18,18,21,0.4);" "$WELL_CSS"
+assert_contains "the well insets its own chrome" "box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), inset 0 -10px 16px -12px rgba(0,0,0,0.5);" "$WELL_CSS"
+assert_file_contains "the well carries a diagonal sheen overlay" ".p-summary-well::before {" "$TEMPLATE"
+assert_file_contains "the well carries a corner vignette overlay" ".p-summary-well::after {" "$TEMPLATE"
+
+REL_CSS=$(awk '/#stage #panel .p-rels \{/,/^  \}/' "$TEMPLATE")
+assert_contains "the deck carries its own fill" "background: rgba(255,255,255,0.018);" "$REL_CSS"
+assert_contains "the deck rounds its own corners" "border-radius: 8px;" "$REL_CSS"
+
+REL_LABEL_CSS=$(awk '/#stage #panel .p-rel-label \{/,/^  \}/' "$TEMPLATE")
+assert_not_contains "no hairline separates the well from the deck" "border-top" "$REL_LABEL_CSS"
+
+assert_file_contains "the drop-cap carries the record's hue" "p-summary p:first-of-type::first-letter {" "$TEMPLATE"
+assert_file_contains "the drop-cap has an initial-letter override" "@supports (initial-letter: 2) or (-webkit-initial-letter: 2) {" "$TEMPLATE"
+
+PANEL_FRAME_CSS=$(awk '/#stage #panel \{/,/^  \}/' "$TEMPLATE")
+assert_contains "the panel frame takes the card radius" "border-radius: 11px;" "$PANEL_FRAME_CSS"
+
+TITLE_CSS=$(awk '/#stage #panel .p-title \{/,/^  \}/' "$TEMPLATE")
+assert_contains "the record title reads in the serif voice" 'font-family: Charter, "Iowan Old Style", Georgia, serif;' "$TITLE_CSS"
+assert_contains "the record title holds the mockup's size" "font-size: 18px;" "$TITLE_CSS"
+
+STAMP_LINE=$(head -10 "$TEMPLATE" | grep '<meta name="craft-template-version" content="')
+assert_not_contains "the template stamp moved off 5" 'content="5"' "$STAMP_LINE"
+
+# --- Test 61: record text becomes structured, verbatim DOM through the parse ---
+begin_test "record text becomes structured, verbatim DOM through the parse"
+RENDER_PROSE=$(awk '/  renderProse\(/,/^  \}/' "$TEMPLATE")
+RENDER_YAML=$(awk '/  renderYamlFields\(/,/^  \}/' "$TEMPLATE")
+RENDER_RECORD=$(awk '/  renderRecord\(/,/^  \}/' "$TEMPLATE")
+assert_contains "a line break inside a paragraph survives as a break element" "createElement('br')" "$RENDER_PROSE"
+assert_not_contains "renderProse never writes record text through innerHTML" "innerHTML" "$RENDER_PROSE"
+assert_not_contains "renderYamlFields never writes record text through innerHTML" "innerHTML" "$RENDER_YAML"
+assert_not_contains "renderRecord never writes record text through innerHTML" "innerHTML" "$RENDER_RECORD"
+assert_contains "an ATX heading line renders as a heading, marker consumed" "#\{1,6\}" "$RENDER_PROSE"
+assert_contains "the heading becomes an h2 element" "'h2'" "$RENDER_PROSE"
+assert_contains "a leading title heading is deduped against the panel title" "String(title" "$RENDER_PROSE"
+assert_contains "cycle records render key/value field wrappers" "'yaml-field'" "$RENDER_YAML"
+assert_contains "cycle records render dim mono keys" "'yaml-key'" "$RENDER_YAML"
+assert_contains "cycle records render hanging values" "'yaml-val'" "$RENDER_YAML"
+assert_contains "list items carry their own marker" "'yaml-list-marker'" "$RENDER_YAML"
+assert_contains "the chrome-duplicated keys are a fixed list, not a judgment" "name: true" "$RENDER_YAML"
+assert_contains "the fixed key list omits the status/date chrome fields too" "updated: true" "$RENDER_YAML"
+
+FILLPANEL_NOW=$(awk '/fillPanel\(n\) \{/,/^  \}/' "$TEMPLATE")
+assert_contains "the record's hue reaches the panel on every fill" "setProperty('--h'" "$FILLPANEL_NOW"
+assert_contains "the type word renders into its own hued span" "'p-type-name'" "$FILLPANEL_NOW"
+assert_contains "an empty summary hides the whole well, not just the summary" "p-summary-well" "$FILLPANEL_NOW"
+assert_contains "the teaser paints through the parse" "this.renderRecord(summaryEl" "$FILLPANEL_NOW"
+assert_file_contains "the mirror guard still gates a race between records" "if (this.selectedNode !== n) return;" "$TEMPLATE"
+
+TYPE_CSS=$(awk '/#stage #panel .p-type \{/,/^  \}/' "$TEMPLATE")
+assert_contains "the type line's separators dim to the machine gray" "color: #7b808e;" "$TYPE_CSS"
+assert_file_contains "the type word takes the record's own hue" ".p-type .p-type-name { color: hsl(var(--h) var(--s) var(--l)); }" "$TEMPLATE"
+
+SUMMARY_CSS=$(awk '/#stage #panel .p-summary \{/,/^  \}/' "$TEMPLATE")
+assert_not_contains "the reading window no longer relies on pre-wrap" "white-space: pre-wrap;" "$SUMMARY_CSS"
+
+# --- Test 62: no new frame loop enters the template (rAF-stacking scar stays closed) ---
+# FIRST TEST for chunk 3: pinned to the pre-chunk-3 count so a new call site fails loudly.
+begin_test "no new frame loop enters the template"
+RAF_COUNT=$(grep -c "requestAnimationFrame" "$TEMPLATE" || true)
+assert_eq "requestAnimationFrame call sites are unchanged by this story" "4" "$RAF_COUNT"
+
+# --- Test 63: the record arrives by an ink wipe, sequenced after the panel's slide-in ---
+begin_test "the record arrives by an ink wipe, sequenced after the panel's slide-in"
+assert_file_contains "the wipe keyframe is the mockup's clip-path reveal" "@keyframes c-ink-wipe { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(0 0 0 0%); } }" "$TEMPLATE"
+assert_file_contains "the reduced-motion wipe is an opacity-only equivalent" "@keyframes c-ink-wipe-reduced { from { opacity: 0; } to { opacity: 1; } }" "$TEMPLATE"
+SUMMARY_CSS=$(awk '/#stage #panel .p-summary \{/,/^  \}/' "$TEMPLATE")
+assert_contains "the wipe animation rides on the summary rule" "animation: c-ink-wipe 320ms ease both;" "$SUMMARY_CSS"
+assert_contains "the wipe is sequenced ~100ms after the panel's own slide-in" "animation-delay: 0.32s;" "$SUMMARY_CSS"
+
+FILLPANEL_NOW=$(awk '/fillPanel\(n\) \{/,/^  \}/' "$TEMPLATE")
+assert_contains "fillPanel reads whether the panel was already open" "const wasOpen = this.panel.classList.contains('visible');" "$FILLPANEL_NOW"
+assert_contains "the wipe restarts by clearing the animation shorthand" "summaryEl.style.animation = 'none';" "$FILLPANEL_NOW"
+assert_contains "the restart forces a reflow before restoring the shorthand" "void summaryEl.offsetHeight;" "$FILLPANEL_NOW"
+assert_contains "the shorthand is restored before the delay override" "summaryEl.style.animation = '';" "$FILLPANEL_NOW"
+assert_contains "a record switch plays the wipe with no delay; a fresh open keeps the stylesheet's delay" "summaryEl.style.animationDelay = wasOpen ? '0s' : '';" "$FILLPANEL_NOW"
+# the delay assignment must follow the shorthand restore (the shorthand clears any inline delay)
+ANIMATION_RESET_LINE=$(echo "$FILLPANEL_NOW" | grep -n "summaryEl.style.animation = ''\|summaryEl.style.animationDelay" | head -2)
+RESET_ORDER=$(echo "$ANIMATION_RESET_LINE" | awk -F: '{print $1}' | tr '\n' ' ')
+FIRST_LINE=$(echo "$RESET_ORDER" | awk '{print $1}')
+SECOND_LINE=$(echo "$RESET_ORDER" | awk '{print $2}')
+if [ -n "$FIRST_LINE" ] && [ -n "$SECOND_LINE" ] && [ "$FIRST_LINE" -lt "$SECOND_LINE" ]; then
+  ORDER_OK="yes"
+else
+  ORDER_OK="no"
+fi
+assert_eq "the delay is assigned AFTER the shorthand restore, not before" "yes" "$ORDER_OK"
+
+RENDER_RECORD=$(awk '/  renderRecord\(/,/^  \}/' "$TEMPLATE")
+LOAD_MIRROR_BLOCK=$(awk '/this.loadRecordText\(n.id, text => \{/,/^    \}\);/' "$TEMPLATE")
+assert_not_contains "the mirror text swap does not restart the wipe" "style.animation" "$LOAD_MIRROR_BLOCK"
+
+# --- Test 64: scroll fades are class-toggled, not computed per frame ---
+begin_test "scroll fades are class-toggled, not computed per frame"
+WIRE_FADE=$(awk '/  wireVerticalFade\(/,/^  \}/' "$TEMPLATE")
+assert_contains "the fade updater toggles the at-top class" "classList.toggle('at-top'" "$WIRE_FADE"
+assert_contains "the fade updater toggles the at-bottom class" "classList.toggle('at-bottom'" "$WIRE_FADE"
+assert_not_contains "the scroll handler writes no inline styles" "style." "$WIRE_FADE"
+assert_contains "the scroll listener is passive" "{ passive: true }" "$WIRE_FADE"
+assert_contains "the updater is returned so a fill can re-run it" "return update;" "$WIRE_FADE"
+
+SUMMARY_CSS=$(awk '/#stage #panel .p-summary \{/,/^  \}/' "$TEMPLATE")
+assert_contains "the summary's base mask hides a 22px top band" "transparent 0, #000 22px, #000 calc(100% - 40px), transparent 100%" "$SUMMARY_CSS"
+SUMMARY_AT_TOP_CSS=$(awk '/#stage #panel .p-summary.at-top \{/,/^  \}/' "$TEMPLATE")
+assert_contains "at the top, only the bottom edge fades" "#000 0, #000 calc(100% - 40px), transparent 100%" "$SUMMARY_AT_TOP_CSS"
+SUMMARY_AT_BOTTOM_CSS=$(awk '/#stage #panel .p-summary.at-bottom \{/,/^  \}/' "$TEMPLATE")
+assert_contains "at the bottom, only the top edge fades" "transparent 0, #000 22px, #000 100%" "$SUMMARY_AT_BOTTOM_CSS"
+assert_file_contains "a resting panel with nothing to hide shows no mask at all" ".p-summary.at-top.at-bottom { -webkit-mask-image: none; mask-image: none; }" "$TEMPLATE"
+
+REL_CSS=$(awk '/#stage #panel .p-rels \{/,/^  \}/' "$TEMPLATE")
+assert_contains "the deck's base mask uses the smaller 14px bands" "transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%" "$REL_CSS"
+assert_file_contains "the deck fades on the same mechanic at the top" ".p-rels.at-top {" "$TEMPLATE"
+assert_file_contains "the deck fades on the same mechanic at the bottom" ".p-rels.at-bottom {" "$TEMPLATE"
+assert_file_contains "a resting deck with nothing to hide shows no mask at all" ".p-rels.at-top.at-bottom { -webkit-mask-image: none; mask-image: none; }" "$TEMPLATE"
+
+assert_file_contains "the summary fade is wired exactly once, alongside the panel it persists on" "this._summaryFade = this.wireVerticalFade(this.panel.querySelector('.p-summary'));" "$TEMPLATE"
+assert_file_contains "the deck fade is wired exactly once, alongside the panel it persists on" "this._relsFade = this.wireVerticalFade(this.panel.querySelector('.p-rels'));" "$TEMPLATE"
+assert_contains "every fill re-runs both fade updaters synchronously" "if (this._summaryFade) this._summaryFade();" "$FILLPANEL_NOW"
+assert_contains "the deck's fade updater re-runs on every fill too" "if (this._relsFade) this._relsFade();" "$FILLPANEL_NOW"
+
+# --- Test 65: heading focus is feature-detected and silent without headings ---
+begin_test "heading focus is feature-detected and silent without headings"
+HEADING_FOCUS_BLOCK=$(awk '/@supports \(animation-timeline: view\(\)\) \{/,/^  \}/' "$TEMPLATE")
+assert_contains "heading focus only applies inside the feature-detect block" "animation-timeline: view();" "$HEADING_FOCUS_BLOCK"
+assert_contains "the heading focus keyframe dims at both ends and peaks mid-crossing" "@keyframes c-heading-focus { 0% { opacity: 0.55; } 40% { opacity: 1; } 60% { opacity: 1; } 100% { opacity: 0.55; } }" "$HEADING_FOCUS_BLOCK"
+assert_contains "the heading focus range spans the full crossing of the scroller" "animation-range: entry 0% exit 100%;" "$HEADING_FOCUS_BLOCK"
+
+# --- Test 66: reduced motion drops the wipe to a fade and the panel entrance to no translate ---
+begin_test "reduced motion drops the wipe to a fade and the panel entrance to no translate"
+REDUCED_MOTION_BLOCK=$(awk '/@media \(prefers-reduced-motion: reduce\) \{/,/^  \}/' "$TEMPLATE")
+assert_contains "the reduced-motion wipe replaces the clip-path reveal" "c-ink-wipe-reduced 220ms ease both;" "$REDUCED_MOTION_BLOCK"
+assert_contains "the reduced-motion wipe keeps the mockup's 0.28s delay" "animation-delay: 0.28s;" "$REDUCED_MOTION_BLOCK"
+assert_contains "the panel entrance drops its translate under reduced motion" "transform: none;" "$REDUCED_MOTION_BLOCK"
+
+# --- Test 67: the work list is collapsible and ships collapsed every fill ---
+begin_test "the work list is collapsible and ships collapsed every fill"
+assert_file_contains "the toggle label is not selectable text" ".p-rel-label.chunks-toggle { cursor: pointer; user-select: none; }" "$TEMPLATE"
+assert_file_contains "the disclosure glyph reserves a fixed width" ".chunks-toggle .disclosure { display: inline-block; width: 0.9em; }" "$TEMPLATE"
+assert_file_contains "a collapsed work list is hidden outright" ".p-chunk-list.is-collapsed { display: none; }" "$TEMPLATE"
+assert_contains "the work label carries the toggle class" "'p-rel-label chunks-toggle'" "$FILLPANEL_NOW"
+assert_contains "the work label opens with a collapsed disclosure glyph" "▸" "$FILLPANEL_NOW"
+assert_contains "the chunk list ships collapsed on every fill" "'p-chunk-list is-collapsed'" "$FILLPANEL_NOW"
+assert_contains "clicking the label toggles the collapsed class on the list" "classList.toggle('is-collapsed')" "$FILLPANEL_NOW"
+assert_contains "the disclosure glyph flips between the collapsed and open marks" "collapsed ? '▸' : '▾'" "$FILLPANEL_NOW"
+assert_contains "the Connections label is never given the toggle class" "label.className = 'p-rel-label'; label.textContent = 'Connections';" "$FILLPANEL_NOW"
 
 finish_tests "test-dashboard-template.sh"

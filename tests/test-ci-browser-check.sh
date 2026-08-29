@@ -86,6 +86,12 @@ if [ "$have_chrome" -eq 1 ]; then
   else
     fail "assertion 3 (card rendered) did not pass" "out: $(echo "$OUT" | tr '\n' ' ')"
   fi
+  if echo "$OUT" | grep -q "assert 4 OK: the parse produced real elements" \
+    || echo "$OUT" | grep -q "assert 4 SKIP: probed node has no summary"; then
+    pass "with Chrome: the parse produced real elements in the panel (or SKIPped legibly)"
+  else
+    fail "assertion 4 (parse produced elements) did not pass or SKIP" "out: $(echo "$OUT" | tr '\n' ' ')"
+  fi
   # And the full run's temp dir is gone too
   TMP_USED=$(tmp_path_from "$OUT")
   if [ -n "$TMP_USED" ] && [ ! -e "$TMP_USED" ]; then
@@ -97,6 +103,7 @@ else
   pass "with Chrome: node count (SKIPPED - no Chrome on this machine)"
   pass "with Chrome: view/graph count match (SKIPPED - no Chrome on this machine)"
   pass "with Chrome: card renders on selection (SKIPPED - no Chrome on this machine)"
+  pass "with Chrome: the parse produced real elements (SKIPPED - no Chrome on this machine)"
   pass "full run temp cleanup (SKIPPED - no Chrome on this machine)"
 fi
 

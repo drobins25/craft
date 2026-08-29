@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="craft-template-version" content="5">
+<meta name="craft-template-version" content="6">
 <title>Craft Browser</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -63,7 +63,7 @@
     flex-direction: column;
     background: rgba(16, 16, 19, 0.93);
     border: 1px solid rgba(210, 215, 225, 0.16);
-    border-radius: 6px;
+    border-radius: 11px;
     padding: 16px 18px;
     font-family: system-ui, -apple-system, sans-serif;
     color: #e8eaef;
@@ -80,46 +80,213 @@
     font-size: 10px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: #9fd8ff;
+    color: #7b808e;
     margin-bottom: 6px;
     flex: none;
   }
-  /* The line tiers down as it reads: the record's type keeps the accent,
-     the state word steps back, the date steps back further. */
+  /* The line tiers down as it reads: the record's own hue lights its type
+     word, the state word steps back, the date steps back further. */
+  #stage #panel .p-type .p-type-name { color: hsl(var(--h) var(--s) var(--l)); }
   #stage #panel .p-type .p-type-status { color: #9298a6; }
   #stage #panel .p-type .p-type-date { color: #7b808e; }
+  /* Serif reading voice, widened here by ruling: the record's title is the
+     one place the reading well's Charter voice reaches outside the well. */
   #stage #panel .p-title {
-    font-size: 15px;
-    font-weight: 600;
-    line-height: 1.35;
-    margin-bottom: 10px;
+    font-family: Charter, "Iowan Old Style", Georgia, serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    line-height: 1.28;
+    margin-bottom: 6px;
     color: #fbfbfd;
     flex: none;
   }
   #stage #panel .p-meta {
-    font-size: 12px;
-    color: #a7acb8;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    color: #7b808e;
     margin-bottom: 12px;
     flex: none;
+  }
+  /* The well: the reading region's own plane of glass. Light plays across it
+     (a static sheen) and its corners recede (a static vignette), so the
+     record feels written INTO the glass rather than pasted flat on the card.
+     Neutral - both overlays are black/white only; the drop-cap is the one
+     hue accent. */
+  #stage #panel .p-summary-well {
+    position: relative;
+    flex: none;
+    overflow: hidden;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    background: rgba(18,18,21,0.4);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), inset 0 -10px 16px -12px rgba(0,0,0,0.5);
+  }
+  #stage #panel .p-summary-well::before {
+    content: '';
+    position: absolute;
+    inset: -10% -30%;
+    z-index: 3;
+    pointer-events: none;
+    background: linear-gradient(115deg, transparent 42%, rgba(255,255,255,0.05) 50%, transparent 58%);
+  }
+  #stage #panel .p-summary-well::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    background: radial-gradient(ellipse at 50% 35%, transparent 55%, rgba(0,0,0,0.32) 100%);
   }
   /* The spark shows the record's full source, always - no reveal control.
      Its line breaks carry meaning, so they render as written; overflow lives
      in an inner scroll window rather than growing the panel past its height. */
   #stage #panel .p-summary {
+    position: relative;
+    z-index: 1;
+    font-family: Charter, "Iowan Old Style", Georgia, serif;
     font-size: 12.5px;
-    line-height: 1.5;
+    line-height: 1.6;
     color: #c6cad4;
-    margin-bottom: 12px;
-    flex: none;
-    overflow-wrap: anywhere;
-    white-space: pre-wrap;
+    max-height: 36vh;
     overflow-y: auto;
-    max-height: 45vh;
     overscroll-behavior: contain;
-    padding-right: 6px;
+    overflow-anchor: none;
+    overflow-wrap: anywhere;
+    padding: 14px 14px 16px 16px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.18) transparent;
+    /* fade state is toggled via at-top/at-bottom classes from a passive
+       scroll listener (wireVerticalFade), not computed per frame. Zone sized
+       to a full line so a boundary line is fully hidden, never half-opaque;
+       the bottom zone is 40px (two lines) so a wrapped line's tail doesn't
+       read as cut off. */
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 22px, #000 calc(100% - 40px), transparent 100%);
+            mask-image: linear-gradient(to bottom, transparent 0, #000 22px, #000 calc(100% - 40px), transparent 100%);
+    /* ink reveal wipe - sequenced ~100ms after the panel's own slide-in so it
+       reads as sequel, not collision. Restarted once per fillPanel; a switch
+       overrides the delay to 0s inline (see fillPanel). */
+    animation: c-ink-wipe 320ms ease both;
+    animation-delay: 0.32s;
   }
+  #stage #panel .p-summary.at-top {
+    -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 40px), transparent 100%);
+            mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 40px), transparent 100%);
+  }
+  #stage #panel .p-summary.at-bottom {
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 22px, #000 100%);
+            mask-image: linear-gradient(to bottom, transparent 0, #000 22px, #000 100%);
+  }
+  #stage #panel .p-summary.at-top.at-bottom { -webkit-mask-image: none; mask-image: none; }
+  @keyframes c-ink-wipe { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(0 0 0 0%); } }
+  /* The template's first reduced-motion block, placed near the panel rules it
+     overrides rather than at the stylesheet's tail (so later reduced-motion
+     work, a future entrance say, has an obvious separate home next to it) -
+     but AFTER those rules in source order: same-specificity selectors resolve
+     by position, and a block placed earlier than the rules it overrides would
+     silently lose to them regardless of the media query being active. */
+  @media (prefers-reduced-motion: reduce) {
+    #stage #panel.visible { transform: none; }
+    #stage #panel .p-summary { animation: c-ink-wipe-reduced 220ms ease both; animation-delay: 0.28s; }
+  }
+  @keyframes c-ink-wipe-reduced { from { opacity: 0; } to { opacity: 1; } }
   #stage #panel .p-summary::-webkit-scrollbar { width: 4px; }
   #stage #panel .p-summary::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 2px; }
+  /* spine neutralized to gray - the drop-cap carries the one hue accent */
+  #stage #panel .p-summary::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: rgba(210,215,225,0.18);
+  }
+  #stage #panel .p-summary h2 {
+    position: relative;
+    font-family: Charter, "Iowan Old Style", Georgia, serif;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: #f2f3f6;
+    margin: 16px 0 6px;
+    opacity: 0.9;
+  }
+  #stage #panel .p-summary h2:first-child { margin-top: 2px; }
+  #stage #panel .p-summary h2::before {
+    content: '';
+    position: absolute;
+    left: -16px;
+    top: 0.65em;
+    width: 8px;
+    height: 1px;
+    background: rgba(210,215,225,0.3);
+  }
+  /* scroll-timeline heading focus - the heading nearest the top brightens,
+     others dim. Feature-detected: a record with no headings never triggers
+     this, an honest silence rather than a fake. */
+  @supports (animation-timeline: view()) {
+    #stage #panel .p-summary h2 {
+      animation: c-heading-focus linear;
+      animation-timeline: view();
+      animation-range: entry 0% exit 100%;
+    }
+    @keyframes c-heading-focus { 0% { opacity: 0.55; } 40% { opacity: 1; } 60% { opacity: 1; } 100% { opacity: 0.55; } }
+  }
+  #stage #panel .p-summary p { margin: 0 0 10px; }
+  #stage #panel .p-summary .yaml-field { margin: 0 0 14px; }
+  #stage #panel .p-summary .yaml-field:last-child { margin-bottom: 0; }
+  #stage #panel .p-summary .yaml-key {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #868c99;
+    margin-bottom: 4px;
+  }
+  #stage #panel .p-summary .yaml-val { overflow-wrap: anywhere; }
+  #stage #panel .p-summary .yaml-list-marker {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color: #6b7080;
+    margin-right: 0.4em;
+  }
+  /* The accent: the drop-cap. Only a prose record has a <p> as its first
+     child - a cycle record's body is yaml-field divs, so this selector never
+     matches it, an honest degradation rather than a bug. initial-letter is
+     the real fix where supported: it reads the font's actual metrics and
+     aligns a 2-line drop cap by construction. The float fallback approximates
+     the same 2-line span for browsers without it. */
+  #stage #panel .p-summary p:first-of-type::first-letter {
+    float: left;
+    font-weight: 700;
+    font-size: 2.55em;
+    line-height: 1.255;
+    margin: 0 0.05em 0 0;
+    color: hsl(var(--h) var(--s) var(--l));
+  }
+  @supports (initial-letter: 2) or (-webkit-initial-letter: 2) {
+    #stage #panel .p-summary p:first-of-type::first-letter {
+      float: none;
+      -webkit-initial-letter: 2;
+      initial-letter: 2;
+      font-size: inherit;
+      line-height: inherit;
+      margin: 0 8px 0 0;
+      padding: 0;
+    }
+  }
+  #stage #panel .p-summary code {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.86em;
+    padding: 1px 5px;
+    margin: 0 3px 0 2px;
+    border-radius: 5px;
+    color: #b8c4d8;
+    background: rgba(255,255,255,0.03);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.07), inset 0 1px 2px rgba(0,0,0,0.35);
+  }
   /* Section headers carry their own boundary: without the top rule and margin
      a chunk list and the Connections heading below it sit flush together. */
   #stage #panel .p-rel-label {
@@ -130,20 +297,47 @@
     color: #9298a6;
     margin-top: 18px;
     padding-top: 12px;
-    border-top: 1px solid rgba(210, 215, 225, 0.14);
     margin-bottom: 6px;
     flex: none;
   }
+  /* The deck's own fill already reads as the section boundary, so the first
+     label under the well needs only a halved gap, not the full rhythm a
+     label following another section (chunks -> Connections) still keeps. */
   #stage #panel .p-rels > .p-rel-label:first-child {
-    margin-top: 4px;
-    padding-top: 0;
-    border-top: none;
+    margin-top: 8px;
+    padding-top: 7px;
   }
+  /* The work is collapsible; Connections is not - only a label carrying this
+     class gets a click handler (wired in fillPanel at label creation). */
+  #stage #panel .p-rel-label.chunks-toggle { cursor: pointer; user-select: none; }
+  #stage #panel .chunks-toggle .disclosure { display: inline-block; width: 0.9em; }
+  #stage #panel .p-chunk-list.is-collapsed { display: none; }
+  /* The deck: a second, distinct region beneath the well - same recessed
+     treatment, no hairline between the two; the label's own top spacing
+     marks the boundary instead. Mask bands are 14px (vs. the well's 22/40) -
+     the deck's rows are shorter, so a full-line zone is smaller here too. */
   #stage #panel .p-rels {
     overflow-y: auto;
     flex: 1 1 auto;
     min-height: 0;
+    padding: 0 14px 12px 12px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.018);
+    overflow-anchor: none;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.18) transparent;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+            mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
   }
+  #stage #panel .p-rels.at-top {
+    -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 14px), transparent 100%);
+            mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 14px), transparent 100%);
+  }
+  #stage #panel .p-rels.at-bottom {
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 100%);
+            mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 100%);
+  }
+  #stage #panel .p-rels.at-top.at-bottom { -webkit-mask-image: none; mask-image: none; }
   #stage #panel .p-rel-item {
     font-size: 12.5px;
     color: #c7cbd4;
@@ -417,7 +611,7 @@
     <div class="p-type"></div>
     <div class="p-title"></div>
     <div class="p-meta"></div>
-    <div class="p-summary"></div>
+    <div class="p-summary-well"><div class="p-summary" tabindex="0"></div></div>
     <div class="p-rels"></div>
   </div>
   <div id="cards"></div>
@@ -907,11 +1101,36 @@ const LABEL_HUB_ZOOM = 0.6;   // large nodes: basically always revealed
 const LABEL_DUST_ZOOM = 3.4;  // smallest nodes: require real zoom-in
 const LABEL_RAMP = 0.9;       // zoom-units over which alpha fades 0->1
 
+// Appends one line of record text as text runs and inline elements, left to
+// right, in order - the only shape that keeps the verbatim law: no character
+// is added, reordered, or removed, and record text never passes through
+// innerHTML. Backtick code wins first at any position, then double-marker
+// bold, then single-marker emphasis; a matcher earlier in the alternation
+// always takes an overlapping span before a later one gets the chance.
+const INLINE_RUN_RE = /`([^`]+)`|\*\*([^*]+)\*\*|__([^_]+)__|\*([^*]+)\*|_([^_]+)_/g;
+function appendInlineRuns(el, line) {
+  INLINE_RUN_RE.lastIndex = 0;
+  let lastIndex = 0, m;
+  while ((m = INLINE_RUN_RE.exec(line)) !== null) {
+    if (m.index > lastIndex) el.appendChild(document.createTextNode(line.slice(lastIndex, m.index)));
+    const node = document.createElement(m[1] !== undefined ? 'code' : (m[2] !== undefined || m[3] !== undefined) ? 'strong' : 'em');
+    node.textContent = m[1] !== undefined ? m[1] : m[2] !== undefined ? m[2] : m[3] !== undefined ? m[3] : m[4] !== undefined ? m[4] : m[5];
+    el.appendChild(node);
+    lastIndex = INLINE_RUN_RE.lastIndex;
+  }
+  if (lastIndex < line.length) el.appendChild(document.createTextNode(line.slice(lastIndex)));
+}
+
 class GraphView {
   constructor(canvas, panel) {
     this.canvas = canvas;
     this.panel = panel;
     this.cardsEl = document.getElementById('cards');
+    // .p-summary and .p-rels are static markup that persist across every
+    // fill (fillPanel only ever writes into them), so the scroll listener
+    // wires exactly once here rather than being re-attached per record.
+    this._summaryFade = this.wireVerticalFade(this.panel.querySelector('.p-summary'));
+    this._relsFade = this.wireVerticalFade(this.panel.querySelector('.p-rels'));
     this.cardsShown = false;
     this.cardsShownAt = 0;
     this.hoverCardIndex = -1;
@@ -1210,6 +1429,27 @@ class GraphView {
   }
 
   fillPanel(n) {
+    // The record's own hue is the panel's light source: the drop-cap and the
+    // type word both read these custom properties, so setting them here once
+    // reaches both without either needing to know the other exists.
+    const hsl = TYPE_HSL[n.type] || FALLBACK_HSL;
+    this.panel.style.setProperty('--h', hsl[0]);
+    this.panel.style.setProperty('--s', hsl[1] + '%');
+    this.panel.style.setProperty('--l', hsl[2] + '%');
+    // The wipe restarts once per fill. Whether the panel was already open
+    // decides the delay: closed->open keeps the stylesheet's 0.32s (sequel
+    // to the panel's own slide-in), a switch plays with no delay at all.
+    // fillPanel runs BEFORE setPanelVisible on the open path, so `.visible`
+    // still reads the panel's PRIOR state here.
+    const summaryEl = this.panel.querySelector('.p-summary');
+    const wasOpen = this.panel.classList.contains('visible');
+    summaryEl.style.animation = 'none';
+    void summaryEl.offsetHeight;
+    summaryEl.style.animation = '';
+    // The animation shorthand reset above also clears any inline delay, so
+    // this has to be assigned AFTER it - and on every fill, or a switch's
+    // '0s' would leak into the next closed->open open.
+    summaryEl.style.animationDelay = wasOpen ? '0s' : '';
     const fmtDate = d => { if (!d) return ''; const dt = new Date(d + 'T00:00:00'); return isNaN(dt) ? d : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); };
     // A dial's status slot holds a session outcome rather than a status -
     // its own vocabulary axis, worded from a different table.
@@ -1226,7 +1466,7 @@ class GraphView {
       span.textContent = text;
       typeEl.appendChild(span);
     };
-    typeBit(VOCAB.types[n.type] || n.type, '');
+    typeBit(VOCAB.types[n.type] || n.type, 'p-type-name');
     if (n.status) typeBit(statusWords[n.status] || n.status, 'p-type-status');
     if (n.date) typeBit(fmtDate(n.date), 'p-type-date');
     // Back is a prefix character on the line that already says where you are,
@@ -1241,26 +1481,40 @@ class GraphView {
     }
     this.panel.querySelector('.p-title').textContent = n.label;
     this.panel.querySelector('.p-meta').textContent = n.degree + ' connection' + (n.degree === 1 ? '' : 's');
-    const summaryEl = this.panel.querySelector('.p-summary');
     // The summary paints instantly; the record's full source replaces it the
     // moment its mirror arrives. No control, no second state - the spark is
-    // always the whole record, scrolling inside its own window.
-    summaryEl.textContent = n.summary || '';
-    summaryEl.style.display = n.summary ? '' : 'none';
+    // always the whole record, scrolling inside its own window. Both paints
+    // route through the same parse, so the record is never pasted as raw
+    // text - only ever written into elements.
+    this.renderRecord(summaryEl, n.type, n.summary, n.label);
+    // An empty record has nothing to light, so the whole well hides rather
+    // than leaving a lit, empty box sitting on the card.
+    this.panel.querySelector('.p-summary-well').style.display = n.summary ? '' : 'none';
     summaryEl.scrollTop = 0;
     if (n.summary) this.loadRecordText(n.id, text => {
       // The panel may already show another record by the time the mirror
       // arrives - never write into someone else's spark.
       if (this.selectedNode !== n) return;
       const full = text == null ? null : this.sourceSection(n.type, text);
-      if (full != null) summaryEl.textContent = full;
+      if (full != null) this.renderRecord(summaryEl, n.type, full, n.label);
     });
     const relsEl = this.panel.querySelector('.p-rels');
     relsEl.innerHTML = '';
     if (n.chunks && n.chunks.list && n.chunks.list.length) {
-      const h = document.createElement('div'); h.className = 'p-rel-label';
-      h.textContent = 'The work (' + n.chunks.complete + '/' + n.chunks.total + ' done)';
+      // The work is collapsible - Connections is not, so only this label
+      // gets the toggle class and its own click listener. Rebuilt on every
+      // fill, so the listener wires fresh here rather than delegating - no
+      // handler stacking to guard against.
+      const h = document.createElement('div');
+      h.className = 'p-rel-label chunks-toggle';
+      const disclosure = document.createElement('span');
+      disclosure.className = 'disclosure';
+      disclosure.textContent = '▸';
+      h.appendChild(disclosure);
+      h.appendChild(document.createTextNode(' The work (' + n.chunks.complete + '/' + n.chunks.total + ' done)'));
       relsEl.appendChild(h);
+      const list = document.createElement('div');
+      list.className = 'p-chunk-list is-collapsed';
       n.chunks.list.forEach(c => {
         const row = document.createElement('div');
         row.className = 'p-chunk' + (c.status === 'complete' ? ' is-complete' : '');
@@ -1271,7 +1525,12 @@ class GraphView {
         title.textContent = c.title || '';
         row.appendChild(dot);
         row.appendChild(title);
-        relsEl.appendChild(row);
+        list.appendChild(row);
+      });
+      relsEl.appendChild(list);
+      h.addEventListener('click', () => {
+        const collapsed = list.classList.toggle('is-collapsed');
+        disclosure.textContent = collapsed ? '▸' : '▾';
       });
     }
     const rels = this.sim.adj.get(n.id);
@@ -1281,6 +1540,102 @@ class GraphView {
       const view = relsEl.querySelector('.p-strip-view[data-open-at-end]');
       if (view) { view.scrollLeft = view.scrollWidth; if (this._stripFades) this._stripFades(); }
     }
+    // Both fades measure synchronously, the same idiom the strip's own fade
+    // already uses here - never deferred to a frame.
+    if (this._summaryFade) this._summaryFade();
+    if (this._relsFade) this._relsFade();
+  }
+
+  // Turns a record's raw text into elements - never a rewrite, only a
+  // client-side span-wrapping parse. A cycle's body is YAML (the registry's
+  // only type pointed at a .yaml file); every other type is prose.
+  renderRecord(el, type, text, title) {
+    el.textContent = '';
+    if (type === 'cycle') {
+      this.renderYamlFields(el, text);
+    } else {
+      this.renderProse(el, text, title);
+    }
+  }
+
+  // Blocks split on blank lines; a block opening with an ATX marker becomes
+  // a heading, everything else a paragraph. Single newlines inside a block
+  // carry meaning (the well's own comment promises it), so they survive as
+  // <br> rather than being swallowed by the block split. Inline markers are
+  // consumed the same way, never left as visible clutter in the reading well.
+  renderProse(el, text, title) {
+    const raw = String(text == null ? '' : text).replace(/\r\n/g, '\n').trim();
+    if (!raw) return;
+    const blocks = raw.split(/\n[ \t]*\n+/).filter(b => b.trim() !== '');
+    const headingRe = /^(#{1,6})\s+(.*)$/;
+    blocks.forEach((block, i) => {
+      const lines = block.split('\n');
+      const m = headingRe.exec(lines[0]);
+      let node, textLines;
+      if (m) {
+        // A record's own leading H1 (a riff's own title line, say) duplicates
+        // the panel's title directly above it - skip only that exact case,
+        // and only at the very top, never a heading deeper in the body.
+        if (i === 0 && m[1].length === 1 && m[2].trim() === String(title == null ? '' : title).trim()) return;
+        node = document.createElement('h2');
+        textLines = [m[2]].concat(lines.slice(1));
+      } else {
+        node = document.createElement('p');
+        textLines = lines;
+      }
+      textLines.forEach((line, li) => {
+        if (li > 0) node.appendChild(document.createElement('br'));
+        appendInlineRuns(node, line);
+      });
+      el.appendChild(node);
+    });
+  }
+
+  // A cycle record's body is a bare YAML file (no frontmatter fence to
+  // strip), so it renders as key/value fields rather than prose. Keys the
+  // panel chrome already shows are omitted mechanically - a fixed list,
+  // never a per-key judgment.
+  renderYamlFields(el, text) {
+    const OMIT_KEYS = { name: true, title: true, status: true, created: true, updated: true };
+    const keyRe = /^([A-Za-z_][A-Za-z0-9_-]*):[ \t]*(.*)$/;
+    const listRe = /^\s*-\s?(.*)$/;
+    const fields = [];
+    let field = null;
+    String(text == null ? '' : text).replace(/\r\n/g, '\n').split('\n').forEach(line => {
+      const km = keyRe.exec(line);
+      if (km) {
+        field = { key: km[1], values: [] };
+        fields.push(field);
+        const inline = km[2].trim();
+        if (inline) field.values.push({ text: inline, isList: false });
+        return;
+      }
+      if (!line.trim() || !field) return;
+      const lm = listRe.exec(line);
+      field.values.push(lm ? { text: lm[1], isList: true } : { text: line.trim(), isList: false });
+    });
+    fields.forEach(f => {
+      if (OMIT_KEYS[f.key]) return;
+      const fieldEl = document.createElement('div');
+      fieldEl.className = 'yaml-field';
+      const keyEl = document.createElement('div');
+      keyEl.className = 'yaml-key';
+      keyEl.textContent = f.key;
+      fieldEl.appendChild(keyEl);
+      f.values.forEach(v => {
+        const valEl = document.createElement('div');
+        valEl.className = 'yaml-val';
+        if (v.isList) {
+          const marker = document.createElement('span');
+          marker.className = 'yaml-list-marker';
+          marker.textContent = '-';
+          valEl.appendChild(marker);
+        }
+        valEl.appendChild(document.createTextNode(v.text));
+        fieldEl.appendChild(valEl);
+      });
+      el.appendChild(fieldEl);
+    });
   }
 
   // The full text behind the card's summary line: each record type names
@@ -1487,6 +1842,25 @@ class GraphView {
   setPanelVisible(on) {
     if (this.panel) this.panel.classList.toggle('visible', on);
     if (this.cardsEl) this.cardsEl.classList.toggle('suppressed', on);
+  }
+
+  // Toggles at-top/at-bottom classes rather than a shared calc()-driven
+  // custom property - a custom property shared across elements under one CSS
+  // rule produced a hard, gapless cut on at least one box instead of a
+  // gradient (mockup finding, root cause not fully isolated). Classes
+  // sidestep the whole failure class: each rule is a static declaration with
+  // nothing to miscompute. Wired once per element (they persist across every
+  // fill); returns the updater so a fill can re-run it synchronously.
+  wireVerticalFade(el) {
+    if (!el) return null;
+    const update = () => {
+      const max = el.scrollHeight - el.clientHeight;
+      el.classList.toggle('at-top', el.scrollTop <= 1);
+      el.classList.toggle('at-bottom', el.scrollTop >= max - 1);
+    };
+    el.addEventListener('scroll', update, { passive: true });
+    update();
+    return update;
   }
 
   replay() {

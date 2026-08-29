@@ -10,7 +10,11 @@
 #   2. GraphInstance.sim.nodes.length === that count  (the view consumed it)
 #   3. goTo(sim.nodes[0]) renders that node's label   (a card really rendered)
 #      in #panel .p-title
+#   4. #panel .p-summary has >= 1 element child        (the parse produced
+#      after that goTo, when the probed node has a     real DOM, not raw text
+#      summary - otherwise this prints a guarded SKIP)
 #
+
 # All 135 assertions in tests/test-dashboard-template.sh read the template as
 # text and would pass on a page that throws on load; this one cannot.
 #
@@ -154,6 +158,9 @@ probe = """
           res.titleText = t ? t.textContent : null;
           var p = document.querySelector('#panel');
           res.panelLen = p ? p.textContent.length : 0;
+          var s = document.querySelector('#panel .p-summary');
+          res.summaryChildren = s ? s.childElementCount : -1;
+          res.probedHasSummary = !!(n && n.summary);
           report(res);
         } catch (e) { res.error = String(e); report(res); }
       }, 900);
@@ -209,6 +216,15 @@ if expected and title == expected:
     print("assert 3 OK: selection rendered the card - #panel .p-title == %r" % expected)
 else:
     failures.append("assert 3 FAILED: #panel .p-title is %r, expected %r" % (title, expected))
+summary_children = data.get("summaryChildren", -1)
+probed_has_summary = data.get("probedHasSummary", False)
+if probed_has_summary:
+    if summary_children >= 1:
+        print("assert 4 OK: the parse produced real elements in #panel .p-summary (%d children)" % summary_children)
+    else:
+        failures.append("assert 4 FAILED: #panel .p-summary has no element children after goTo (%s)" % summary_children)
+else:
+    print("assert 4 SKIP: probed node has no summary text, nothing to parse")
 if failures:
     for f in failures:
         print(f)
