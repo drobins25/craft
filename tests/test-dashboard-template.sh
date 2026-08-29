@@ -204,7 +204,7 @@ assert_file_not_contains "no unconditional self-rescheduling loop" "requestAnima
 RAF_CALL_COUNT=$(grep -c "requestAnimationFrame(" "$TEMPLATE")
 assert_eq "exactly three requestAnimationFrame call sites (requestRender, requestFrame, tick)" "3" "$RAF_CALL_COUNT"
 assert_file_contains "the request-side call is guarded by a pending-frame check" "if (!this.rafId) this.rafId = requestAnimationFrame(this.tick);" "$TEMPLATE"
-assert_file_contains "the loop-side call is guarded by the still flag" "if (still) this.rafId = requestAnimationFrame(this.tick);" "$TEMPLATE"
+assert_file_contains "the loop-side call is guarded by the still flag AND a pending-frame check" "if (still && !this.rafId) this.rafId = requestAnimationFrame(this.tick);" "$TEMPLATE"
 
 # --- Test 17: entranceStart is not seeded at construction ---
 begin_test "entranceStart is not seeded at construction"

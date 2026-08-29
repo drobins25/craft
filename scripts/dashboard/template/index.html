@@ -1832,7 +1832,11 @@ class GraphView {
       this.interactionActive = false;
     }
     const still = entranceActive || !this.sim.isAtRest() || this.dragging || this.panning || this.interactionActive;
-    if (still) this.rafId = requestAnimationFrame(this.tick);
+    /* Guarded reschedule only: draw() may already have booked the next frame
+       (mark fade, hover-glow easing). A bare requestAnimationFrame here would
+       stack a second loop on top of that one - and the population doubles
+       every frame both fire, collapsing the page to a crawl. */
+    if (still && !this.rafId) this.rafId = requestAnimationFrame(this.tick);
     // The hover gate lifts here, on the load clock rather than the sim's
     // energy: once the entrance's violent fling window has passed, pointing
     // at nodes feels natural again. Latched - later re-heats (a drag warms
