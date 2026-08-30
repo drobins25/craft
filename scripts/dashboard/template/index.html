@@ -1,0 +1,2449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="craft-template-version" content="7">
+<title>Craft Browser</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #000;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  canvas { display: block; }
+
+  #stage .hint {
+    position: absolute;
+    left: 20px;
+    bottom: 18px;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    pointer-events: none;
+    z-index: 5;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color: rgba(220, 224, 232, 0.62);
+  }
+
+  #stage #controls {
+    position: absolute;
+    top: 20px;
+    right: 22px;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+    pointer-events: none;
+  }
+  #stage #controls .notice { display: none; color: rgba(220, 224, 232, 0.34); }
+  #stage #controls .notice.visible { display: inline; }
+  #stage #controls button {
+    pointer-events: auto;
+    font-family: inherit;
+    font-size: inherit;
+    color: rgba(226, 230, 238, 0.78);
+    background: transparent;
+    border: 1px solid rgba(210, 215, 225, 0.16);
+    border-radius: 4px;
+    padding: 6px 10px;
+    cursor: pointer;
+  }
+  #stage #controls button:hover { color: rgba(220, 224, 232, 0.9); border-color: rgba(210, 215, 225, 0.3); }
+
+  #stage #panel {
+    position: absolute;
+    top: 62px;
+    right: 22px;
+    width: 320px;
+    max-height: calc(100vh - 90px);
+    display: flex;
+    flex-direction: column;
+    background: rgba(16, 16, 19, 0.93);
+    border: 1px solid rgba(210, 215, 225, 0.16);
+    border-radius: 11px;
+    padding: 16px 18px;
+    font-family: system-ui, -apple-system, sans-serif;
+    color: #e8eaef;
+    opacity: 0;
+    transform: translateX(8px);
+    transition: opacity 0.22s ease, transform 0.22s ease;
+    pointer-events: none;
+    z-index: 6;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  }
+  #stage #panel.visible { opacity: 1; transform: translateX(0); pointer-events: auto; }
+  #stage #panel .p-type {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #7b808e;
+    margin-bottom: 6px;
+    flex: none;
+  }
+  /* The line tiers down as it reads: the record's own hue lights its type
+     word, the state word steps back, the date steps back further. */
+  #stage #panel .p-type .p-type-name { color: hsl(var(--h) var(--s) var(--l)); }
+  #stage #panel .p-type .p-type-status { color: #9298a6; }
+  #stage #panel .p-type .p-type-date { color: #7b808e; }
+  /* Serif reading voice, widened here by ruling: the record's title is the
+     one place the reading well's Charter voice reaches outside the well. */
+  #stage #panel .p-title {
+    font-family: Charter, "Iowan Old Style", Georgia, serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    line-height: 1.28;
+    margin-bottom: 6px;
+    color: #fbfbfd;
+    flex: none;
+  }
+  #stage #panel .p-meta {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    color: #7b808e;
+    margin-bottom: 12px;
+    flex: none;
+  }
+  /* The well: the reading region's own plane of glass. Light plays across it
+     (a static sheen) and its corners recede (a static vignette), so the
+     record feels written INTO the glass rather than pasted flat on the card.
+     Neutral - both overlays are black/white only; the drop-cap is the one
+     hue accent. */
+  #stage #panel .p-summary-well {
+    position: relative;
+    flex: none;
+    overflow: hidden;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    background: rgba(18,18,21,0.4);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), inset 0 -10px 16px -12px rgba(0,0,0,0.5);
+  }
+  #stage #panel .p-summary-well::before {
+    content: '';
+    position: absolute;
+    inset: -10% -30%;
+    z-index: 3;
+    pointer-events: none;
+    background: linear-gradient(115deg, transparent 42%, rgba(255,255,255,0.05) 50%, transparent 58%);
+  }
+  #stage #panel .p-summary-well::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    background: radial-gradient(ellipse at 50% 35%, transparent 55%, rgba(0,0,0,0.32) 100%);
+  }
+  /* The spark shows the record's full source, always - no reveal control.
+     Its line breaks carry meaning, so they render as written; overflow lives
+     in an inner scroll window rather than growing the panel past its height. */
+  #stage #panel .p-summary {
+    position: relative;
+    z-index: 1;
+    font-family: Charter, "Iowan Old Style", Georgia, serif;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: #c6cad4;
+    max-height: 36vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    overflow-anchor: none;
+    overflow-wrap: anywhere;
+    padding: 14px 14px 16px 16px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.18) transparent;
+    /* fade state is toggled via at-top/at-bottom classes from a passive
+       scroll listener (wireVerticalFade), not computed per frame. Zone sized
+       to a full line so a boundary line is fully hidden, never half-opaque;
+       the bottom zone is 40px (two lines) so a wrapped line's tail doesn't
+       read as cut off. */
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 22px, #000 calc(100% - 40px), transparent 100%);
+            mask-image: linear-gradient(to bottom, transparent 0, #000 22px, #000 calc(100% - 40px), transparent 100%);
+    /* ink reveal wipe - sequenced ~100ms after the panel's own slide-in so it
+       reads as sequel, not collision. Restarted once per fillPanel; a switch
+       overrides the delay to 0s inline (see fillPanel). */
+    animation: c-ink-wipe 320ms ease both;
+    animation-delay: 0.32s;
+  }
+  #stage #panel .p-summary.at-top {
+    -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 40px), transparent 100%);
+            mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 40px), transparent 100%);
+  }
+  #stage #panel .p-summary.at-bottom {
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 22px, #000 100%);
+            mask-image: linear-gradient(to bottom, transparent 0, #000 22px, #000 100%);
+  }
+  #stage #panel .p-summary.at-top.at-bottom { -webkit-mask-image: none; mask-image: none; }
+  @keyframes c-ink-wipe { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(0 0 0 0%); } }
+  /* The template's first reduced-motion block, placed near the panel rules it
+     overrides rather than at the stylesheet's tail (so later reduced-motion
+     work, a future entrance say, has an obvious separate home next to it) -
+     but AFTER those rules in source order: same-specificity selectors resolve
+     by position, and a block placed earlier than the rules it overrides would
+     silently lose to them regardless of the media query being active. */
+  @media (prefers-reduced-motion: reduce) {
+    #stage #panel.visible { transform: none; }
+    #stage #panel .p-summary { animation: c-ink-wipe-reduced 220ms ease both; animation-delay: 0.28s; }
+  }
+  @keyframes c-ink-wipe-reduced { from { opacity: 0; } to { opacity: 1; } }
+  #stage #panel .p-summary::-webkit-scrollbar { width: 4px; }
+  #stage #panel .p-summary::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 2px; }
+  /* spine neutralized to gray - the drop-cap carries the one hue accent */
+  #stage #panel .p-summary::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: rgba(210,215,225,0.18);
+  }
+  #stage #panel .p-summary h2 {
+    position: relative;
+    font-family: Charter, "Iowan Old Style", Georgia, serif;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: #f2f3f6;
+    margin: 16px 0 6px;
+    opacity: 0.9;
+  }
+  #stage #panel .p-summary h2:first-child { margin-top: 2px; }
+  #stage #panel .p-summary h2::before {
+    content: '';
+    position: absolute;
+    left: -16px;
+    top: 0.65em;
+    width: 8px;
+    height: 1px;
+    background: rgba(210,215,225,0.3);
+  }
+  /* scroll-timeline heading focus - the heading nearest the top brightens,
+     others dim. Feature-detected: a record with no headings never triggers
+     this, an honest silence rather than a fake. */
+  @supports (animation-timeline: view()) {
+    #stage #panel .p-summary h2 {
+      animation: c-heading-focus linear;
+      animation-timeline: view();
+      animation-range: entry 0% exit 100%;
+    }
+    @keyframes c-heading-focus { 0% { opacity: 0.55; } 40% { opacity: 1; } 60% { opacity: 1; } 100% { opacity: 0.55; } }
+  }
+  #stage #panel .p-summary p { margin: 0 0 10px; }
+  #stage #panel .p-summary .yaml-field { margin: 0 0 14px; }
+  #stage #panel .p-summary .yaml-field:last-child { margin-bottom: 0; }
+  #stage #panel .p-summary .yaml-key {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #868c99;
+    margin-bottom: 4px;
+  }
+  #stage #panel .p-summary .yaml-val { overflow-wrap: anywhere; }
+  #stage #panel .p-summary .yaml-list-marker {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color: #6b7080;
+    margin-right: 0.4em;
+  }
+  /* The accent: the drop-cap. Only a prose record has a <p> as its first
+     child - a cycle record's body is yaml-field divs, so this selector never
+     matches it, an honest degradation rather than a bug. initial-letter is
+     the real fix where supported: it reads the font's actual metrics and
+     aligns a 2-line drop cap by construction. The float fallback approximates
+     the same 2-line span for browsers without it. */
+  #stage #panel .p-summary p:first-of-type::first-letter {
+    float: left;
+    font-weight: 700;
+    font-size: 2.55em;
+    line-height: 1.255;
+    margin: 0 0.05em 0 0;
+    color: hsl(var(--h) var(--s) var(--l));
+  }
+  @supports (initial-letter: 2) or (-webkit-initial-letter: 2) {
+    #stage #panel .p-summary p:first-of-type::first-letter {
+      float: none;
+      -webkit-initial-letter: 2;
+      initial-letter: 2;
+      font-size: inherit;
+      line-height: inherit;
+      margin: 0 8px 0 0;
+      padding: 0;
+    }
+  }
+  #stage #panel .p-summary code {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.86em;
+    padding: 1px 5px;
+    margin: 0 3px 0 2px;
+    border-radius: 5px;
+    color: #b8c4d8;
+    background: rgba(255,255,255,0.03);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.07), inset 0 1px 2px rgba(0,0,0,0.35);
+  }
+  /* Section headers carry their own boundary: without the top rule and margin
+     a chunk list and the Connections heading below it sit flush together. */
+  #stage #panel .p-rel-label {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #9298a6;
+    margin-top: 18px;
+    padding-top: 12px;
+    margin-bottom: 6px;
+    flex: none;
+  }
+  /* The deck's own fill already reads as the section boundary, so the first
+     label under the well needs only a halved gap, not the full rhythm a
+     label following another section (chunks -> Connections) still keeps. */
+  #stage #panel .p-rels > .p-rel-label:first-child {
+    margin-top: 8px;
+    padding-top: 7px;
+  }
+  /* The work is collapsible; Connections is not - only a label carrying this
+     class gets a click handler (wired in fillPanel at label creation). */
+  #stage #panel .p-rel-label.chunks-toggle { cursor: pointer; user-select: none; }
+  #stage #panel .chunks-toggle .disclosure { display: inline-block; width: 0.9em; }
+  #stage #panel .p-chunk-list.is-collapsed { display: none; }
+  /* The deck: a second, distinct region beneath the well - same recessed
+     treatment, no hairline between the two; the label's own top spacing
+     marks the boundary instead. Mask bands are 14px (vs. the well's 22/40) -
+     the deck's rows are shorter, so a full-line zone is smaller here too. */
+  #stage #panel .p-rels {
+    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 0 14px 12px 12px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.018);
+    overflow-anchor: none;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.18) transparent;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+            mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+  }
+  #stage #panel .p-rels.at-top {
+    -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 14px), transparent 100%);
+            mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 14px), transparent 100%);
+  }
+  #stage #panel .p-rels.at-bottom {
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 100%);
+            mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 100%);
+  }
+  #stage #panel .p-rels.at-top.at-bottom { -webkit-mask-image: none; mask-image: none; }
+  #stage #panel .p-rel-item {
+    font-size: 12.5px;
+    color: #c7cbd4;
+    padding: 4px 0;
+    border-top: 1px solid rgba(210, 215, 225, 0.08);
+    overflow-wrap: anywhere;
+  }
+  #stage #panel .p-rel-item:first-of-type { border-top: none; }
+
+  /* Work rows: a status dot and the title on one flex line. text-indent is
+     pinned to 0 and the title wraps inside its own flex cell, so wrapped
+     lines align under the title text, never under the dot. */
+  #stage #panel .p-chunk {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5em;
+    text-indent: 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #c7cbd4;
+    padding: 4px 0;
+    border-top: 1px solid rgba(210, 215, 225, 0.08);
+  }
+  #stage #panel .p-chunk:first-of-type { border-top: none; }
+  /* The dot's resting look IS the pending state, so an unrecognized status
+     degrades to pending instead of an invisible marker. The margin centers
+     a 7px dot against the first 12.5px/1.5 text line. */
+  #stage #panel .p-chunk .p-chunk-dot {
+    box-sizing: border-box;
+    flex: none;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    margin-top: 0.45em;
+    border: 1px solid #6b7080;
+    opacity: 0.5;
+  }
+  #stage #panel .p-chunk .p-chunk-dot.is-active {
+    border: 1.5px solid #9fd8ff;
+    opacity: 1;
+  }
+  #stage #panel .p-chunk .p-chunk-dot.is-complete {
+    background: #c7cbd4;
+    border: none;
+    opacity: 1;
+  }
+  #stage #panel .p-chunk .p-chunk-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  #stage #panel .p-chunk.is-complete .p-chunk-title { opacity: 0.65; }
+
+  /* Back is a character in the type line, not a control on the card: bare
+     chevron in that line's own colour and size, no fill, no border, no
+     hit-box. iOS navigation-bar chevron / Linear's side panel. */
+  #stage #panel .p-back {
+    all: unset;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+    font-size: 1.25em;
+    line-height: 1;
+    margin-right: 0.5em;
+    vertical-align: -0.06em;
+  }
+  #stage #panel .p-back:hover { color: #ffffff; }
+  /* `all: unset` above also unsets the user-agent focus ring, so the keyboard
+     affordance has to be put back by hand - same outline the strip scroller
+     uses. :focus-visible, not :focus, so a mouse click leaves no ring behind. */
+  #stage #panel .p-back:focus-visible {
+    outline: 1px solid rgba(159, 216, 255, 0.5);
+    outline-offset: 2px;
+    color: #ffffff;
+  }
+
+  /* The commit strip. A cell is ONE RECORD at a fixed size - a longer span
+     widens the strip and scrolls; it never shrinks the cells below a
+     clickable target. The scroller and its chrome exist only on overflow. */
+  #stage #panel .p-strip-view { overflow: hidden; }
+  #stage #panel .p-strip-view.is-scrollable {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding-bottom: 7px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(210, 215, 225, 0.34) rgba(210, 215, 225, 0.10);
+    -webkit-mask-image: linear-gradient(to right,
+      transparent 0,
+      #000 calc(18px * var(--fade-l, 0)),
+      #000 calc(100% - 18px * var(--fade-r, 0)),
+      transparent 100%);
+  }
+  /* The hairline that was already under the strip IS the scrollbar track, so
+     overflow adds no new visual object to the card. */
+  #stage #panel .p-strip-view.is-scrollable::-webkit-scrollbar { height: 3px; }
+  #stage #panel .p-strip-view.is-scrollable::-webkit-scrollbar-track {
+    background: rgba(210, 215, 225, 0.10);
+    border-radius: 2px;
+  }
+  #stage #panel .p-strip-view.is-scrollable::-webkit-scrollbar-thumb {
+    background: rgba(210, 215, 225, 0.34);
+    border-radius: 2px;
+  }
+  #stage #panel .p-strip-view.is-scrollable::-webkit-scrollbar-thumb:hover {
+    background: rgba(210, 215, 225, 0.55);
+  }
+  #stage #panel .p-strip-view.is-scrollable:focus-visible {
+    outline: 1px solid rgba(159, 216, 255, 0.5);
+    outline-offset: 2px;
+  }
+  #stage #panel .p-strip-grid {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+  }
+  #stage #panel .p-strip-col {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 2px;
+    width: 22px;
+    flex: none;
+  }
+  #stage #panel .p-strip-cell {
+    width: 22px;
+    height: 9px;
+    border-radius: 1.5px;
+    cursor: pointer;
+  }
+  /* The strip is one tab stop with arrow keys inside it, so the ring has to
+     read at 22x9 - same outline as the scroller and the back chevron. */
+  #stage #panel .p-strip-cell:focus-visible {
+    outline: 1px solid rgba(159, 216, 255, 0.5);
+    outline-offset: 2px;
+  }
+  #stage #panel .p-strip-empty {
+    width: 22px;
+    height: 1px;
+    background: rgba(210, 215, 225, 0.10);
+  }
+  #stage #panel .p-strip-ends {
+    display: flex;
+    justify-content: space-between;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #83889a;
+    margin-top: 6px;
+  }
+  #stage #panel .p-strip-span {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #7b808e;
+    margin-top: 7px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(210, 215, 225, 0.10);
+  }
+  #stage #panel .p-strip-legend {
+    margin-top: 7px;
+    font-size: 11px;
+    color: #9aa0ad;
+    line-height: 1.7;
+  }
+  #stage #panel .p-strip-legend span { margin-right: 11px; white-space: nowrap; }
+  #stage #panel .p-strip-swatch {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 1.5px;
+    margin-right: 5px;
+  }
+  #stage #panel .p-strip-hover {
+    font-size: 11.5px;
+    color: #aeb4c1;
+    margin-top: 8px;
+    height: 32px;
+    line-height: 16px;
+    overflow: hidden;
+  }
+
+  /* The insight layer: near-opaque cards pinned to the frame edges,
+     composed over the settled galaxy. The layer itself rests at full
+     opacity - each card owns its own staggered entrance - and the layer
+     fade survives solely as the reading-panel coexistence seam. */
+  #stage #cards {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 0.6s ease;
+  }
+  /* Chips accept the mouse only once revealed - the reveal itself fires at
+     true rest, so this is the calm gate: hover can never catch the bloom. */
+  #stage #cards.shown .card { pointer-events: auto; }
+  #stage #cards.suppressed .card { pointer-events: none; }
+  /* While the record panel owns the right edge, the insight layer bows out -
+     the mark pass reads this same class to stop drawing marks. Declared
+     after .shown so it wins when both classes are present. */
+  #stage #cards.suppressed { opacity: 0; }
+  /* Below desktop sizes the edge slots start eating the luminous core, so
+     the layer disappears entirely rather than crowd the sky. */
+  @media (max-width: 1099px), (max-height: 699px) {
+    #stage #cards { display: none; }
+  }
+  /* The card surface: near-opaque fill so the galaxy never bleeds through
+     the prose, one inset top highlight, and the accepted soft drop shadow -
+     the one deliberate exception to the inset-only shadow law. Entrance is
+     opacity+transform per card, staggered by an inline transition delay. */
+  #stage #cards .card {
+    position: absolute;
+    width: 300px;
+    background: rgba(14,15,19,0.94);
+    border-radius: 11px;
+    padding: 13px 15px 14px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 10px 30px rgba(0,0,0,0.45);
+    border: 1px solid transparent; /* per-card evidence hue at 0.55 alpha, set inline */
+    font-family: -apple-system, system-ui, 'Segoe UI', sans-serif;
+    font-weight: 450;
+    letter-spacing: 0em;
+    font-optical-sizing: auto;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 480ms ease, transform 480ms cubic-bezier(0.16,1,0.3,1);
+  }
+  #stage #cards.shown .card { opacity: 1; transform: translateY(0); }
+  #stage #cards .card .c-eyebrow {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 7px;
+  }
+  #stage #cards .card .c-eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+  /* The date badge rides the eyebrow's far end - graph-derived from the
+     quote-source node, never carried by the sidecar. */
+  #stage #cards .card .c-eyebrow .c-date { margin-left: auto; font-size: 9.5px; letter-spacing: 0.1em; opacity: 0.75; }
+  /* Right-pinned chips justify the machine-voice eyebrow to the frame edge;
+     the prose below stays left-aligned unconditionally - a right-aligned
+     body reads as a ragged left edge. */
+  #stage #cards .card.pin-right .c-eyebrow { justify-content: flex-end; }
+  #stage #cards .card .c-body {
+    font-size: 14px;
+    line-height: 1.5;
+    color: #e8eaef;
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
+  #stage #cards .card .c-witness {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: #83889a;
+    margin-top: 8px;
+    overflow-wrap: anywhere;
+  }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <canvas id="canvas"></canvas>
+  <div id="controls">
+    <span class="notice"></span>
+    <button id="replay-btn">↺ Replay entrance</button>
+    <button id="refresh-btn">⟳ Refresh</button>
+  </div>
+  <div id="panel">
+    <div class="p-type"></div>
+    <div class="p-title"></div>
+    <div class="p-meta"></div>
+    <div class="p-summary-well"><div class="p-summary" tabindex="0"></div></div>
+    <div class="p-rels"></div>
+  </div>
+  <div id="cards"></div>
+  <div class="hint">drag a node to pin · drag empty space to pan · scroll to zoom · click to lock</div>
+</div>
+
+<script src="graph/build-status.js"></script>
+<script src="graph/graph.js"></script>
+<script src="graph/insights.js"></script>
+<script>
+'use strict';
+
+/* This page opens from file:// - every local file is its own opaque origin
+   there, so the Fetch API and ES modules fail silently. Classic sibling
+   <script src> tags are the only load path that works, hence the three
+   tags above rather than any import. */
+const TAU = Math.PI * 2;
+const GRAPH = (window.CRAFT_GRAPH && window.CRAFT_GRAPH.nodes) ? window.CRAFT_GRAPH : { nodes: [], edges: [] };
+// The status, dial-outcome and type words this page prints - additive on the
+// graph envelope, read here instead of held as a second copy of the same rules
+// inside the page. No relationship verbs: the card's Connections region is the
+// commit strip now, so the builder stopped emitting words nothing reads.
+const VOCAB = GRAPH.vocabulary || { statuses: {}, dial_outcomes: {}, types: {} };
+// The insight sidecar is optional and hand-authored, so absent, stale and
+// malformed must all land in the same branch. A parse error inside a classic
+// script stays inside its own tag - a broken sidecar simply never assigns
+// the global and this guard sees undefined. No try/catch needed.
+const INSIGHTS = (window.CRAFT_INSIGHTS && window.CRAFT_INSIGHTS.version === 1 && Array.isArray(window.CRAFT_INSIGHTS.cards)) ? window.CRAFT_INSIGHTS : null;
+
+// The page cannot read .craft/'s mtime, so elapsed time since the last build
+// carries no information about whether the graph is current - only these
+// three receipts do.
+const EXPECTED_DATA_VERSION = 1;
+
+function computeNotice(build, graph) {
+  if (!graph || !graph.nodes || !graph.nodes.length) {
+    return 'No graph data yet. Run any craft flow, then press Refresh.';
+  }
+  if (graph.version !== EXPECTED_DATA_VERSION) {
+    return 'This page is older than your project data. Run /craft:dashboard to update it.';
+  }
+  if (build && build.status !== 'ok') {
+    return "The last rebuild didn't finish. Refresh once it has run again.";
+  }
+  return null;
+}
+
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function truncateTitle(title, max) {
+  const s = title || '(untitled)';
+  return s.length > max ? s.slice(0, max - 1).trimEnd() + '…' : s;
+}
+
+function cloneNodes() {
+  return GRAPH.nodes.map((n, i) => ({
+    id: n.id,
+    type: n.type,
+    label: n.title || n.id,
+    short: truncateTitle(n.title, 24),
+    date: n.date,
+    status: n.status,
+    chunks: n.chunks,
+    summary: n.summary,
+    x: 0, y: 0, vx: 0, vy: 0,
+    mass: 1,
+    phase: i * 1.3197 + 0.4,
+  }));
+}
+
+function buildEdges(nodes) {
+  const byId = new Map(nodes.map(n => [n.id, n]));
+  const out = [];
+  let i = 0;
+  for (const e of GRAPH.edges) {
+    const s = byId.get(e.source), t = byId.get(e.target);
+    if (!s || !t) continue; // defensive: skip any dangling reference
+    out.push({ source: s, target: t, kind: e.kind, pulsePhase: (i * 0.3719) % 1 });
+    i++;
+  }
+  return out;
+}
+
+function buildAdjacency(nodes, edges) {
+  const adj = new Map(nodes.map(n => [n.id, []]));
+  edges.forEach(e => {
+    adj.get(e.source.id).push({ other: e.target, kind: e.kind, dir: 'out' });
+    adj.get(e.target.id).push({ other: e.source, kind: e.kind, dir: 'in' });
+  });
+  return adj;
+}
+
+/* Records semi-cluster by TYPE: a small standalone force relaxation among
+   the ~9 type anchors, weighted by each type's real member count/radius
+   mass, decides where each coloured region lives. Bigger clusters pull
+   harder toward the centre (they end up the visual core); smaller ones get
+   pushed to the periphery by pairwise repulsion sized to their own spread -
+   the real data's lopsidedness, not a fabricated balance. */
+const GOLDEN_ANGLE = 2.399963229728653;
+const SPREAD_MULT = 1.0;
+let TYPE_ANCHORS = null;
+function computeTypeAnchors(nodes, groups) {
+  const types = [...groups.keys()];
+  const anchors = types.map(t => {
+    const members = groups.get(t);
+    const massArea = members.reduce((s, i) => s + nodes[i].hw * nodes[i].hw, 0);
+    const spreadR = 26 + Math.sqrt(massArea) * 1.15;
+    return { type: t, count: members.length, spreadR, x: 0, y: 0 };
+  });
+  anchors.sort((a, b) => b.spreadR - a.spreadR);
+  const N = anchors.length;
+  anchors.forEach((a, i) => {
+    const ang = (i / N) * TAU;
+    const seedR = 220 + a.spreadR;
+    a.x = Math.cos(ang) * seedR; a.y = Math.sin(ang) * seedR * 0.7;
+  });
+  for (let iter = 0; iter < 420; iter++) {
+    for (let i = 0; i < N; i++) {
+      let fx = 0, fy = 0;
+      const ai = anchors[i];
+      for (let j = 0; j < N; j++) {
+        if (i === j) continue;
+        const bj = anchors[j];
+        let dx = ai.x - bj.x, dy = ai.y - bj.y;
+        let d = Math.hypot(dx, dy) || 0.01;
+        const minD = ai.spreadR + bj.spreadR + 46;
+        if (d < minD) {
+          const push = (minD - d) * 0.05;
+          fx += (dx / d) * push; fy += (dy / d) * push;
+        }
+      }
+      const gk = 0.00016 * ai.spreadR;
+      fx += -ai.x * gk; fy += -ai.y * gk;
+      ai.fx = fx; ai.fy = fy;
+    }
+    for (const a of anchors) { a.x += a.fx; a.y += a.fy; }
+  }
+  const map = new Map(); anchors.forEach(a => map.set(a.type, a));
+  return map;
+}
+
+// Each type's members scatter phyllotaxis-style around their relaxed anchor,
+// spiral radius scaled by member count, in the same unitless reference space.
+function computeHomeRefs(nodes, groups, spreadMult) {
+  for (const [type, members] of groups) {
+    const anchor = TYPE_ANCHORS.get(type);
+    const spiralScale = (10 + Math.sqrt(members.length) * 8) * spreadMult;
+    members.forEach((i, j) => {
+      const angle = j * GOLDEN_ANGLE;
+      const rad = spiralScale * Math.sqrt(j + 0.5);
+      nodes[i].homeRefX = anchor.x + Math.cos(angle) * rad;
+      nodes[i].homeRefY = anchor.y + Math.sin(angle) * rad;
+    });
+  }
+}
+// The plate fits the viewport with ONE uniform scale - never per-axis, so
+// the sky is never stretched anisotropically. The returned transform maps
+// reference space to world space; the heat bake projects anchors through it.
+function fitHomes(nodes, w, h, fitWFrac, fitHFrac) {
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const n of nodes) {
+    if (n.homeRefX < minX) minX = n.homeRefX; if (n.homeRefX > maxX) maxX = n.homeRefX;
+    if (n.homeRefY < minY) minY = n.homeRefY; if (n.homeRefY > maxY) maxY = n.homeRefY;
+  }
+  const cx0 = (minX + maxX) / 2, cy0 = (minY + maxY) / 2;
+  const scaleX = (w * fitWFrac) / (maxX - minX || 1);
+  const scaleY = (h * fitHFrac) / (maxY - minY || 1);
+  const scale = Math.min(scaleX, scaleY);
+  for (const n of nodes) {
+    n.homeX = w / 2 + (n.homeRefX - cx0) * scale;
+    n.homeY = h / 2 + (n.homeRefY - cy0) * scale;
+  }
+  return { scale, cx0, cy0 };
+}
+
+class Sim {
+  constructor(opts) {
+    this.nodes = cloneNodes();
+    this.edges = buildEdges(this.nodes);
+    this.idx = new Map(this.nodes.map((n, i) => [n.id, i]));
+    this.adj = buildAdjacency(this.nodes, this.edges);
+    // Type-group map (type -> member indexes): the layout scatters by it and
+    // the ambient region treatment reads the same grouping.
+    this.byType = new Map();
+    this.nodes.forEach((n, i) => { if (!this.byType.has(n.type)) this.byType.set(n.type, []); this.byType.get(n.type).push(i); });
+    this.opts = opts;
+    this.alpha = 0;
+    this.alphaTarget = 0;
+    // The node the pointer is actively holding - set by the view on grab,
+    // cleared on release. Distinct from fx/fy pins, which can persist.
+    this.dragNode = null;
+    // Direct neighbours of the held node, towed toward it while it is held -
+    // captured at grab, emptied on release, never pinned themselves.
+    this.towed = [];
+    // Drag-release recovery window anchor - the brief eased-damping bounce
+    // that lets a jammed pocket unpack itself in place.
+    this.recoverT0 = 0;
+    // Entrance anchor mirrored from the view's first painted frame - the
+    // repulsion pop measures its 380ms burst window from here.
+    this.entranceT0 = 0;
+    this.fit = null;
+    this.alphaDecay = opts.alphaDecay != null ? opts.alphaDecay : 0.06;
+  }
+  resizeHome(w, h) {
+    if (this.nodes.length === 0) return; // no data yet - nothing to fit, nothing to poison with NaN
+    // Anchors relax once (node radii are fixed after shaping); the fit
+    // re-derives on every resize so the plate always fills the viewport.
+    if (!TYPE_ANCHORS) TYPE_ANCHORS = computeTypeAnchors(this.nodes, this.byType);
+    computeHomeRefs(this.nodes, this.byType, SPREAD_MULT);
+    this.fit = fitHomes(this.nodes, w, h, 0.72, 0.66);
+  }
+  // The rest predicate reads the node the hand is HOLDING, not the set of
+  // pinned nodes - a node pinned where it was dropped must coexist with
+  // true stillness, or the render loop would never park again.
+  hasFixed() { return this.dragNode != null; }
+  isAtRest() {
+    let maxSp2 = 0;
+    for (const nd of this.nodes) { const s2 = nd.vx * nd.vx + nd.vy * nd.vy; if (s2 > maxSp2) maxSp2 = s2; }
+    return this.alpha < 0.0008 && maxSp2 < 0.003 && !this.hasFixed();
+  }
+  step(dt, now) {
+    const alphaRetain = Math.pow(1 - this.alphaDecay, dt * 60);
+    this.alpha = this.alphaTarget + (this.alpha - this.alphaTarget) * alphaRetain;
+    const nodes = this.nodes, n = nodes.length;
+    // True-stillness fast path: once settled, skip the O(n^2) force pass
+    // entirely rather than compute forces that round to nothing.
+    if (this.isAtRest()) return;
+
+    const { springK, springLength, gravity, maxSpeed } = this.opts;
+    const fx = new Float64Array(n), fy = new Float64Array(n);
+    const forceScale = this.alpha;
+    let repulse = this.opts.repulse;
+    // A brief extra-hot repulsion window right at launch - the bigger pop -
+    // decaying back to the stance's normal repulsion within ~380ms so it
+    // reads as a burst, not a permanent change.
+    if (!REDUCED_MOTION && this.entranceT0) {
+      const elapsed = now - this.entranceT0;
+      if (elapsed < 380) repulse *= 1 + (1 - elapsed / 380) * 0.7;
+    }
+
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        const a = nodes[i], b = nodes[j];
+        let dx = a.x - b.x, dy = a.y - b.y;
+        let d = Math.sqrt(dx * dx + dy * dy); if (d < 0.001) d = 0.001;
+        const ux = dx / d, uy = dy / d;
+        const combined = a.hw + b.hw;
+        const dd = Math.max(d, combined * 0.5);
+        let f = (repulse / (dd * dd)) * forceScale;
+        if (d < combined) f += (combined - d) * 3.4 * forceScale; // soft collision correction
+        fx[i] += ux * f; fy[i] += uy * f;
+        fx[j] -= ux * f; fy[j] -= uy * f;
+      }
+    }
+    for (const e of this.edges) {
+      const ai = this.idx.get(e.source.id), bi = this.idx.get(e.target.id);
+      const a = nodes[ai], b = nodes[bi];
+      let dx = b.x - a.x, dy = b.y - a.y;
+      let d = Math.sqrt(dx * dx + dy * dy); if (d < 0.001) d = 0.001;
+      const f = springK * (d - springLength) * forceScale;
+      const ux = dx / d, uy = dy / d;
+      fx[ai] += ux * f; fy[ai] += uy * f;
+      fx[bi] -= ux * f; fy[bi] -= uy * f;
+    }
+    for (let i = 0; i < n; i++) {
+      const node = nodes[i];
+      fx[i] += (node.homeX - node.x) * gravity * forceScale;
+      fy[i] += (node.homeY - node.y) * gravity * forceScale;
+    }
+    // Drag towing: a direct neighbour's own gravity is far stronger than the
+    // edge spring pulling it toward a held node - nowhere near enough to
+    // visibly follow. This is a temporary, much stronger pull straight at
+    // the held node's live position, active only while a node is held, so
+    // towed neighbours visibly stretch toward it and flow back to their
+    // normal cluster home the instant it is released. Only the held node
+    // itself ever pins; a neighbour already pinned holds its own spot.
+    if (this.dragNode && this.towed.length) {
+      const towK = 26;
+      const dn = this.dragNode;
+      for (const tn of this.towed) {
+        if (tn.fx != null) continue; // an already-pinned neighbour holds its own spot
+        const ti = this.idx.get(tn.id);
+        fx[ti] += (dn.x - tn.x) * towK * forceScale;
+        fy[ti] += (dn.y - tn.y) * towK * forceScale;
+      }
+    }
+    // Drag-release recovery: ease damping UP toward a bouncier value right
+    // after a pin, easing back down to the stance's normal (heavier)
+    // damping. A jammed pocket needs real velocity to build up before it
+    // can unpack itself, and the normal damping kills that velocity too
+    // fast - this briefly lets the physics relax the jam in place. No
+    // repositioning: nothing moves that wasn't already out of equilibrium.
+    let damping = this.opts.damping;
+    if (this.recoverT0) {
+      const RECOVER_MS = 1100;
+      const elapsed = now - this.recoverT0;
+      if (elapsed < RECOVER_MS) damping = damping + (0.992 - damping) * (1 - elapsed / RECOVER_MS);
+    }
+    const dampingStep = Math.pow(damping, dt * 60);
+    for (let i = 0; i < n; i++) {
+      const node = nodes[i];
+      if (node.fx != null) { node.x = node.fx; node.y = node.fy; node.vx = 0; node.vy = 0; continue; }
+      node.vx = (node.vx + (fx[i] / node.mass) * dt) * dampingStep;
+      node.vy = (node.vy + (fy[i] / node.mass) * dt) * dampingStep;
+      const sp = Math.hypot(node.vx, node.vy);
+      if (sp > maxSpeed) { const s = maxSpeed / sp; node.vx *= s; node.vy *= s; }
+      node.x += node.vx * dt;
+      node.y += node.vy * dt;
+    }
+  }
+}
+
+// Seed tight, then launch with real angular momentum: a radial component
+// for the burst plus a dominant tangential component (perpendicular to each
+// node's own outward direction, same handedness for every node), so the
+// whole galaxy visibly spins up out of the flash as gravity reels it back
+// into formation. Under reduced motion: a plain, slightly looser seed with
+// zero velocity.
+function seedCompactCloud(nodes, cx, cy) {
+  const swirl = !REDUCED_MOTION;
+  const seedScale = swirl ? 0.022 : 0.055;
+  nodes.forEach((n, i) => {
+    const hx = n.homeX != null ? n.homeX : cx, hy = n.homeY != null ? n.homeY : cy;
+    const jitter = (i % 2 === 0 ? 1 : -1) * (3 + (i * 7) % 9);
+    n.x = cx + (hx - cx) * seedScale + jitter;
+    n.y = cy + (hy - cy) * seedScale - jitter * 0.6;
+    if (swirl) {
+      const dx = hx - n.x, dy = hy - n.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      const ux = dx / dist, uy = dy / dist;
+      const tx = -uy, ty = ux; // perpendicular - same rotational sense for every node
+      const launch = Math.min(dist * 2.6, 900);
+      n.vx = ux * launch * 0.35 + tx * launch * 0.9;
+      n.vy = uy * launch * 0.35 + ty * launch * 0.9;
+    } else {
+      n.vx = 0; n.vy = 0;
+    }
+  });
+}
+
+function makeCanvasCtx(canvas) {
+  const ctx = canvas.getContext('2d');
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = window.innerWidth, h = window.innerHeight;
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  return { ctx, resize };
+}
+
+function hitTestNode(nodes, wx, wy) {
+  let best = null, bestScore = Infinity;
+  for (const n of nodes) {
+    const d = Math.hypot(n.x - wx, n.y - wy);
+    if (d <= n.hw + 6 && d < bestScore) { best = n; bestScore = d; }
+  }
+  return best;
+}
+
+class Camera {
+  constructor() { this.scale = 1; this.x = 0; this.y = 0; }
+  toWorld(sx, sy, w, h) { return { x: (sx - w / 2) / this.scale + this.x, y: (sy - h / 2) / this.scale + this.y }; }
+  zoomAt(sx, sy, w, h, factor) {
+    const before = this.toWorld(sx, sy, w, h);
+    this.scale = clamp(this.scale * factor, 0.2, 6);
+    const after = this.toWorld(sx, sy, w, h);
+    this.x += before.x - after.x;
+    this.y += before.y - after.y;
+  }
+}
+
+function hsl2rgb(h, s, l) {
+  s /= 100; l /= 100;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+  const m = l - c / 2;
+  let r = 0, g = 0, b = 0;
+  if (h < 60) { r = c; g = x; b = 0; }
+  else if (h < 120) { r = x; g = c; b = 0; }
+  else if (h < 180) { r = 0; g = c; b = x; }
+  else if (h < 240) { r = 0; g = x; b = c; }
+  else if (h < 300) { r = x; g = 0; b = c; }
+  else { r = c; g = 0; b = x; }
+  return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
+}
+const TYPE_HSL = {
+  cycle: [47, 88, 64],      // true gold - the container
+  story: [16, 72, 60],      // ember-coral - craft's own accent
+  fix: [352, 66, 58],       // rose-red - alert/resolved
+  tweak: [178, 46, 54],     // teal-cyan - minor/quiet
+  planning: [210, 50, 58],  // blue - not built yet
+  notebook: [258, 40, 56],  // violet - quiet dust-ring texture
+  riff: [325, 58, 64],      // magenta - rare, allowed to stand out
+  dial: [302, 42, 63],      // orchid
+  mockup: [135, 45, 56],    // tree green
+};
+const TYPE_RGB = {};
+for (const k in TYPE_HSL) TYPE_RGB[k] = hsl2rgb(TYPE_HSL[k][0], TYPE_HSL[k][1], TYPE_HSL[k][2]);
+const GROUND = '#121214';
+const rgbCss = (rgb, a) => 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',' + (a === undefined ? 1 : a) + ')';
+// Status dims a record without changing its hue, so the strip reads type by
+// colour and progress by weight, the same pair the graph already uses.
+const STATUS_ALPHA = { complete: 1, shipped: 1, active: 0.85, ready: 0.6, open: 0.6, planning: 0.4 };
+const fillFor = n => rgbCss(TYPE_RGB[n.type] || FALLBACK_RGB, STATUS_ALPHA[n.status] === undefined ? 0.75 : STATUS_ALPHA[n.status]);
+// Legend wording rides the same vocabulary table the cards already print.
+const typeCountWord = (t, count) => {
+  const word = String(VOCAB.types[t] || t).toLowerCase();
+  if (count === 1) return word;
+  if (/[^aeiou]y$/.test(word)) return word.slice(0, -1) + 'ies';   // -y becomes -ies
+  return /(?:[sxz]|ch|sh)$/.test(word) ? word + 'es' : word + 's'; // sibilants take -es
+};
+// Neutral hue for a record type this page has never seen, so a future
+// type degrades gracefully instead of throwing on the first draw frame.
+const FALLBACK_TYPE = '__unknown__';
+const FALLBACK_HSL = [0, 0, 55];
+const FALLBACK_RGB = hsl2rgb(FALLBACK_HSL[0], FALLBACK_HSL[1], FALLBACK_HSL[2]);
+
+const SIZE_BUCKETS = [
+  { key: 'dust', maxR: 11, bakeR: 12 },
+  { key: 'small', maxR: 19, bakeR: 20 },
+  { key: 'medium', maxR: 29, bakeR: 30 },
+  { key: 'hub', maxR: Infinity, bakeR: 42 },
+];
+function bucketFor(r) {
+  for (const b of SIZE_BUCKETS) if (r <= b.maxR) return b.key;
+  return 'hub';
+}
+
+// Ambient cluster heat: one soft radial bloom per type region, baked once
+// to an offscreen canvas and stamped additively. No canvas blur-shadow
+// property, no live blur - the same no-blur bakery discipline as the node
+// sprites above.
+function bakeHeatBlob(rgb, size) {
+  const c = document.createElement('canvas'); c.width = size; c.height = size;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  grad.addColorStop(0, rgbCss(rgb, 0.55));
+  grad.addColorStop(0.4, rgbCss(rgb, 0.22));
+  grad.addColorStop(1, rgbCss(rgb, 0));
+  g.fillStyle = grad; g.beginPath(); g.arc(size / 2, size / 2, size / 2, 0, TAU); g.fill();
+  return c;
+}
+
+// Flat circle baked at an explicit radius (bakeR) so rim width can be
+// proportioned to that size bucket rather than one universal stretch ratio.
+// No canvas blur-shadow property anywhere in this bakery or the per-frame
+// draw path - sprites are baked once per (hue x size bucket) and reused
+// every frame instead.
+// Rim per tokens.yaml visual.node_treatment.rim_to_radius: width
+// max(1px, 0.08r), own hue +16 LIGHTNESS (not an RGB boost - a lightness
+// lift keeps the rim in-hue), 0.55 alpha. The rim carries most of the
+// "alive" read, so it stays quiet rather than hot.
+// Baked 4x supersampled - canvas size, radius, pad and rim width all scale
+// by SS, and the per-frame draw scales the sprite back down, so the rim
+// lands crisp instead of smearing across interpolated pixels.
+function bakeFlatCircle(rgb, bakeR, rimRgb) {
+  const SS = 4;
+  const pad = 6;
+  const SZ = (bakeR * 2 + pad * 2) * SS;
+  const c = document.createElement('canvas'); c.width = SZ; c.height = SZ;
+  const g = c.getContext('2d');
+  g.beginPath(); g.arc(SZ / 2, SZ / 2, bakeR * SS, 0, TAU);
+  g.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},1)`; g.fill();
+  g.lineWidth = Math.max(1, bakeR * 0.08) * SS;
+  g.strokeStyle = `rgba(${rimRgb[0]},${rimRgb[1]},${rimRgb[2]},0.55)`;
+  g.stroke();
+  return c;
+}
+
+function bakeBackground(w, h) {
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, w); c.height = Math.max(1, h);
+  const bctx = c.getContext('2d');
+  bctx.fillStyle = GROUND;
+  bctx.fillRect(0, 0, w, h);
+  // Ground vignette per tokens.yaml visual.node_treatment.ground_vignette:
+  // transparent -> 0.22 black at 65% -> 0.62 at the edge, outer radius 1.05x
+  // the long dimension - deep enough that every glow reads by contrast.
+  const vg = bctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.22, w / 2, h / 2, Math.max(w, h) * 1.05);
+  vg.addColorStop(0, 'rgba(0,0,0,0)');
+  vg.addColorStop(0.65, 'rgba(0,0,0,0.22)');
+  vg.addColorStop(1, 'rgba(0,0,0,0.62)');
+  bctx.fillStyle = vg; bctx.fillRect(0, 0, w, h);
+  return c;
+}
+function drawLabelHalo(ctx, text, x, y, fillStyle) {
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = 'rgba(8,8,10,0.85)';
+  ctx.strokeText(text, x, y);
+  ctx.fillStyle = fillStyle;
+  ctx.fillText(text, x, y);
+}
+
+const DEG_CAP = 40;
+const MIN_R = 6, MAX_R = 40;
+
+// The cluster heat's own clock. The bloom bakes early rather than waiting
+// for true rest (which a drag or a slow settle can push out indefinitely).
+// The beat is derived from the stance's own alphaDecay (0.026), not guessed:
+// alpha reaches ~95% decayed - the point the launch has visibly resolved
+// into a gentle settle - at ln(0.05)/ln(1-0.026)/60 =~ 1.9s. Landing the
+// beat at 1.6s puts it just ahead of that read, so heat arrives after the
+// entrance's big gesture rather than cutting in front of it; its 600ms fade
+// then reads as continuing atmosphere behind the insight layer landing.
+const EARLY_HEAT_MS = 1600;
+const HEAT_FADE_MS = 600;
+// Heat stamps additively at this alpha with this size multiplier; the
+// cooled region's bloom drops to 0.7x so grey dots never sit on a warm haze.
+const HEAT_ALPHA = 0.5;
+const HEAT_SIZE_MULT = 1.1;
+// A trackpad zoom stream fires many wheel events per second; a shorter
+// window would stutter the loop stopping and restarting between them.
+const CALM_MS = 900;
+// The swirl launch and the repulsion pop collapse to a plain seed under
+// reduced motion - checked once at load, never per frame. The heat and
+// insight-layer opacity fades still run either way.
+const REDUCED_MOTION = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+// The insight layer reveals at whichever comes FIRST: the simulation
+// reaching true rest, or this hard ceiling from the first painted frame -
+// so a drag keeping the loop alive can never hold the insight layer
+// hostage, and a fast settle never leaves it waiting on a clock.
+const CARD_REVEAL_MS = 2000;
+// Eyebrow badge months - uppercase to match the eyebrow's machine voice.
+const CARD_MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+// Leaders fade in over 500ms starting 400ms after the reveal, and their
+// contact ray-march re-derives at most once per 100ms while the camera or
+// the field is moving - the march tests every node, so an unthrottled
+// rebuild would run it four times per frame during a drag.
+const LEADER_FADE_MS = 500;
+const LEADER_FADE_DELAY_MS = 400;
+const LEADER_REMARCH_MS = 100;
+// Hover unlocks on a fixed clock from the first painted frame - a load
+// delay, deliberately NOT chained to the sim's energy. The early violent
+// fling (where a cursor over flying nodes strobes the glow and flickers the
+// pointer) is over well inside this window; after it, the slow glide is
+// gentle enough to point at long before true stillness. Named so the calm
+// point can be tuned live against the real page.
+const HOVER_CALM_MS = 1500;
+// Four fixed viewport slots for the insight chips, fractions of the frame
+// edges. Assignment happens once, at reveal, by giving each card the nearest
+// free slot to its evidence centroid in screen space - never recomputed
+// during pan, zoom or drag, so the composition stays quiet under a hand.
+const CARD_SLOTS = [
+  { side: 'left', x: 0.028, y: 0.075 },
+  { side: 'right', x: 0.028, y: 0.10 },
+  { side: 'left', x: 0.028, y: 0.62 },
+  { side: 'right', x: 0.028, y: 0.60 },
+];
+// Below these viewport sizes the edge slots start eating the luminous core,
+// so the whole insight layer (chips and marks alike) stays hidden.
+const CARD_MIN_W = 1100, CARD_MIN_H = 700;
+function cardsViewportOk() { return window.innerWidth >= CARD_MIN_W && window.innerHeight >= CARD_MIN_H; }
+// window.NS and window.LT are page globals on purpose - the browser skill's
+// evaluate_script reaches them directly to try alternate values live.
+window.NS = window.NS || { cycleScale: 0.65 };
+window.LT = window.LT || { degreeAlwaysOn: Infinity, hubZoom: 2.2, dustZoom: 4.6, ramp: 0.8 };
+
+// Progressive label reveal: labelAlpha = f(camera.scale, nodeRadius). Bigger
+// radius means a lower reveal threshold (arrives first); alpha ramps
+// linearly over LABEL_RAMP zoom-units around that threshold, never a hard
+// pop. Labels render at a constant screen size regardless of zoom.
+const LABEL_HUB_ZOOM = 0.6;   // large nodes: basically always revealed
+const LABEL_DUST_ZOOM = 3.4;  // smallest nodes: require real zoom-in
+const LABEL_RAMP = 0.9;       // zoom-units over which alpha fades 0->1
+
+// Appends one line of record text as text runs and inline elements, left to
+// right, in order - the only shape that keeps the verbatim law: no character
+// is added, reordered, or removed, and record text never passes through
+// innerHTML. Backtick code wins first at any position, then double-marker
+// bold, then single-marker emphasis; a matcher earlier in the alternation
+// always takes an overlapping span before a later one gets the chance.
+const INLINE_RUN_RE = /`([^`]+)`|\*\*([^*]+)\*\*|__([^_]+)__|\*([^*]+)\*|_([^_]+)_/g;
+function appendInlineRuns(el, line) {
+  INLINE_RUN_RE.lastIndex = 0;
+  let lastIndex = 0, m;
+  while ((m = INLINE_RUN_RE.exec(line)) !== null) {
+    if (m.index > lastIndex) el.appendChild(document.createTextNode(line.slice(lastIndex, m.index)));
+    const node = document.createElement(m[1] !== undefined ? 'code' : (m[2] !== undefined || m[3] !== undefined) ? 'strong' : 'em');
+    node.textContent = m[1] !== undefined ? m[1] : m[2] !== undefined ? m[2] : m[3] !== undefined ? m[3] : m[4] !== undefined ? m[4] : m[5];
+    el.appendChild(node);
+    lastIndex = INLINE_RUN_RE.lastIndex;
+  }
+  if (lastIndex < line.length) el.appendChild(document.createTextNode(line.slice(lastIndex)));
+}
+
+class GraphView {
+  constructor(canvas, panel) {
+    this.canvas = canvas;
+    this.panel = panel;
+    this.cardsEl = document.getElementById('cards');
+    // .p-summary and .p-rels are static markup that persist across every
+    // fill (fillPanel only ever writes into them), so the scroll listener
+    // wires exactly once here rather than being re-attached per record.
+    this._summaryFade = this.wireVerticalFade(this.panel.querySelector('.p-summary'));
+    this._relsFade = this.wireVerticalFade(this.panel.querySelector('.p-rels'));
+    this.cardsShown = false;
+    this.cardsShownAt = 0;
+    this.calm = false;
+    this.cardMeta = [];
+    this._leaderMarchAt = 0;
+    this._leaderCamSig = '';
+    this._leaderRestMarched = false;
+    const { ctx, resize: resizeCanvas } = makeCanvasCtx(canvas);
+    this.ctx = ctx;
+    this._resizeCanvas = resizeCanvas;
+    this.camera = new Camera();
+    this.mouse = { x: -9999, y: -9999 };
+    this.hoverNode = null;
+    this.selectedNode = null;
+    this.dragNode = null;
+    this.dragCandidate = null;
+    this.dragging = false;
+    this.downScreen = null;
+    this.panning = false;
+    this.panStartScreen = null;
+    this.panStartCam = null;
+    this._labelWidthCache = new Map();
+    // Both anchor on the first PAINTED frame (set inside tick), not here -
+    // on a cold load the gap between this line and first paint can be large
+    // enough to burn the entrance, or a whole clamped simulation step, dark.
+    this.lastT = 0;
+    this.entranceStart = 0;
+    this.simT = 0;
+    this.frameCount = 0;
+    this.interactionActive = false;
+    this.lastInputAt = 0;
+    this.rafId = null;
+
+    // One damping value and one alphaDecay - the accepted stance's own. The
+    // drag-release recovery window inside the simulation is the only
+    // modulation either ever gets.
+    this.sim = new Sim({ repulse: 30000, springK: 0.9, springLength: 92, damping: 0.94, gravity: 10, maxSpeed: 6000, alphaDecay: 0.026 });
+    this.sim.nodes.forEach(n => this.shapeNode(n));
+    // Cluster heat state: the baked bloom canvas and the moment its fade-in
+    // began. heatFadeStart doubles as the already-handled guard, so the
+    // early beat and the first-rest path can never double-fire the fade.
+    this.heatCanvas = null;
+    this.heatFadeStart = 0;
+    this.settledOnce = false;
+    this.bakeAssets();
+    this.attachInteraction();
+    this.tick = this.tick.bind(this);
+    this.resize();
+    this.replay();
+  }
+
+  shapeNode(n) {
+    n.shape = 'circle';
+    const degree = this.sim.adj.get(n.id).length;
+    n.degree = degree;
+    const t = Math.sqrt(Math.min(degree, DEG_CAP) / DEG_CAP);
+    n.hw = n.hh = (MIN_R + (MAX_R - MIN_R) * t) * (n.type === 'cycle' ? window.NS.cycleScale : 1);
+    n.mass = 0.6 + t * 2.2;
+    n.bucket = bucketFor(n.hw);
+  }
+
+  bakeAssets() {
+    this.fill = {};
+    this.heat = {};
+    // Rim colour is the node's own hue lifted +16 lightness (clamped), so it
+    // needs the HSL triple, not the precomputed RGB.
+    const bake = (key, hsl) => {
+      const rgb = hsl2rgb(hsl[0], hsl[1], hsl[2]);
+      const rim = hsl2rgb(hsl[0], hsl[1], Math.min(90, hsl[2] + 16));
+      this.fill[key] = {};
+      for (const b of SIZE_BUCKETS) this.fill[key][b.key] = bakeFlatCircle(rgb, b.bakeR, rim);
+      this.heat[key] = bakeHeatBlob(rgb, 320);
+    };
+    for (const t in TYPE_HSL) bake(t, TYPE_HSL[t]);
+    bake(FALLBACK_TYPE, FALLBACK_HSL);
+    // Completed records of the most numerous type cool to near-neutral grey
+    // texture - saturation dropped hard, lightness pulled down - so only
+    // living work still carries the ember-coral. The same dim key feeds that
+    // region's ambient heat, cooled to match the dimmed dots (grey dots over
+    // a still-warm haze read as olive, not neutral).
+    bake('story_dim', [220, 4, 36]);
+  }
+
+  // A record type this page has no hue for still resolves - to the baked
+  // fallback sprite set - rather than throwing on the first draw frame.
+  spriteFor(type, bucket) { return (this.fill[type] || this.fill[FALLBACK_TYPE])[bucket]; }
+  heatFor(type) { return this.heat[type] || this.heat[FALLBACK_TYPE]; }
+
+  // One bloom per type region, stamped additively into a world-sized canvas.
+  // Both POSITION and SIZE are ANALYTIC - the anchor's fitted position and a
+  // final-scatter prediction from member count - never a live centroid. A
+  // bloom baked from mid-flight positions sits in the wrong place looking
+  // settled, then silently jumps at true rest; the anchor and the final
+  // centroid agree within ~1-2px, so baking from the anchor the whole time
+  // removes the jump entirely rather than hiding it better.
+  bakeHeat() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const fit = this.sim.fit;
+    if (!fit || !TYPE_ANCHORS) return null; // no fitted plate yet - nothing to bloom
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, w); c.height = Math.max(1, h);
+    const g = c.getContext('2d');
+    g.globalCompositeOperation = 'lighter';
+    for (const [type, idxs] of this.sim.byType) {
+      const anchor = TYPE_ANCHORS.get(type);
+      if (!anchor || !idxs.length) continue;
+      const cooled = type === 'story';
+      const sprite = cooled ? this.heatFor('story_dim') : this.heatFor(type);
+      const cx = w / 2 + (anchor.x - fit.cx0) * fit.scale;
+      const cy = h / 2 + (anchor.y - fit.cy0) * fit.scale;
+      const memberCount = idxs.length;
+      const spiralScale = (10 + Math.sqrt(memberCount) * 8) * SPREAD_MULT;
+      const analyticMaxDRef = spiralScale * Math.sqrt(Math.max(0, memberCount - 1) + 0.5);
+      const analyticMaxD = Math.max(30, analyticMaxDRef * fit.scale);
+      const size = Math.max(180, (analyticMaxD + 40) * 2.1) * HEAT_SIZE_MULT;
+      g.globalAlpha = cooled ? HEAT_ALPHA * 0.7 : HEAT_ALPHA;
+      g.drawImage(sprite, cx - size / 2, cy - size / 2, size, size);
+    }
+    g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+    return c;
+  }
+
+  // Bakes (or re-bakes) the bloom and starts its one fade-in. The fade
+  // starts only once - a later re-bake (first rest, a resize) refreshes the
+  // canvas without restarting the fade.
+  armHeat(now) {
+    this.heatCanvas = this.bakeHeat();
+    if (this.heatCanvas && !this.heatFadeStart) { this.heatFadeStart = now; this.requestFrame(); }
+  }
+
+  // ---- the commit strip -------------------------------------------------
+  // One cell = one record, at a FIXED size. A longer span makes the strip
+  // wider (and scrollable); it never shrinks a cell below a clickable target.
+  // The bucket unit is a calendar decision taken from the date strings before
+  // anything is laid out - layout adapts to it and never overrules it.
+  buildStrip(rels) {
+    const CELL_W = 22, CELL_H = 9, GAP = 2;
+    const el = (tag, cls) => { const e = document.createElement(tag); if (cls) e.className = cls; return e; };
+    const host = el('div');
+
+    const items = rels.map(r => r.other).filter(n => n.date).sort((a, b) => a.date.localeCompare(b.date));
+    const undated = rels.length - items.length;
+    if (!items.length) {
+      const none = el('div', 'p-rel-item');
+      none.textContent = rels.length + ' connection' + (rels.length === 1 ? '' : 's') + ', no dates recorded';
+      host.appendChild(none);
+      return host;
+    }
+
+    // Read the calendar straight off 'YYYY-MM-DD'. No average day-lengths:
+    // an approximated month drifts off real month boundaries.
+    const ymd = t => ({ y: +t.slice(0, 4), m: +t.slice(5, 7), d: +t.slice(8, 10) });
+    const a = ymd(items[0].date), b = ymd(items[items.length - 1].date);
+    const spanDays = Math.round((Date.UTC(b.y, b.m - 1, b.d) - Date.UTC(a.y, a.m - 1, a.d)) / 86400000) + 1;
+    const spanMonths = (b.y - a.y) * 12 + (b.m - a.m);
+    const unit = spanDays <= 21 ? 'day' : spanMonths < 4 ? 'week' : spanMonths < 36 ? 'month' : 'year';
+
+    const iso = dt => dt.toISOString().slice(0, 10);
+    const monday = t => { const p = ymd(t); const dt = new Date(Date.UTC(p.y, p.m - 1, p.d)); dt.setUTCDate(dt.getUTCDate() - ((dt.getUTCDay() + 6) % 7)); return iso(dt); };
+    const keyOf = { day: t => t, week: monday, month: t => t.slice(0, 7), year: t => t.slice(0, 4) }[unit];
+    const nextKey = {
+      day:   k => { const p = ymd(k); return iso(new Date(Date.UTC(p.y, p.m - 1, p.d + 1))); },
+      week:  k => { const p = ymd(k); return iso(new Date(Date.UTC(p.y, p.m - 1, p.d + 7))); },
+      month: k => { const y = +k.slice(0, 4), m = +k.slice(5, 7); return m === 12 ? (y + 1) + '-01' : y + '-' + String(m + 1).padStart(2, '0'); },
+      year:  k => String(+k + 1)
+    }[unit];
+
+    // Walk the calendar end to end so an idle week or month is a visible gap.
+    const firstKey = keyOf(items[0].date), lastKey = keyOf(items[items.length - 1].date);
+    const keys = [firstKey];
+    for (let k = firstKey; k !== lastKey && keys.length < 4000; ) { k = nextKey(k); keys.push(k); }
+    const slot = new Map(keys.map((k, i) => [k, i]));
+    const cols = keys.map(() => []);
+    items.forEach(n => { const i = slot.get(keyOf(n.date)); cols[i === undefined ? 0 : i].push(n); });
+
+    const nCols = keys.length;
+    const gridW = nCols * CELL_W + (nCols - 1) * GAP;
+    const tallest = Math.max.apply(null, cols.map(c => c.length).concat([1]));
+
+    const view = el('div', 'p-strip-view');
+    const inner = el('div');
+    inner.style.width = gridW + 'px';
+    const grid = el('div', 'p-strip-grid');
+    grid.style.height = (tallest * (CELL_H + GAP)) + 'px';
+
+    const hover = el('div', 'p-strip-hover');
+    // Cells are addressable by (column, row) so the key handler can walk the
+    // grid. Row 0 is the bottom of a column - .p-strip-col is column-reverse.
+    const colCells = [];
+    cols.forEach((bucket, ci) => {
+      const colEl = el('div', 'p-strip-col');
+      const cells = [];
+      bucket.forEach(n => {
+        const cell = el('div', 'p-strip-cell');
+        cell.style.background = fillFor(n);
+        cell.title = n.label;
+        // A div with a click handler is a pointer affordance and nothing else -
+        // the browser synthesizes no keyboard activation for a roleless
+        // element. Role plus a tab stop plus Enter/Space is the whole gap.
+        cell.setAttribute('role', 'button');
+        cell.setAttribute('aria-label', n.label);
+        cell.tabIndex = -1;
+        cell._node = n;
+        cell._col = ci;
+        cell._row = cells.length;
+        cell.addEventListener('mouseenter', () => { hover.textContent = n.label; });
+        cell.addEventListener('mouseleave', () => { hover.textContent = ''; });
+        cell.addEventListener('focus', () => { hover.textContent = n.label; });
+        cell.addEventListener('blur', () => { hover.textContent = ''; });
+        cell.addEventListener('click', ev => { ev.stopPropagation(); this.goTo(n); });
+        cells.push(cell);
+        colEl.appendChild(cell);
+      });
+      colCells.push(cells);
+      if (!bucket.length) colEl.appendChild(el('div', 'p-strip-empty'));
+      grid.appendChild(colEl);
+    });
+    inner.appendChild(grid);
+
+    // The endpoint dates ride inside the scroller with the bars, so the axis
+    // never describes a window you are not looking at.
+    const fmt = t => new Date(t + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const ends = el('div', 'p-strip-ends');
+    ends.style.width = gridW + 'px';
+    const from = el('span'); from.textContent = fmt(items[0].date); ends.appendChild(from);
+    if (nCols > 1) { const to = el('span'); to.textContent = fmt(items[items.length - 1].date); ends.appendChild(to); }
+    inner.appendChild(ends);
+    view.appendChild(inner);
+    host.appendChild(view);
+
+    // Roving tabindex: the strip is ONE tab stop and the arrows walk it. A tab
+    // stop per cell would put a thousand-record project's whole history in the
+    // tab order, which is why this is not just tabIndex = 0 on every cell.
+    const occupied = colCells.filter(c => c.length);
+    if (occupied.length) {
+      const firstCell = occupied[0][0];
+      const lastCol = occupied[occupied.length - 1];
+      const lastCell = lastCol[lastCol.length - 1];
+      firstCell.tabIndex = 0;
+      grid.setAttribute('role', 'group');
+      grid.setAttribute('aria-label', 'Connected records, ' + items.length + ' dated, oldest first');
+
+      // Nudge the scroller rather than scrollIntoView, which would also scroll
+      // every ancestor. Paired with focus({preventScroll}) so the page is still.
+      const keepInView = cell => {
+        if (!view.classList.contains('is-scrollable')) return;
+        const vr = view.getBoundingClientRect(), cr = cell.getBoundingClientRect();
+        if (cr.left < vr.left) view.scrollLeft -= (vr.left - cr.left);
+        else if (cr.right > vr.right) view.scrollLeft += (cr.right - vr.right);
+      };
+      const move = (from, to) => {
+        if (!to || to === from) return;
+        from.tabIndex = -1;
+        to.tabIndex = 0;
+        to.focus({ preventScroll: true });
+        keepInView(to);
+      };
+      // Step to the nearest column that actually holds records, then clamp the
+      // row - an idle week is a visible gap, and focus should skip over it.
+      const stepCol = (ci, dir, row) => {
+        for (let i = ci + dir; i >= 0 && i < colCells.length; i += dir) {
+          if (colCells[i].length) return colCells[i][Math.min(row, colCells[i].length - 1)];
+        }
+        return null;
+      };
+
+      grid.addEventListener('keydown', ev => {
+        const cell = ev.target;
+        if (!cell || !cell.classList || !cell.classList.contains('p-strip-cell')) return;
+        if (ev.key === 'Enter' || ev.key === ' ' || ev.key === 'Spacebar') {
+          ev.preventDefault();
+          ev.stopPropagation();
+          this.goTo(cell._node);
+          return;
+        }
+        const col = colCells[cell._col];
+        let to = null;
+        if (ev.key === 'ArrowUp') to = col[cell._row + 1];
+        else if (ev.key === 'ArrowDown') to = col[cell._row - 1];
+        else if (ev.key === 'ArrowRight') to = stepCol(cell._col, 1, cell._row);
+        else if (ev.key === 'ArrowLeft') to = stepCol(cell._col, -1, cell._row);
+        else if (ev.key === 'Home') to = firstCell;
+        else if (ev.key === 'End') to = lastCell;
+        else return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        move(cell, to);
+      });
+    }
+
+    // Overflow chrome exists only when the strip actually overflows.
+    const rail = this.panel.querySelector('.p-rels');
+    if (gridW > (rail ? rail.clientWidth : gridW)) {
+      view.classList.add('is-scrollable');
+      view.tabIndex = 0;
+      view.setAttribute('role', 'region');
+      view.setAttribute('aria-label', 'Timeline, ' + nCols + ' ' + unit + (nCols === 1 ? '' : 's') + ', scrollable');
+      const fades = () => {
+        const max = view.scrollWidth - view.clientWidth;
+        view.style.setProperty('--fade-l', view.scrollLeft > 1 ? '1' : '0');
+        view.style.setProperty('--fade-r', view.scrollLeft < max - 1 ? '1' : '0');
+      };
+      view.addEventListener('scroll', fades, { passive: true });
+      // Opened on the most recent end by fillPanel, once the strip is in the
+      // document and has a measurable scrollWidth. Deliberately not deferred
+      // to a frame: the render loop owns the only two rAF call sites.
+      view.dataset.openAtEnd = '1';
+      this._stripFades = fades;
+    }
+
+    // The span and the legend describe the whole record, not the visible
+    // window, so they stay outside the scroller. The span is worded from the
+    // columns actually drawn - there is no second unit ladder to drift.
+    const span = el('div', 'p-strip-span');
+    span.textContent = nCols + ' ' + unit + (nCols === 1 ? '' : 's') + (undated ? ' · ' + undated + ' undated' : '');
+    host.appendChild(span);
+
+    const counts = {};
+    rels.forEach(r => { counts[r.other.type] = (counts[r.other.type] || 0) + 1; });
+    const legend = el('div', 'p-strip-legend');
+    Object.keys(counts).sort((x, y) => counts[y] - counts[x]).forEach(t => {
+      const w = el('span');
+      const sw = el('span', 'p-strip-swatch');
+      sw.style.background = rgbCss(TYPE_RGB[t] || FALLBACK_RGB);
+      w.appendChild(sw);
+      w.appendChild(document.createTextNode(counts[t] + ' ' + typeCountWord(t, counts[t])));
+      legend.appendChild(w);
+    });
+    host.appendChild(legend);
+    host.appendChild(hover);
+    return host;
+  }
+
+  fillPanel(n) {
+    // The record's own hue is the panel's light source: the drop-cap and the
+    // type word both read these custom properties, so setting them here once
+    // reaches both without either needing to know the other exists.
+    const hsl = TYPE_HSL[n.type] || FALLBACK_HSL;
+    this.panel.style.setProperty('--h', hsl[0]);
+    this.panel.style.setProperty('--s', hsl[1] + '%');
+    this.panel.style.setProperty('--l', hsl[2] + '%');
+    // The wipe restarts once per fill. Whether the panel was already open
+    // decides the delay: closed->open keeps the stylesheet's 0.32s (sequel
+    // to the panel's own slide-in), a switch plays with no delay at all.
+    // fillPanel runs BEFORE setPanelVisible on the open path, so `.visible`
+    // still reads the panel's PRIOR state here.
+    const summaryEl = this.panel.querySelector('.p-summary');
+    const wasOpen = this.panel.classList.contains('visible');
+    summaryEl.style.animation = 'none';
+    void summaryEl.offsetHeight;
+    summaryEl.style.animation = '';
+    // The animation shorthand reset above also clears any inline delay, so
+    // this has to be assigned AFTER it - and on every fill, or a switch's
+    // '0s' would leak into the next closed->open open.
+    summaryEl.style.animationDelay = wasOpen ? '0s' : '';
+    const fmtDate = d => { if (!d) return ''; const dt = new Date(d + 'T00:00:00'); return isNaN(dt) ? d : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); };
+    // A dial's status slot holds a session outcome rather than a status -
+    // its own vocabulary axis, worded from a different table.
+    const statusWords = n.type === 'dial' ? VOCAB.dial_outcomes : VOCAB.statuses;
+    const typeEl = this.panel.querySelector('.p-type');
+    typeEl.textContent = '';
+    // Each bit is its own span so the line can tier its colours; the ' · '
+    // separators stay bare text nodes in the line's own colour.
+    const typeBit = (text, cls) => {
+      if (typeEl.childNodes.length) typeEl.appendChild(document.createTextNode(' · '));
+      if (!cls) { typeEl.appendChild(document.createTextNode(text)); return; }
+      const span = document.createElement('span');
+      span.className = cls;
+      span.textContent = text;
+      typeEl.appendChild(span);
+    };
+    typeBit(VOCAB.types[n.type] || n.type, 'p-type-name');
+    if (n.status) typeBit(statusWords[n.status] || n.status, 'p-type-status');
+    if (n.date) typeBit(fmtDate(n.date), 'p-type-date');
+    // Back is a prefix character on the line that already says where you are,
+    // shown only when there is a card behind this one. No container, no label.
+    if (this.trail && this.trail.length) {
+      const back = document.createElement('button');
+      back.className = 'p-back';
+      back.textContent = '\u2039';
+      back.setAttribute('aria-label', 'Back');
+      back.addEventListener('click', ev => { ev.stopPropagation(); this.goBack(); });
+      typeEl.insertBefore(back, typeEl.firstChild);
+    }
+    this.panel.querySelector('.p-title').textContent = n.label;
+    this.panel.querySelector('.p-meta').textContent = n.degree + ' connection' + (n.degree === 1 ? '' : 's');
+    // The summary paints instantly; the record's full source replaces it the
+    // moment its mirror arrives. No control, no second state - the spark is
+    // always the whole record, scrolling inside its own window. Both paints
+    // route through the same parse, so the record is never pasted as raw
+    // text - only ever written into elements.
+    this.renderRecord(summaryEl, n.type, n.summary, n.label);
+    // An empty record has nothing to light, so the whole well hides rather
+    // than leaving a lit, empty box sitting on the card.
+    this.panel.querySelector('.p-summary-well').style.display = n.summary ? '' : 'none';
+    summaryEl.scrollTop = 0;
+    if (n.summary) this.loadRecordText(n.id, text => {
+      // The panel may already show another record by the time the mirror
+      // arrives - never write into someone else's spark.
+      if (this.selectedNode !== n) return;
+      const full = text == null ? null : this.sourceSection(n.type, text);
+      if (full != null) this.renderRecord(summaryEl, n.type, full, n.label);
+    });
+    const relsEl = this.panel.querySelector('.p-rels');
+    relsEl.innerHTML = '';
+    if (n.chunks && n.chunks.list && n.chunks.list.length) {
+      // The work is collapsible - Connections is not, so only this label
+      // gets the toggle class and its own click listener. Rebuilt on every
+      // fill, so the listener wires fresh here rather than delegating - no
+      // handler stacking to guard against.
+      const h = document.createElement('div');
+      h.className = 'p-rel-label chunks-toggle';
+      const disclosure = document.createElement('span');
+      disclosure.className = 'disclosure';
+      disclosure.textContent = '▸';
+      h.appendChild(disclosure);
+      h.appendChild(document.createTextNode(' The work (' + n.chunks.complete + '/' + n.chunks.total + ' done)'));
+      relsEl.appendChild(h);
+      const list = document.createElement('div');
+      list.className = 'p-chunk-list is-collapsed';
+      n.chunks.list.forEach(c => {
+        const row = document.createElement('div');
+        row.className = 'p-chunk' + (c.status === 'complete' ? ' is-complete' : '');
+        const dot = document.createElement('span');
+        dot.className = 'p-chunk-dot' + (c.status === 'complete' || c.status === 'active' ? ' is-' + c.status : '');
+        const title = document.createElement('span');
+        title.className = 'p-chunk-title';
+        title.textContent = c.title || '';
+        row.appendChild(dot);
+        row.appendChild(title);
+        list.appendChild(row);
+      });
+      relsEl.appendChild(list);
+      h.addEventListener('click', () => {
+        const collapsed = list.classList.toggle('is-collapsed');
+        disclosure.textContent = collapsed ? '▸' : '▾';
+      });
+    }
+    const rels = this.sim.adj.get(n.id);
+    if (rels.length) {
+      const label = document.createElement('div'); label.className = 'p-rel-label'; label.textContent = 'Connections'; relsEl.appendChild(label);
+      relsEl.appendChild(this.buildStrip(rels));
+      const view = relsEl.querySelector('.p-strip-view[data-open-at-end]');
+      if (view) { view.scrollLeft = view.scrollWidth; if (this._stripFades) this._stripFades(); }
+    }
+    // Both fades measure synchronously, the same idiom the strip's own fade
+    // already uses here - never deferred to a frame.
+    if (this._summaryFade) this._summaryFade();
+    if (this._relsFade) this._relsFade();
+  }
+
+  // Turns a record's raw text into elements - never a rewrite, only a
+  // client-side span-wrapping parse. A cycle's body is YAML (the registry's
+  // only type pointed at a .yaml file); every other type is prose.
+  renderRecord(el, type, text, title) {
+    el.textContent = '';
+    if (type === 'cycle') {
+      this.renderYamlFields(el, text);
+    } else {
+      this.renderProse(el, text, title);
+    }
+  }
+
+  // Blocks split on blank lines; a block opening with an ATX marker becomes
+  // a heading, everything else a paragraph. Single newlines inside a block
+  // carry meaning (the well's own comment promises it), so they survive as
+  // <br> rather than being swallowed by the block split. Inline markers are
+  // consumed the same way, never left as visible clutter in the reading well.
+  renderProse(el, text, title) {
+    const raw = String(text == null ? '' : text).replace(/\r\n/g, '\n').trim();
+    if (!raw) return;
+    const blocks = raw.split(/\n[ \t]*\n+/).filter(b => b.trim() !== '');
+    const headingRe = /^(#{1,6})\s+(.*)$/;
+    blocks.forEach((block, i) => {
+      const lines = block.split('\n');
+      const m = headingRe.exec(lines[0]);
+      let node, textLines;
+      if (m) {
+        // A record's own leading H1 (a riff's own title line, say) duplicates
+        // the panel's title directly above it - skip only that exact case,
+        // and only at the very top, never a heading deeper in the body.
+        if (i === 0 && m[1].length === 1 && m[2].trim() === String(title == null ? '' : title).trim()) return;
+        node = document.createElement('h2');
+        textLines = [m[2]].concat(lines.slice(1));
+      } else {
+        node = document.createElement('p');
+        textLines = lines;
+      }
+      textLines.forEach((line, li) => {
+        if (li > 0) node.appendChild(document.createElement('br'));
+        appendInlineRuns(node, line);
+      });
+      el.appendChild(node);
+    });
+  }
+
+  // A cycle record's body is a bare YAML file (no frontmatter fence to
+  // strip), so it renders as key/value fields rather than prose. Keys the
+  // panel chrome already shows are omitted mechanically - a fixed list,
+  // never a per-key judgment.
+  renderYamlFields(el, text) {
+    const OMIT_KEYS = { name: true, title: true, status: true, created: true, updated: true };
+    const keyRe = /^([A-Za-z_][A-Za-z0-9_-]*):[ \t]*(.*)$/;
+    const listRe = /^\s*-\s?(.*)$/;
+    const fields = [];
+    let field = null;
+    String(text == null ? '' : text).replace(/\r\n/g, '\n').split('\n').forEach(line => {
+      const km = keyRe.exec(line);
+      if (km) {
+        field = { key: km[1], values: [] };
+        fields.push(field);
+        const inline = km[2].trim();
+        if (inline) field.values.push({ text: inline, isList: false });
+        return;
+      }
+      if (!line.trim() || !field) return;
+      const lm = listRe.exec(line);
+      field.values.push(lm ? { text: lm[1], isList: true } : { text: line.trim(), isList: false });
+    });
+    fields.forEach(f => {
+      if (OMIT_KEYS[f.key]) return;
+      const fieldEl = document.createElement('div');
+      fieldEl.className = 'yaml-field';
+      const keyEl = document.createElement('div');
+      keyEl.className = 'yaml-key';
+      keyEl.textContent = f.key;
+      fieldEl.appendChild(keyEl);
+      f.values.forEach(v => {
+        const valEl = document.createElement('div');
+        valEl.className = 'yaml-val';
+        if (v.isList) {
+          const marker = document.createElement('span');
+          marker.className = 'yaml-list-marker';
+          marker.textContent = '-';
+          valEl.appendChild(marker);
+        }
+        valEl.appendChild(document.createTextNode(v.text));
+        fieldEl.appendChild(valEl);
+      });
+      el.appendChild(fieldEl);
+    });
+  }
+
+  // The full text behind the card's summary line: each record type names
+  // the section its summary was drawn from; a type with no such heading
+  // reads as its whole body after the frontmatter.
+  sourceSection(type, text) {
+    const body = String(text).replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
+    const titles = { story: 'Spark', fix: 'Symptom', tweak: 'Request', mockup: 'Brief' };
+    const wanted = titles[type];
+    if (!wanted) return body.trim() || null;
+    const lines = body.split('\n');
+    const out = [];
+    let inside = false;
+    for (const line of lines) {
+      if (/^## /.test(line)) {
+        if (inside) break;
+        inside = line.slice(3).trim() === wanted;
+        continue;
+      }
+      if (inside) out.push(line);
+    }
+    const section = out.join('\n').trim();
+    return section || null;
+  }
+
+  // On-demand record mirror load through a sibling script tag - the only
+  // load path that works from file:// (see the top-of-page note). Each
+  // mirror registers itself on window.CRAFT_RECORDS; a mirror already
+  // registered is never requested twice.
+  loadRecordText(id, cb) {
+    const have = window.CRAFT_RECORDS && window.CRAFT_RECORDS[id];
+    if (have != null) { cb(have); return; }
+    // One in-flight tag per id: rapid re-clicks while the mirror is still
+    // arriving queue their callbacks instead of appending duplicate tags.
+    this._mirrorWaiters = this._mirrorWaiters || {};
+    if (this._mirrorWaiters[id]) { this._mirrorWaiters[id].push(cb); return; }
+    this._mirrorWaiters[id] = [cb];
+    const settle = () => {
+      const records = window.CRAFT_RECORDS || {};
+      const text = records[id] != null ? records[id] : null;
+      const waiters = this._mirrorWaiters[id] || [];
+      delete this._mirrorWaiters[id];
+      waiters.forEach(fn => fn(text));
+    };
+    const tag = document.createElement('script');
+    tag.src = 'graph/records/' + id + '.js';
+    tag.onload = settle;
+    tag.onerror = settle;
+    document.head.appendChild(tag);
+  }
+
+  resize() {
+    this._resizeCanvas();
+    this.sim.resizeHome(window.innerWidth, window.innerHeight);
+    this.camera.x = window.innerWidth / 2;
+    this.camera.y = window.innerHeight / 2;
+    this.bg = bakeBackground(window.innerWidth, window.innerHeight);
+    // The fitted plate moved, so an already-baked bloom re-bakes to the new
+    // anchors - a refresh, never a second fade (armHeat guards the clock).
+    if (this.heatCanvas) this.heatCanvas = this.bakeHeat();
+    // The card slots are viewport-fraction positioned, so every leader's
+    // card end moved with the resize - the cache re-derives on the next
+    // painted frame.
+    this._leaderMarchAt = 0;
+    this._leaderRestMarched = false;
+    this.requestRender();
+  }
+
+  // Travel between records from inside the card. Pushing happens only on an
+  // in-card click; a canvas click clears the trail (see the mouseup handler).
+  goTo(node) {
+    if (this.selectedNode) (this.trail = this.trail || []).push(this.selectedNode);
+    this.selectedNode = node;
+    this.fillPanel(node);
+    this.requestRender();
+  }
+
+  goBack() {
+    const prev = (this.trail || []).pop();
+    if (!prev) return;
+    this.selectedNode = prev;
+    this.fillPanel(prev);
+    this.requestRender();
+  }
+
+  // ---- the insight layer -----------------------------------------------
+  // Content and evidence come from the sidecar; geometry and chrome are the
+  // page's. Evidence ids resolve against the live graph - an id that no
+  // longer resolves loses only its marks, never the card: the wit survives,
+  // the pointer goes quiet.
+  resolveInsightCards() {
+    if (!INSIGHTS) return [];
+    return INSIGHTS.cards.filter(c => c && typeof c === 'object').slice(0, 4).map(c => {
+      const ids = Array.isArray(c.evidence_node_ids) ? c.evidence_node_ids : [];
+      const nodes = ids
+        .map(id => this.sim.idx.has(id) ? this.sim.nodes[this.sim.idx.get(id)] : null)
+        .filter(Boolean);
+      return { body: String(c.body || ''), witness: String(c.witness || ''), nodes };
+    }).filter(c => c.body);
+  }
+
+  // Hue is derived from the live type of the first RESOLVING evidence node,
+  // never asserted by the sidecar - the chip's chrome IS its citation, so it
+  // cannot cite a type the graph disagrees with. No surviving evidence takes
+  // the same neutral fallback an unknown node type does.
+  cardHsl(card) {
+    return (card.nodes.length && TYPE_HSL[card.nodes[0].type]) || FALLBACK_HSL;
+  }
+
+  buildCards(cards) {
+    const w = window.innerWidth, h = window.innerHeight;
+    this.cardsEl.innerHTML = '';
+    this.cardMeta = [];
+    const free = CARD_SLOTS.map((s, i) => i);
+    cards.forEach((card, ci) => {
+      // Evidence centroid in screen space - the same projection expression
+      // the label pass uses, so there is exactly one mapping to drift.
+      let cx = w / 2, cy = h / 2;
+      if (card.nodes.length) {
+        let sx = 0, sy = 0;
+        for (const n of card.nodes) {
+          sx += (n.x - this.camera.x) * this.camera.scale + w / 2;
+          sy += (n.y - this.camera.y) * this.camera.scale + h / 2;
+        }
+        cx = sx / card.nodes.length; cy = sy / card.nodes.length;
+      }
+      // Greedy nearest free slot, so each chip sits closest to its own
+      // evidence.
+      let best = free[0], bestD = Infinity;
+      for (const i of free) {
+        const s = CARD_SLOTS[i];
+        const px = s.side === 'left' ? s.x * w : w - s.x * w;
+        const d = Math.hypot(px - cx, s.y * h - cy);
+        if (d < bestD) { bestD = d; best = i; }
+      }
+      free.splice(free.indexOf(best), 1);
+      const slot = CARD_SLOTS[best];
+      const hsl = this.cardHsl(card);
+      const el = document.createElement('div');
+      el.className = 'card' + (slot.side === 'right' ? ' pin-right' : '');
+      el.style[slot.side] = (slot.x * 100) + '%';
+      el.style.top = (slot.y * 100) + '%';
+      el.style.transitionDelay = (ci * 110) + 'ms';
+      el.style.borderColor = `hsla(${hsl[0]},${hsl[1]}%,${hsl[2]}%,0.55)`;
+      const eyebrow = document.createElement('div');
+      eyebrow.className = 'c-eyebrow';
+      eyebrow.style.color = `hsl(${hsl[0]},${hsl[1]}%,${Math.min(90, hsl[2] + 12)}%)`;
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      dot.style.background = `hsl(${hsl[0]},${hsl[1]}%,${hsl[2]}%)`;
+      const obs = document.createTextNode('Observation ' + String(ci + 1).padStart(2, '0'));
+      // The dot sits at the frame-facing edge: before the text on a
+      // left-pinned chip, after it on a right-pinned one.
+      if (slot.side === 'right') { eyebrow.appendChild(obs); eyebrow.appendChild(dot); }
+      else { eyebrow.appendChild(dot); eyebrow.appendChild(obs); }
+      // The quote-source node's date closes the row on every chip - the
+      // auto margin owns the far end regardless of pin side.
+      const src = card.nodes[0];
+      if (src && src.date) {
+        const parts = String(src.date).split('-');
+        const month = CARD_MONTHS[(+parts[1] || 1) - 1];
+        if (month && parts[2]) {
+          const dateEl = document.createElement('span');
+          dateEl.className = 'c-date';
+          dateEl.textContent = month + ' ' + (+parts[2]);
+          eyebrow.appendChild(dateEl);
+        }
+      }
+      el.appendChild(eyebrow);
+      const body = document.createElement('div');
+      body.className = 'c-body';
+      body.textContent = card.body;
+      el.appendChild(body);
+      if (card.witness) {
+        const witness = document.createElement('div');
+        witness.className = 'c-witness';
+        witness.textContent = 'witnessed by ' + card.witness;
+        el.appendChild(witness);
+      }
+      this.cardsEl.appendChild(el);
+      // The leader pass derives its geometry from this entry: the element's
+      // untransformed layout box (offsetLeft/offsetTop are immune to the
+      // translateY entrance) and the evidence hue. The cached leader
+      // geometry lands on the same entry when the throttled march runs.
+      this.cardMeta.push({ card, slot, hsl, el, leader: null });
+    });
+    this._leaderMarchAt = 0;
+    this._leaderCamSig = '';
+    this._leaderRestMarched = false;
+  }
+
+  // Ray-marches from the card edge toward the evidence cluster's projected
+  // centroid in small screen-space steps, testing every node's projected
+  // radius, and returns the first contact backed off by a standoff - so the
+  // leader travels only over empty background and stops at the dot field's
+  // true outer edge, never crossing ANY dot (not just the evidence
+  // cluster's own members).
+  cloudContact(x1, y1, cx, cy, w, h) {
+    const dx = cx - x1, dy = cy - y1;
+    const dist = Math.hypot(dx, dy) || 1;
+    const ux = dx / dist, uy = dy / dist;
+    const stepSize = 6, standoff = 14;
+    const steps = Math.max(1, Math.floor(dist / stepSize));
+    const cam = this.camera, scale = cam.scale;
+    for (let s = 1; s <= steps; s++) {
+      const px = x1 + ux * stepSize * s, py = y1 + uy * stepSize * s;
+      for (const n of this.sim.nodes) {
+        const nx = (n.x - cam.x) * scale + w / 2;
+        const ny = (n.y - cam.y) * scale + h / 2;
+        const dd = Math.hypot(px - nx, py - ny);
+        if (dd <= n.hw * scale + 3) {
+          const backDist = Math.max(0, stepSize * s - standoff);
+          return { x: x1 + ux * backDist, y: y1 + uy * backDist };
+        }
+      }
+    }
+    // No contact along the whole ray - stop well short of the centroid
+    // rather than reaching all the way in.
+    const fallback = Math.max(dist - 60, dist * 0.5);
+    return { x: x1 + ux * fallback, y: y1 + uy * fallback };
+  }
+
+  // Re-derives every leader's cached geometry from live projected node
+  // positions. The card end reads the untransformed layout box
+  // (offsetLeft/offsetTop), so a leader measured mid-entrance never anchors
+  // low; the node end re-projects, so pan, zoom, resize and drag never
+  // leave a leader pointing at empty space. All coordinates round to
+  // integers before caching.
+  deriveLeaders(w, h) {
+    for (const meta of this.cardMeta) {
+      const evidence = meta.card.nodes;
+      if (!evidence.length) { meta.leader = null; continue; }
+      const src = evidence[0];
+      const grp = this.sim.byType.get(src.type) || [];
+      let gx = 0, gy = 0;
+      for (const ni of grp) { gx += this.sim.nodes[ni].x; gy += this.sim.nodes[ni].y; }
+      const count = grp.length || 1;
+      const cx = (gx / count - this.camera.x) * this.camera.scale + w / 2;
+      const cy = (gy / count - this.camera.y) * this.camera.scale + h / 2;
+      const el = meta.el;
+      const x1 = meta.slot.side === 'left' ? el.offsetLeft + el.offsetWidth : el.offsetLeft;
+      const y1 = el.offsetTop + el.offsetHeight / 2;
+      const contact = this.cloudContact(x1, y1, cx, cy, w, h);
+      const tx = contact.x, ty = contact.y;
+      // A shallow bend only - a wider bow risks bowing the curve's belly
+      // back over a dot near the boundary it just stopped short of.
+      const bend = (y1 < ty ? 1 : -1) * (meta.slot.side === 'left' ? 1 : -1) * 14;
+      const cxp = (x1 + tx) / 2, cyp = (y1 + ty) / 2 + bend;
+      const dirx = tx - cxp, diry = ty - cyp;
+      const dl2 = Math.hypot(dirx, diry) || 1;
+      const uxa = dirx / dl2, uya = diry / dl2;
+      const perpx = -uya, perpy = uxa;
+      const back = 8, spread = 4;
+      meta.leader = {
+        x1: Math.round(x1), y1: Math.round(y1),
+        cx: Math.round(cxp), cy: Math.round(cyp),
+        tx: Math.round(tx), ty: Math.round(ty),
+        a1x: Math.round(tx - uxa * back + perpx * spread), a1y: Math.round(ty - uya * back + perpy * spread),
+        a2x: Math.round(tx - uxa * back - perpx * spread), a2y: Math.round(ty - uya * back - perpy * spread),
+        hue: `hsl(${meta.hsl[0]},${meta.hsl[1]}%,${Math.min(85, meta.hsl[2] + 6)}%)`,
+      };
+    }
+  }
+
+  // Fires from the render loop at whichever comes first: the simulation
+  // reaching rest, or the CARD_REVEAL_MS ceiling from the first painted
+  // frame. The requestFrame kicks the entrance's first frame; the leader
+  // fade keeps the loop alive until it completes, and stillness returns.
+  revealCards() {
+    // The viewport bail precedes the latch: a settle below the size floor
+    // leaves the reveal armed, so enlarging the window fires it on the next
+    // rest frame instead of never.
+    if (!this.cardsEl || !cardsViewportOk()) return;
+    this.cardsShown = true;
+    const cards = this.resolveInsightCards();
+    if (!cards.length) return;
+    this.buildCards(cards);
+    this.cardsShownAt = performance.now();
+    void this.cardsEl.offsetWidth; // commit resting styles so the class toggle transitions
+    this.cardsEl.classList.add('shown');
+    this.requestFrame();
+  }
+
+  // One seam for the record panel's visibility, so the insight layer bows
+  // out and returns in the same breath - the composed frame never holds two
+  // competing focus objects on the right edge.
+  setPanelVisible(on) {
+    if (this.panel) this.panel.classList.toggle('visible', on);
+    if (this.cardsEl) this.cardsEl.classList.toggle('suppressed', on);
+  }
+
+  // Toggles at-top/at-bottom classes rather than a shared calc()-driven
+  // custom property - a custom property shared across elements under one CSS
+  // rule produced a hard, gapless cut on at least one box instead of a
+  // gradient (mockup finding, root cause not fully isolated). Classes
+  // sidestep the whole failure class: each rule is a static declaration with
+  // nothing to miscompute. Wired once per element (they persist across every
+  // fill); returns the updater so a fill can re-run it synchronously.
+  wireVerticalFade(el) {
+    if (!el) return null;
+    const update = () => {
+      const max = el.scrollHeight - el.clientHeight;
+      el.classList.toggle('at-top', el.scrollTop <= 1);
+      el.classList.toggle('at-bottom', el.scrollTop >= max - 1);
+    };
+    el.addEventListener('scroll', update, { passive: true });
+    update();
+    return update;
+  }
+
+  replay() {
+    const w = window.innerWidth, h = window.innerHeight;
+    this.sim.resizeHome(w, h);
+    // A Replay is a genuinely fresh start - a node pinned from an earlier
+    // drag must not survive it and sit frozen while everything else
+    // re-enters. Every pin clears BEFORE the seed.
+    this.sim.nodes.forEach(n => { n.fx = null; n.fy = null; });
+    seedCompactCloud(this.sim.nodes, w / 2, h / 2);
+    this.sim.alpha = 1;
+    this.sim.alphaTarget = 0;
+    this.sim.dragNode = null;
+    this.sim.towed = [];
+    this.sim.recoverT0 = 0;
+    this.sim.entranceT0 = 0;
+    this.selectedNode = null;
+    this.hoverNode = null;
+    this.dragNode = null;
+    this.dragCandidate = null;
+    this.setPanelVisible(false);
+    // Clearing cardsShown re-arms the reveal, so the whole choreography -
+    // bloom, settle, card entrance - runs again from the top. The hover
+    // calm latch re-arms with it, so hover goes quiet for the re-run too.
+    this.cardsShown = false;
+    this.cardsShownAt = 0;
+    this.calm = false;
+    this.cardMeta = [];
+    this._leaderMarchAt = 0;
+    this._leaderCamSig = '';
+    this._leaderRestMarched = false;
+    if (this.cardsEl) { this.cardsEl.classList.remove('shown'); this.cardsEl.innerHTML = ''; }
+    this.heatCanvas = null;
+    this.heatFadeStart = 0;
+    this.settledOnce = false;
+    this.entranceStart = 0;
+    this.requestRender();
+  }
+
+  attachInteraction() {
+    const canvas = this.canvas;
+    canvas.addEventListener('mousedown', (ev) => {
+      this.requestRender();
+      const w = window.innerWidth, h = window.innerHeight;
+      const wp = this.camera.toWorld(ev.clientX, ev.clientY, w, h);
+      this.dragCandidate = hitTestNode(this.sim.nodes, wp.x, wp.y);
+      this.downScreen = { x: ev.clientX, y: ev.clientY };
+      this.dragging = false;
+      this.panning = false;
+      if (!this.dragCandidate) {
+        this.panStartScreen = { x: ev.clientX, y: ev.clientY };
+        this.panStartCam = { x: this.camera.x, y: this.camera.y };
+      }
+    });
+    canvas.addEventListener('mousemove', (ev) => {
+      // Unconditional: with a stopped loop, hover state can change on any
+      // move, and detecting "did it actually change" costs more than a
+      // spare frame request does.
+      this.requestRender();
+      const w = window.innerWidth, h = window.innerHeight;
+      this.mouse.x = ev.clientX; this.mouse.y = ev.clientY;
+      const wp = this.camera.toWorld(ev.clientX, ev.clientY, w, h);
+      if (this.dragCandidate) {
+        if (!this.dragging) {
+          const dx = ev.clientX - this.downScreen.x, dy = ev.clientY - this.downScreen.y;
+          if (Math.hypot(dx, dy) > 4) {
+            this.dragging = true;
+            this.dragNode = this.dragCandidate;
+            // Mirror the held node onto the simulation: the rest predicate
+            // reads it, and the tow pass pulls its direct neighbours toward
+            // it - captured here, emptied on release, never pinned.
+            this.sim.dragNode = this.dragNode;
+            this.sim.towed = (this.sim.adj.get(this.dragNode.id) || []).map(r => r.other);
+            this.dragNode.fx = this.dragNode.x; this.dragNode.fy = this.dragNode.y;
+            this.sim.alphaTarget = 0.35;
+            if (this.sim.alpha < this.sim.alphaTarget) this.sim.alpha = this.sim.alphaTarget;
+          }
+        }
+        if (this.dragging && this.dragNode) { this.dragNode.fx = wp.x; this.dragNode.fy = wp.y; }
+      } else if (this.panStartScreen) {
+        // Background drag-to-pan - 1:1 with the cursor, no inertia, sharing
+        // the same camera.x/y the wheel-zoom reads/writes so the two compose.
+        const dx = ev.clientX - this.panStartScreen.x, dy = ev.clientY - this.panStartScreen.y;
+        if (!this.panning && Math.hypot(dx, dy) > 3) {
+          this.panning = true;
+          canvas.style.cursor = 'grabbing';
+        }
+        if (this.panning) {
+          this.camera.x = this.panStartCam.x - dx / this.camera.scale;
+          this.camera.y = this.panStartCam.y - dy / this.camera.scale;
+        }
+      } else {
+        // Hover stays quiet while nodes are still flying - the gate lifts
+        // once motion calms into the final drift (see the tick loop's
+        // HOVER_CALM_MS latch), and Replay re-arms it.
+        this.hoverNode = this.calm ? hitTestNode(this.sim.nodes, wp.x, wp.y) : null;
+        canvas.style.cursor = this.hoverNode ? 'pointer' : 'default';
+      }
+    });
+    const release = () => {
+      this.requestRender();
+      if (this.dragging && this.dragNode) {
+        // Pin exactly where dropped - no fx/fy clear, no spring home, and no
+        // repositioning of anything else. The field recovers IN PLACE: a
+        // full reheat (alpha 1 draining to 0) plus the simulation's brief
+        // eased-damping window relaxes the disturbed pocket with real
+        // physics. Nodes already in equilibrium have ~zero net force, so
+        // raising alpha moves nothing that wasn't actually disturbed.
+        this.sim.dragNode = null;
+        this.sim.towed = [];
+        this.sim.alpha = 1;
+        this.sim.alphaTarget = 0;
+        this.sim.recoverT0 = performance.now();
+      } else if (this.panning) {
+        // pan release - camera state just stays where it is, nothing to undo
+      } else if (this.dragCandidate) {
+        const hit = this.dragCandidate;
+        this.selectedNode = (hit === this.selectedNode) ? null : hit;
+        // A canvas click is a jump to somewhere new, not a step along a path,
+        // so it starts the card's back-trail over rather than extending it.
+        this.trail = [];
+        if (this.selectedNode) this.fillPanel(this.selectedNode);
+        this.setPanelVisible(!!this.selectedNode);
+      } else if (this.panel && this.panStartScreen) {
+        // a real empty-space click (never moved past the pan threshold) = deselect
+        this.selectedNode = null;
+        this.setPanelVisible(false);
+      }
+      this.dragCandidate = null; this.dragging = false; this.dragNode = null;
+      this.panStartScreen = null; this.panStartCam = null;
+      if (this.panning) { this.panning = false; canvas.style.cursor = 'default'; }
+    };
+    // Listen on window, not just canvas: a pan or drag that ends with the
+    // cursor released outside the canvas must still clear cleanly.
+    window.addEventListener('mouseup', release);
+    canvas.addEventListener('mouseleave', () => { this.requestRender(); this.mouse.x = -9999; this.mouse.y = -9999; this.hoverNode = null; });
+    canvas.addEventListener('wheel', (ev) => {
+      ev.preventDefault();
+      this.requestRender();
+      const w = window.innerWidth, h = window.innerHeight;
+      // Proportional zoom: scale follows actual scroll distance, so trackpad
+      // streams accumulate gently. deltaMode 1 = line-scroll mice; ctrlKey = pinch.
+      const px = ev.deltaY * (ev.deltaMode === 1 ? 50 : 1);
+      const factor = Math.pow(2, -px * (ev.ctrlKey ? 0.02 : 0.002));
+      this.camera.zoomAt(ev.clientX, ev.clientY, w, h, factor);
+    }, { passive: false });
+  }
+
+  draw() {
+    const ctx = this.ctx, sim = this.sim, w = window.innerWidth, h = window.innerHeight;
+    ctx.drawImage(this.bg, 0, 0, w, h);
+    ctx.save();
+    ctx.translate(w / 2, h / 2); ctx.scale(this.camera.scale, this.camera.scale); ctx.translate(-this.camera.x, -this.camera.y);
+
+    // The bloom pans and zooms locked to the galaxy it belongs to: the bake
+    // canvas and the fitted world plate are the same w x h rectangle, so one
+    // drawImage inside the camera transform is the whole registration.
+    if (this.heatCanvas) {
+      let heatMul = 1;
+      if (this.heatFadeStart) heatMul = clamp((performance.now() - this.heatFadeStart) / HEAT_FADE_MS, 0, 1);
+      if (heatMul < 1) ctx.globalAlpha = heatMul;
+      ctx.drawImage(this.heatCanvas, 0, 0, w, h);
+      if (heatMul < 1) ctx.globalAlpha = 1;
+    }
+
+    const active = this.selectedNode || this.hoverNode;
+    const connectedIds = active ? new Set(sim.adj.get(active.id).map(e => e.other.id)) : null;
+
+    // Label candidates are gathered here (screen position projected under
+    // the world transform) but drawn in a separate screen-space pass below,
+    // so label text stays a constant size at every zoom level.
+    const labelCandidates = [];
+    for (const n of sim.nodes) {
+      const alwaysOn = n === active || n === this.dragNode || n.degree >= window.LT.degreeAlwaysOn;
+      let alpha = 1;
+      if (!alwaysOn) {
+        const t = (n.hw - MIN_R) / (MAX_R - MIN_R);
+        const threshold = lerp(window.LT.dustZoom, window.LT.hubZoom, t);
+        alpha = clamp((this.camera.scale - (threshold - window.LT.ramp)) / window.LT.ramp, 0, 1);
+        if (alpha <= 0.01) continue; // not a candidate at all this frame
+      }
+      const sx = (n.x - this.camera.x) * this.camera.scale + w / 2;
+      const sy = (n.y - this.camera.y) * this.camera.scale + h / 2;
+      if (sx < -80 || sx > w + 80 || sy < -60 || sy > h + 60) continue; // off-screen
+      labelCandidates.push({ n, alwaysOn, alpha, sx, sy });
+    }
+    // Always-on first, then most prominent (bigger radius) first.
+    labelCandidates.sort((a, b) => (b.alwaysOn - a.alwaysOn) || (b.n.hw - a.n.hw));
+
+    // The resting mesh is one quiet batched stroke - the coloured regions
+    // and their heat carry the composition now, so the hairlines only need
+    // to whisper the connective tissue. The selected/hover branches survive
+    // for the reading panel's connected-highlight affordance.
+    if (active) {
+      for (const e of sim.edges) {
+        const isConn = e.source.id === active.id || e.target.id === active.id;
+        ctx.beginPath(); ctx.moveTo(e.source.x, e.source.y); ctx.lineTo(e.target.x, e.target.y);
+        ctx.strokeStyle = isConn ? 'rgba(220,225,235,0.6)' : 'rgba(190,195,205,0.04)';
+        ctx.lineWidth = isConn ? 1.6 : 1;
+        ctx.stroke();
+      }
+    } else {
+      ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(180,190,210,0.085)';
+      ctx.beginPath();
+      for (const e of sim.edges) {
+        ctx.moveTo(e.source.x, e.source.y); ctx.lineTo(e.target.x, e.target.y);
+      }
+      ctx.stroke();
+    }
+
+    // No per-node glow anywhere: the region heat IS the luminosity, and the
+    // absence on individual dots is the design. Completed records of the
+    // most numerous type swap to the dim sprite and step back to 0.8 alpha -
+    // finished work as quiet grey texture, living work carrying the colour.
+    for (const n of sim.nodes) {
+      const dim = active && n !== active && !(connectedIds && connectedIds.has(n.id)) ? 0.3 : 1;
+      const cooled = n.type === 'story' && (n.status === 'complete' || n.status === 'shipped');
+      const sprite = cooled ? this.spriteFor('story_dim', n.bucket) : this.spriteFor(n.type, n.bucket);
+      ctx.globalAlpha = (cooled ? 0.8 : 1) * dim;
+      const d2 = n.hw * 2;
+      ctx.drawImage(sprite, n.x - n.hw, n.y - n.hh, d2, d2);
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore(); // back to screen space - DPR-scaled, no camera transform
+
+    // Leader pass: each card draws ONE dotted, gently-curved 1px reach in
+    // its evidence hue, riding a 3px dark casing - the label-halo idiom -
+    // ending in a filled arrowhead at the first node contact along the ray,
+    // standoff included, so no leader ever crosses a dot. Geometry re-derives
+    // from live projected positions (throttled), and the whole pass shares
+    // the reading panel's suppression seam. Evidence that stopped resolving
+    // simply draws nothing: the card stays, the pointer goes quiet.
+    if (this.cardsShown && this.cardMeta.length && cardsViewportOk() &&
+        this.cardsEl && !this.cardsEl.classList.contains('suppressed')) {
+      const leaderAlpha = clamp((performance.now() - this.cardsShownAt - LEADER_FADE_DELAY_MS) / LEADER_FADE_MS, 0, 1);
+      // The leader fade schedules its own frames until complete - internal
+      // animation, not input.
+      if (leaderAlpha < 1) this.requestFrame();
+      if (leaderAlpha > 0) {
+        const nowMs = performance.now();
+        const atRest = this.sim.isAtRest();
+        const camSig = this.camera.x + '|' + this.camera.y + '|' + this.camera.scale;
+        const stale = camSig !== this._leaderCamSig || !atRest || !this._leaderRestMarched;
+        if (stale && (!this._leaderMarchAt || nowMs - this._leaderMarchAt >= LEADER_REMARCH_MS || (atRest && !this._leaderRestMarched))) {
+          this.deriveLeaders(w, h);
+          this._leaderMarchAt = nowMs;
+          this._leaderCamSig = camSig;
+          this._leaderRestMarched = atRest;
+        }
+        ctx.save();
+        ctx.globalAlpha = leaderAlpha;
+        const CASING = 'rgba(8,9,12,0.65)';
+        for (const meta of this.cardMeta) {
+          const L = meta.leader;
+          if (!L) continue;
+          ctx.setLineDash([1, 6]);
+          ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.moveTo(L.x1, L.y1); ctx.quadraticCurveTo(L.cx, L.cy, L.tx, L.ty);
+          ctx.lineWidth = 3; ctx.strokeStyle = CASING; ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(L.x1, L.y1); ctx.quadraticCurveTo(L.cx, L.cy, L.tx, L.ty);
+          ctx.lineWidth = 1; ctx.strokeStyle = L.hue; ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.beginPath(); ctx.moveTo(L.tx, L.ty); ctx.lineTo(L.a1x, L.a1y); ctx.lineTo(L.a2x, L.a2y);
+          ctx.closePath(); ctx.fillStyle = L.hue; ctx.fill();
+        }
+        ctx.restore();
+      }
+    }
+
+    // Screen-space label pass - constant 11px size at every zoom. Suppression
+    // uses each candidate's real measured text bounds against an AABB of
+    // already-placed higher-priority labels, not a fixed grid.
+    ctx.font = '11px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const placed = [];
+    for (const cand of labelCandidates) {
+      const n = cand.n;
+      let tw = this._labelWidthCache.get(n.id);
+      if (tw == null) { tw = ctx.measureText(n.short).width; this._labelWidthCache.set(n.id, tw); }
+      const labelY = cand.sy + n.hw * this.camera.scale + 13;
+      const halfW = tw / 2 + 3, halfH = 8;
+      const rect = { x1: cand.sx - halfW, y1: labelY - halfH, x2: cand.sx + halfW, y2: labelY + halfH };
+      let overlaps = false;
+      for (const p of placed) {
+        if (rect.x1 < p.x2 && rect.x2 > p.x1 && rect.y1 < p.y2 && rect.y2 > p.y1) { overlaps = true; break; }
+      }
+      if (overlaps && !cand.alwaysOn) continue; // always-on always draws; others yield to a higher-priority neighbor
+      placed.push(rect);
+
+      const dim = active && n !== active && !(connectedIds && connectedIds.has(n.id)) ? 0.3 : 1;
+      const isActive = n === active;
+      ctx.font = (isActive ? '600 ' : '400 ') + '11px system-ui, -apple-system, sans-serif';
+      const labelAlpha = cand.alpha * dim;
+      const col = isActive ? 'rgba(255,255,255,1)' : `rgba(222,226,232,${0.78 * labelAlpha})`;
+      drawLabelHalo(ctx, n.short, cand.sx, labelY, col);
+    }
+  }
+
+  requestRender() {
+    this.lastInputAt = performance.now();
+    this.interactionActive = true;
+    if (!this.rafId) this.rafId = requestAnimationFrame(this.tick);
+  }
+
+  // Pure frame scheduling for the page's OWN animations (heat fade, leader
+  // fade, card reveal). Unlike requestRender it does not stamp the input
+  // timer, so an internal ease can never masquerade as user activity and
+  // extend the calm window - the loop parks the moment the animation truly
+  // finishes.
+  requestFrame() {
+    if (!this.rafId) this.rafId = requestAnimationFrame(this.tick);
+  }
+
+  tick(now) {
+    this.rafId = null;
+    if (!this.entranceStart) this.entranceStart = now;
+    // The simulation reads the same anchor for its launch-pop window - the
+    // swirl IS the entrance, there is no global fade softening it.
+    if (!this.sim.entranceT0) this.sim.entranceT0 = now;
+    if (!this.lastT) this.lastT = now;
+    const dt = Math.min((now - this.lastT) / 1000, 0.05);
+    this.lastT = now;
+    this.simT += dt;
+    this.sim.step(dt, now);
+    this.draw(now);
+    this.frameCount++;
+
+    if (this.interactionActive && !this.dragging && !this.panning && (now - this.lastInputAt) > CALM_MS) {
+      this.interactionActive = false;
+    }
+    // True stillness also waits for the heat fade - a loop parked mid-fade
+    // would snap the bloom to full alpha on the frame that stopped it.
+    const heatFading = !!this.heatFadeStart && (now - this.heatFadeStart) < HEAT_FADE_MS;
+    const still = !this.sim.isAtRest() || this.dragging || this.panning || this.interactionActive || heatFading;
+    /* Guarded reschedule only: draw() may already have booked the next frame
+       (heat fade, leader fade). A bare requestAnimationFrame here would
+       stack a second loop on top of that one - and the population doubles
+       every frame both fire, collapsing the page to a crawl. */
+    if (still && !this.rafId) this.rafId = requestAnimationFrame(this.tick);
+    // The hover gate lifts here, on the load clock rather than the sim's
+    // energy: once the entrance's violent fling window has passed, pointing
+    // at nodes feels natural again. Latched - later re-heats (a drag warms
+    // the sim back up) never re-close it; only Replay does.
+    if ((now - this.entranceStart) > HOVER_CALM_MS) this.calm = true;
+    // The insight reveal races the physics against a hard ceiling: true
+    // rest, or CARD_REVEAL_MS from the first painted frame, whichever
+    // arrives first - so a fast settle brings the layer in early and a
+    // long-held drag can never push it out indefinitely. It runs after the
+    // frame's scheduling decision so its requestFrame never races the
+    // still-guarded reschedule above.
+    if (!this.cardsShown && (this.sim.isAtRest() || (now - this.entranceStart) > CARD_REVEAL_MS)) this.revealCards();
+    // The bloom bakes on its own early beat, or at first true rest -
+    // whichever arrives first; armHeat guards the fade clock so it never
+    // double-fires. Both sit after the scheduling decision for the same
+    // reason the reveal does: their requestFrame must never race the
+    // still-guarded reschedule above.
+    if (!this.heatFadeStart && (now - this.entranceStart) > EARLY_HEAT_MS) this.armHeat(now);
+    if (!this.settledOnce && this.sim.isAtRest()) { this.settledOnce = true; this.armHeat(now); }
+  }
+}
+
+window.GraphInstance = new GraphView(document.getElementById('canvas'), document.getElementById('panel'));
+
+document.getElementById('replay-btn').addEventListener('click', () => {
+  window.GraphInstance.replay();
+});
+document.getElementById('refresh-btn').addEventListener('click', () => {
+  location.reload();
+});
+window.addEventListener('resize', () => {
+  window.GraphInstance.resize();
+});
+
+const noticeMessage = computeNotice(window.CRAFT_BUILD, GRAPH);
+if (noticeMessage) {
+  const noticeEl = document.querySelector('#controls .notice');
+  noticeEl.textContent = noticeMessage;
+  noticeEl.classList.add('visible');
+}
+</script>
+</body>
+</html>

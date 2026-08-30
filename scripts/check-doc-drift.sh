@@ -19,8 +19,47 @@
 
 set -uo pipefail
 
+# Optional: --range <base>..<head> makes check 9 (feat: commits need a
+# CHANGELOG.md change) run against that commit range instead of the
+# upstream..HEAD it derives locally. A PR checkout in CI is detached - no
+# upstream - so without this flag check 9 silently no-ops there. Opt-in by
+# design: every existing caller invokes with no arguments and is untouched.
+RANGE=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --range)
+      RANGE="${2:-}"
+      shift 2 || { echo "check-doc-drift: --range needs a <base>..<head> value" >&2; exit 2; }
+      ;;
+    *)
+      echo "check-doc-drift: unknown argument '$1' (usage: check-doc-drift.sh [--range <base>..<head>])" >&2
+      exit 2
+      ;;
+  esac
+done
+
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$ROOT" || { echo "check-doc-drift: cannot resolve repo root" >&2; exit 1; }
+
+# A bad --range must exit loudly rather than skipping check 9 - a silent
+# skip is the exact failure the flag exists to remove.
+if [ -n "$RANGE" ]; then
+  case "$RANGE" in
+    *..*) : ;;
+    *)
+      echo "check-doc-drift: --range value '$RANGE' is not <base>..<head>" >&2
+      exit 2
+      ;;
+  esac
+  range_base="${RANGE%%..*}"
+  range_head="${RANGE##*..}"
+  if [ -z "$range_base" ] || [ -z "$range_head" ] \
+    || ! git rev-parse --verify --quiet "${range_base}^{commit}" > /dev/null \
+    || ! git rev-parse --verify --quiet "${range_head}^{commit}" > /dev/null; then
+    echo "check-doc-drift: --range value '$RANGE' does not resolve to two commits" >&2
+    exit 2
+  fi
+fi
 
 BT='`'   # backtick literal, so the shell never tries to expand `...`
 
@@ -28,11 +67,10 @@ BT='`'   # backtick literal, so the shell never tries to expand `...`
 # Reference docs that are legitimately NOT wired to a hook or command. Each
 # entry REQUIRES a one-line reason. Adds appear in the commit diff, so a
 # reviewer sees the bypass and the reason forces a conscious "yes, standalone."
-ALLOWLIST=(
-  # reference/decision-tree.md: human- and guide-facing orchestration map. Read
-  #   directly by people and the guide agent; not invoked by any hook/command.
-  "reference/decision-tree.md"
-)
+# Entries are reference/ paths - that is the only domain the check-5 loop below
+# walks, so a path outside reference/ can never match and would be dead weight.
+# Currently empty: every reference/ file is wired to a hook, command or skill.
+ALLOWLIST=()
 
 findings=()
 add() { findings+=("$1"); }
@@ -51,11 +89,11 @@ has_token() { printf '%s' "$1" | grep -qF "${BT}${2}${BT}"; }
 #    Expected set = /craft (commands/craft.md) + /craft:<x> (commands/craft-*.md)
 #    + skills invoked as commands, read from the machine-readable marker so the
 #    list stays single-source (never hardcoded here).
-cmd_ref="$(section '## Commands Reference' reference/decision-tree.md)"
+cmd_ref="$(section '## Commands Reference' docs/decision-tree.md)"
 # Unquoted $skill_cmds in the loop below is intentional - it word-splits the
 # marker list on IFS (spaces and newlines), which handles one or many markers.
 # Do not quote it.
-skill_cmds="$(grep -oE '<!-- skill-commands:[^>]*-->' reference/decision-tree.md \
+skill_cmds="$(grep -oE '<!-- skill-commands:[^>]*-->' docs/decision-tree.md \
   | sed -E 's/<!-- skill-commands: *//; s/ *-->//' | tr ',' ' ')"
 expected_cmds="/craft"
 for f in commands/craft-*.md; do
@@ -68,7 +106,7 @@ for c in $expected_cmds; do
 done
 
 # 2. Skill parity: every skill dir appears in the Skills Reference.
-skill_ref="$(section '## Skills Reference' reference/decision-tree.md)"
+skill_ref="$(section '## Skills Reference' docs/decision-tree.md)"
 for d in skills/*/; do
   [ -d "$d" ] || continue
   n="$(basename "$d")"
@@ -76,7 +114,7 @@ for d in skills/*/; do
 done
 
 # 3. Agent parity x3: every agent appears in all three lists.
-agents_dt="$(section '## Agents Reference' reference/decision-tree.md)"
+agents_dt="$(section '## Agents Reference' docs/decision-tree.md)"
 agents_rm="$(section '## Agents' README.md)"
 catalog="$(cat docs/agent-catalog.md)"
 for f in agents/*.md; do
@@ -110,7 +148,10 @@ check_count commands "$n_commands"
 for f in reference/*.md reference/*.min; do
   [ -e "$f" ] || continue
   skip=0
-  for a in "${ALLOWLIST[@]}"; do [ "$a" = "$f" ] && skip=1; done
+  # Guarded expansion: under `set -u`, bash 3.2 (what macOS ships as /bin/bash)
+  # treats "${ALLOWLIST[@]}" on an EMPTY array as an unbound variable and aborts.
+  # This form is a no-op when the array has entries and safe when it does not.
+  for a in ${ALLOWLIST[@]+"${ALLOWLIST[@]}"}; do [ "$a" = "$f" ] && skip=1; done
   [ "$skip" = 1 ] && continue
   base="$(basename "$f")"
   grep -rqF "$base" hooks/ commands/ skills/ agents/ 2>/dev/null \
@@ -130,7 +171,7 @@ sentinel="$(grep -rln 'validate-chunk via Skill\|Invoke validate-chunk skill' \
 while read -r p; do
   [ -z "$p" ] && continue
   [ -e "$p" ] || [ -e "commands/$p" ] || add "[refpath] decision-tree names '$p' but no such file exists"
-done < <(grep -oE '(commands/)?references/[A-Za-z0-9_./-]+\.md' reference/decision-tree.md | sort -u)
+done < <(grep -oE '(commands/)?references/[A-Za-z0-9_./-]+\.md' docs/decision-tree.md | sort -u)
 
 # 8. Changelog sanity: entries are notable-only (features and user-visible
 #    fixes), so the newest entry may LAG plugin.json - internal changes bump
@@ -161,14 +202,36 @@ done < <(grep -E '^## ' CHANGELOG.md 2>/dev/null | sed -E 's/^## +//' \
 # 9. Feature release notes: an unpushed feat: commit must be accompanied by a
 #    CHANGELOG.md change somewhere in the unpushed range - a feature cannot
 #    ship without release notes. Fixes stay a judgment call (notable-only).
-#    Runs only when an upstream exists; fails open elsewhere (CI on a merged
-#    tree has no unpushed range to judge).
-if upstream="$(git rev-parse --abbrev-ref '@{u}' 2>/dev/null)"; then
-  feat_commits="$(git log --format='%h %s' "$upstream"..HEAD 2>/dev/null \
+#    With --range (validated above) the check runs unconditionally on that
+#    range - the CI job passes the PR's base..head. Otherwise it runs only
+#    when an upstream exists; fails open elsewhere (CI on a merged tree has
+#    no unpushed range to judge).
+check9_range=""
+if [ -n "$RANGE" ]; then
+  check9_range="$RANGE"
+elif upstream="$(git rev-parse --abbrev-ref '@{u}' 2>/dev/null)"; then
+  check9_range="$upstream..HEAD"
+fi
+if [ -n "$check9_range" ]; then
+  feat_commits="$(git log --format='%h %s' "$check9_range" 2>/dev/null \
     | grep -E '^[0-9a-f]+ feat[(!:]' || true)"
   if [ -n "$feat_commits" ] \
-    && ! git diff --name-only "$upstream"..HEAD 2>/dev/null | grep -qxF 'CHANGELOG.md'; then
+    && ! git diff --name-only "$check9_range" 2>/dev/null | grep -qxF 'CHANGELOG.md'; then
     add "[changelog] feat commit(s) about to push with no CHANGELOG.md entry in the range: $(printf '%s' "$feat_commits" | head -3 | tr '\n' ';')"
+  fi
+fi
+
+# 10. Record-vocabulary field parity (Decision 12): the four reference docs
+#     that document craft's record-linking fields in prose must agree with
+#     src/vocabulary.py in both directions. Shared logic, not restated here
+#     - two copies of a drift rule is the drift this check exists to catch.
+#     Sourced lazily (only this section needs it) and namespaced so it
+#     cannot collide with this file's own `findings`/`add`.
+if [ -f "$ROOT/tests/check-vocabulary-prose-drift.sh" ]; then
+  # shellcheck source=/dev/null
+  source "$ROOT/tests/check-vocabulary-prose-drift.sh"
+  if ! check_vocabulary_prose_drift; then
+    for f in "${VOCAB_PROSE_FINDINGS[@]}"; do add "$f"; done
   fi
 fi
 

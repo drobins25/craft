@@ -74,7 +74,8 @@ MOCK_PASSED=$(cat <<'EOF'
 | Tests + Coverage | PASS |
 | Design Tokens | SKIP |
 
-**Fix count:** 0 | No fixes requiredEOF
+**Fix count:** 0 | No fixes required
+EOF
 )
 
 # Partial — warnings only, non-final chunk
@@ -188,8 +189,10 @@ MOCK_STORY_FINAL=$(cat <<'EOF'
 | Build | PASS |
 | Tests + Coverage | PASS |
 | Design Tokens | SKIP |
+| Citation Scan | PASS |
 
-**Fix count:** 0 | No fixes requiredEOF
+**Fix count:** 0 | No fixes required
+EOF
 )
 
 # Final chunk — lint/any-types escalated to FAIL
@@ -251,7 +254,8 @@ MOCK_ALL_SKIP=$(cat <<'EOF'
 | Tests + Coverage | SKIP |
 | Design Tokens | SKIP |
 
-**Fix count:** 0 | No fixes requiredEOF
+**Fix count:** 0 | No fixes required
+EOF
 )
 
 # Multiple errors
@@ -380,6 +384,9 @@ echo "Test 7: Story-final mode has correct fields"
 assert_contains "$MOCK_STORY_FINAL" "**Status:** PASSED" "Story-final passes"
 assert_contains "$MOCK_STORY_FINAL" "**Chunk:** final" "Chunk is 'final'"
 assert_contains "$MOCK_STORY_FINAL" "**Mode:** story-final" "Mode is story-final"
+# Pins the check-8 row string for the next reader; the mock table predates the
+# live agent's full row set, so this is NOT a drift guard for the validator.
+assert_contains "$MOCK_STORY_FINAL" "| Citation Scan | PASS |" "Story-final carries the Citation Scan row"
 
 # ── Test 8: Final chunk escalates WARN to FAIL ────────────────────
 

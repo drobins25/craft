@@ -89,6 +89,10 @@ rm -f "${PROJECT_ROOT}.craft/.chunk-state"
 EVENTS_DIR="$CYCLE_DIR/.events"
 "$SCRIPT_DIR/append-event.sh" "$EVENTS_DIR" "chunk_completed" "$CURRENT_STORY" chunk="$CURRENT_CHUNK" total="$TOTAL_CHUNKS" || true
 
+# Refresh the dashboard graph data. Silenced so callers still read this
+# script's own final line; guarded so a missing wrapper never fails a flow.
+bash "$SCRIPT_DIR/../../scripts/dashboard/dashboard-run.sh" --root "${PROJECT_ROOT:-.}" >/dev/null 2>&1 || true
+
 # Signal whether this was the last chunk
 if [ "$NEW_CHUNK" -gt "$TOTAL_CHUNKS" ]; then
   echo "ALL CHUNKS COMPLETE ($TOTAL_CHUNKS/$TOTAL_CHUNKS). Run complete-story.sh to finalize."

@@ -717,6 +717,7 @@ flowchart LR
 | `/craft` | Main entry point — routes based on context |
 | `/craft:init` | One-time setup for new projects |
 | `/craft:status` | Rich dashboard (cycles, stories, backlog) |
+| `/craft:dashboard` | Open the project graph page - cycles, stories, records, and how they connect |
 | `/craft:story-new` | Create story → backlog (with alignment check) |
 | `/craft:story-implement` | Implement story with chunk loop |
 | `/craft:story-implement-auto` | Implement a story (autonomous, for implement phase) |

@@ -3,7 +3,7 @@
 # Usage: update-global-state.sh <key> <value> [project-root]
 #
 # Valid keys: ACTIVE_CYCLE, CURRENT_STORY, PLANNING_CYCLE, RUN_MODE,
-#             BACKLOG_COUNT, DEFAULT_MODE, LAST_ACTIVITY
+#             BACKLOG_COUNT, DEFAULT_MODE, LAST_ACTIVITY, VOCAB_GATE
 
 set -e
 

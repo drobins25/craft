@@ -316,5 +316,62 @@ assert_eq "global CURRENT_STORY cleared" "" "$CURRENT_STORY"
 cleanup_test_dir
 echo ""
 
+# Test 13: Dashboard page never opened — the one-shot offer flag prints
+begin_test "Dashboard offer flag prints when the page has never been created"
+
+TEST_DIR=$(create_craft_with_story "test-cycle" "login-form" "Login Form" "3" "active")
+STORY_FILE="$TEST_DIR/.craft/cycles/1-test-cycle/stories/1-login-form.md"
+
+set +e
+STDOUT_OUT=$(cd "$TEST_DIR" && bash "$COMPLETE_STORY_SCRIPT" "$STORY_FILE" 2>/dev/null)
+EXIT_CODE=$?
+set -e
+
+assert_eq "exits 0" "0" "$EXIT_CODE"
+assert_contains "offer flag printed" "DASHBOARD_OFFER=1" "$STDOUT_OUT"
+assert_contains "story-completed line survives the addition" "Story completed:" "$STDOUT_OUT"
+
+cleanup_test_dir
+echo ""
+
+# Test 14: Dashboard page already exists — the offer never fires again
+begin_test "Dashboard offer flag is absent once the page exists"
+
+TEST_DIR=$(create_craft_with_story "test-cycle" "login-form" "Login Form" "3" "active")
+STORY_FILE="$TEST_DIR/.craft/cycles/1-test-cycle/stories/1-login-form.md"
+touch "$TEST_DIR/.craft/dashboard.html"
+
+set +e
+STDOUT_OUT=$(cd "$TEST_DIR" && bash "$COMPLETE_STORY_SCRIPT" "$STORY_FILE" 2>/dev/null)
+EXIT_CODE=$?
+set -e
+
+assert_eq "exits 0" "0" "$EXIT_CODE"
+assert_not_contains "no offer flag once the page exists" "DASHBOARD_OFFER=1" "$STDOUT_OUT"
+
+cleanup_test_dir
+echo ""
+
+# Test 15: Aborted commit — no offer flag rides the failure turn, still exits 1
+begin_test "Dashboard offer flag never prints on the aborted-commit path"
+
+TEST_DIR=$(create_craft_with_story "test-cycle" "login-form" "Login Form" "3" "active")
+STORY_FILE="$TEST_DIR/.craft/cycles/1-test-cycle/stories/1-login-form.md"
+git_init_repo "$TEST_DIR"
+
+echo "feature" > "$TEST_DIR/f1.txt"
+printf 'story: other-story\nf1.txt\n' > "$TEST_DIR/.craft/.commit-manifest"
+
+set +e
+STDOUT_OUT=$(cd "$TEST_DIR" && bash "$COMPLETE_STORY_SCRIPT" "$STORY_FILE" 2>/dev/null)
+EXIT_CODE=$?
+set -e
+
+assert_eq "exits 1" "1" "$EXIT_CODE"
+assert_not_contains "no offer flag on the aborted path" "DASHBOARD_OFFER=1" "$STDOUT_OUT"
+
+cleanup_test_dir
+echo ""
+
 # --- Summary ---
 finish_tests

@@ -37,12 +37,13 @@ plugins/craft/
 │   ├── ux-analyzer.md         ← Nielsen heuristics, accessibility
 │   ├── verifier.md            ← Adversarial claim checker (primary sources only)
 │   └── walkthrough-analyzer.md ← First-time user simulation (chrome-devtools MCP)
-├── commands/                  ← Slash command definitions (32 commands)
+├── commands/                  ← Slash command definitions (33 commands)
 │   ├── craft.md               ← Main entry point
 │   ├── craft-ask.md           ← Consult a workshop agent (intelligent routing)
 │   ├── craft-become.md        ← Agent crystallization (4-phase: research→checkpoint→crystallize→save)
 │   ├── craft-docs.md          ← Documentation generation (two-pass: brief then generate)
 │   ├── craft-init.md
+│   ├── craft-dashboard.md     ← Opens the project graph page - rebuilds first, offers a template pull when stale, then opens (distinct from craft-status.md's terminal snapshot)
 │   ├── craft-dial.md          ← Live value calibration shell (candidates injected into the running app)
 │   ├── craft-mockup.md        ← Live mockup funnel shell (diverge→refine→polish, solidify at acceptance)
 │   ├── craft-notebook.md      ← Low-ceremony capture (ideas/todos/notes); conversational graduate/done
@@ -108,18 +109,22 @@ plugins/craft/
 │   ├── story-backlog.md       ← Backlog story template
 │   ├── story-full.md          ← Full story template (with chunks)
 │   └── story-roadmap.md       ← Roadmap-only story template
-├── reference/                 ← Orchestration-critical (injected by hooks, drives routing)
+├── reference/                 ← Orchestration-critical (injected by hooks, read by skills at runtime)
 │   ├── calibration-loop.md    ← Shared technique: boundary elicitation (creative-spark +)
-│   ├── decision-tree.md
+│   ├── cold-start-index.min
 │   ├── hunch-settling.md      ← Shared technique: executable-threshold gate (mockup funnel +)
 │   └── orchestration-index.min
-├── docs/                      ← Generated documentation (informational, not auto-loaded)
+├── docs/                      ← Human-facing documentation (informational, not auto-loaded)
 │   ├── agent-catalog.md
 │   ├── creative-workshop.md
+│   ├── decision-tree.md       ← Routing map: every /craft path, as flowcharts
 │   ├── design-philosophy.md
 │   ├── plan-tdd-enforcement.md
 │   ├── research-agentic-research-patterns.md
 │   └── workflow-reference.md
+├── scripts/                   ← Self-contained toolchains outside hooks/
+│   ├── map/                   ← Living Map structural generator (Node; seam: map-run.sh)
+│   └── dashboard/             ← Dashboard graph data builder (python stdlib; seams: dashboard-run.sh builds the graph data, dashboard-page.sh delivers the page template; output: .craft/graph/, .craft/dashboard.html)
 ├── tests/                     ← Bash test suite (30+ bash tests)
 │   ├── run-all.sh
 │   ├── test_helper.sh
@@ -241,6 +246,7 @@ All hooks defined in `hooks/hooks.json`. Scripts in `hooks/scripts/`.
 
 ### PreToolUse (Write|Edit)
 - **`check-write-permission.py`** - Enforces write permission gating. Checks for active story/cycle context, `CRAFT_WRITE_ENABLED` flag, active workflow session, and allowed paths. Also denies the Write tool on an existing `.craft/design/tokens.yaml` (merge target - redirects to `merge-tokens.py`; Edit and creation stay allowed). Uses hardcoded logic (no external config file).
+- **`check-craft-vocab.py`** - Denies writes whose code comments carry craft planning citations ("Chunk 3", "Story 4", tokens.yaml key paths). Off switch: `VOCAB_GATE=false` in the written file's project `.global-state`. Also a CLI: `--scan <files>` reports leaks for validation sweeps.
 - **`merge-tokens.py`** - Not a hook: a CLI invoked by craft-init's token phases. The sole writer for merges into an existing tokens.yaml - `report` mode emits a mechanical per-key CONFLICT/NEW/SAME diff for the token AUQs; `merge` mode does a line-surgical keyed union (snapshot, self-verify, restore-on-violation). Lives here beside the hook that enforces it.
 
 ### PreToolUse (Bash)
@@ -493,4 +499,4 @@ Individual tests follow the pattern `test-{script-name}.sh` and test the corresp
 
 ---
 
-*For decision trees and orchestration routing, see `reference/`. For design philosophy and TDD enforcement patterns, see `docs/`.*
+*For decision trees, orchestration routing, design philosophy and TDD enforcement patterns, see `docs/` - the human-facing documentation. `reference/` holds only what the harness loads at runtime: the index files injected by hooks and the technique files skills read inline.*

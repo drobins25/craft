@@ -14,6 +14,8 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Resolve project root (matches pattern from create-story.sh)
 if [ -n "$CRAFT_PROJECT_ROOT" ]; then
   ROOT="${CRAFT_PROJECT_ROOT%/}"
@@ -205,5 +207,9 @@ fi
     echo "$BODY_PARAGRAPH2"
   fi
 } > "$TARGET_FILE"
+
+# Refresh the dashboard graph data. Silenced so callers still read this
+# script's own final line; guarded so a missing wrapper never fails a flow.
+bash "$SCRIPT_DIR/../../scripts/dashboard/dashboard-run.sh" --root "$ROOT" >/dev/null 2>&1 || true
 
 echo "$TARGET_FILE"

@@ -1,0 +1,81 @@
+# CI for craft. Every suite runs on a pull request targeting main, and only
+# there - now that all changes to main go through PRs, the PR is the single
+# choke point, and a push-triggered run would only duplicate it.
+#
+# Each suite group is its own job keyed on its own exit code, so GitHub names
+# the failing group directly and the log tail names the failing file. The
+# five group jobs derive their membership from the live test-file glob via
+# scripts/ci/run-suite-group.sh - a new test file is covered on the day it is
+# added, with no edit here.
+#
+# No job installs a package, runs a package manager, or hits the network
+# beyond actions/checkout: the dashboard builder is Python stdlib only and
+# the rest of craft is bash. That cheapness is an asset - keep it.
+#
+# The browser job is deliberately non-blocking (continue-on-error) and runs
+# last: it is the only job needing installed software (the runner's Chrome),
+# and the only check anywhere that RUNS the dashboard page over file://.
+#
+# Job ids are also the check names branch protection is given - see
+# docs/ci-branch-protection.md before editing any id here.
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  dashboard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/ci/run-suite-group.sh dashboard
+
+  hooks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/ci/run-suite-group.sh hooks
+
+  lifecycle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/ci/run-suite-group.sh lifecycle
+
+  flows:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/ci/run-suite-group.sh flows
+
+  misc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/ci/run-suite-group.sh misc
+
+  doc-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: bash scripts/check-doc-drift.sh --range "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+
+  template-stamp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: bash scripts/ci/check-template-stamp.sh --base "${{ github.event.pull_request.base.sha }}" --head "${{ github.event.pull_request.head.sha }}"
+
+  browser:
+    runs-on: ubuntu-latest
+    needs: [dashboard, hooks, lifecycle, flows, misc, doc-drift, template-stamp]
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/ci/browser-check.sh

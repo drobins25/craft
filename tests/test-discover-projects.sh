@@ -21,7 +21,7 @@ TEST_DIR=$(create_craft_with_rogue_shadow)
 PROJECT_DIR="$TEST_DIR/project"
 
 # discover-projects.sh uses git rev-parse, so we need a git repo
-(cd "$PROJECT_DIR" && git init --quiet && git add -A && git commit -m "init" --quiet) 2>/dev/null
+(cd "$PROJECT_DIR" && git init --quiet && git config user.email "test@test.com" && git config user.name "Test" && git add -A && git commit -m "init" --quiet) 2>/dev/null
 
 # Run discover-projects.sh from within the git repo
 RESULT=$(cd "$PROJECT_DIR" && source "$DISCOVER_SCRIPT" 2>/dev/null && discover_craft_projects)
@@ -51,7 +51,7 @@ type: ui
 EOF
 
 # apps/web already has .global-state from create_craft_with_shadow
-(cd "$PROJECT_DIR" && git init --quiet && git add -A && git commit -m "init" --quiet) 2>/dev/null
+(cd "$PROJECT_DIR" && git init --quiet && git config user.email "test@test.com" && git config user.name "Test" && git add -A && git commit -m "init" --quiet) 2>/dev/null
 
 RESULT=$(cd "$PROJECT_DIR" && source "$DISCOVER_SCRIPT" 2>/dev/null && discover_craft_projects)
 

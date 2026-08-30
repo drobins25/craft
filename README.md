@@ -1,4 +1,6 @@
-![Craft - a Claude Code plugin. Claude proposes. You decide. Craft builds. Stop Vibing. Start Crafting. Your codebase is read-only until a tweak, a fix, or a story opens it. Claude proposes a researched plan, you decide, and every code change leaves a paper trail in your project's .craft directory. And your taste compounds - say "Love it!" once, and craft builds with it next time, without being asked.](docs/media/hero.svg)
+![Craft's dashboard rendering a real project as a living galaxy - records cluster into colored regions with glowing heat behind them, finished work cooled to quiet grey, observation cards quoting the project's own history with arrows into the sky, the whole thing swirling into place and settling still.](https://raw.githubusercontent.com/drobins25/craft/assets/craft-galaxy.gif)
+
+**Not a demo - this ships with the plugin.** Run `/craft:dashboard` and it's your own project in here: every story, fix, riff, and idea you've worked through, linked and alive. Your second brain, filling itself in while you build.
 
 # Craft [![version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fdrobins25%2Fcraft%2Fmain%2F.claude-plugin%2Fplugin.json&query=%24.version&label=version&color=blue)](CHANGELOG.md)
 
@@ -26,7 +28,7 @@ Then start Claude Code and run `/craft` - [full install notes](#install).
 
 **It steals your best ideas back.** You say "that's it!" after working through a tweak, and craft remembers. It waits, then brings that same taste back on a completely different feature - elevated. Keep going, and you'll catch yourself asking, "how did I do this?"
 
-![Craft building its own repo page live - a terminal conversation on the left drives an adhoc tweak, while on the right the Craft Open Source interface assembles itself in response.](docs/media/craft-caught-in-the-act.gif)
+![Craft building its own repo page live - a terminal conversation on the left drives an adhoc tweak, while on the right the Craft Open Source interface assembles itself in response.](https://raw.githubusercontent.com/drobins25/craft/assets/craft-caught-in-the-act.gif)
 
 *Craft building its own repo page, live.*
 
@@ -262,7 +264,7 @@ It ends with a real first move, not a blank prompt: **mock up a screen**, **desc
 
 or ship one targeted fix through `/craft:adhoc`. You'll see the whole loop without restructuring anything.
 
-*Curious how `/craft` decides what to invoke? See the [decision tree](reference/decision-tree.md).*
+*Curious how `/craft` decides what to invoke? See the [decision tree](docs/decision-tree.md).*
 
 ### Capture an idea
 
@@ -297,12 +299,13 @@ This runs the story end-to-end. Craft flows through four beats: a creative pass 
 
 You rarely type these. Craft routes plain English to the right one - this table is for when you want to be explicit.
 
-*How `/craft` chooses what to invoke is mapped in [reference/decision-tree.md](reference/decision-tree.md).*
+*How `/craft` chooses what to invoke is mapped in [docs/decision-tree.md](docs/decision-tree.md).*
 
 | Command | Purpose |
 |---------|---------|
 | `/craft` | Main entry point - start here |
-| `/craft:status` | Dashboard view of progress |
+| `/craft:status` | Terminal snapshot of progress - cycles, stories, backlog |
+| `/craft:dashboard` | Opens the project graph page in your browser - cycles, stories, and every record, all connected |
 | `/craft:notebook` | Low-ceremony capture for ideas, todos, and notes (durable project facts). Graduate / mark done conversationally - no subcommands needed for lifecycle. |
 | `/craft:riff` | Riff on an idea together - a two-player conversation in small beats, one concept at a time, until it's ready to build. Bare invocation opens from the oldest open notebook idea. |
 | `/craft:story-new` | Create story (lands in backlog) |
@@ -536,7 +539,7 @@ flowchart LR
   C -->|backlog only / nothing| N["Create story or cycle"]
 ```
 
-For the complete routing map across every command - fast paths, state recovery, request gates, the works - see [reference/decision-tree.md](reference/decision-tree.md).
+For the complete routing map across every command - fast paths, state recovery, request gates, the works - see [docs/decision-tree.md](docs/decision-tree.md).
 
 State is the input. There are no flags, no subcommand picker. Whatever is true on disk determines the route.
 
@@ -607,12 +610,13 @@ Run by the `chunk-validator` agent after every chunk:
 4. **Build** - story-final only. The project's build script must succeed.
 5. **Tests + Coverage** - story-final only. Affected tests must pass.
 6. **Design Tokens** - hardcoded values in UI code that should reference `tokens.yaml` get flagged.
+7. **Citation Scan** - story-final only. Code comments citing craft planning artifacts ("Chunk 3", "Story 4", tokens.yaml key paths) get flagged - comments should say why, not which planning step wrote them.
 
 Failures route to `refine-chunk` (build/lint) or `test-fix` (tests). FAIL is FAIL - no override.
 
 ### Beyond npm: verified command gates
 
-The six built-ins auto-detect npm-shaped projects. For everything else - .NET, Go, Python, Rust, Make, multi-stack monorepos - craft never guesses. It measures what it can see and tells you the truth about the rest:
+The built-ins auto-detect npm-shaped projects. For everything else - .NET, Go, Python, Rust, Make, multi-stack monorepos - craft never guesses. It measures what it can see and tells you the truth about the rest:
 
 - **The coverage line.** Every validation report carries one `Gates` row. A fast filesystem probe (`gate-signals.sh`) fingerprints which toolchain manifests your repo actually has; when every signal is measured by some gate, the row reads `full coverage`, otherwise it names what's unmeasured (`1 uncovered: *.csproj`). Coverage is judged by what actually ran - a package.json whose checks all skipped counts as uncovered, not covered.
 - **The reconcile offer.** When a chunk passes validation while a toolchain sits unmeasured, craft asks - a real question, not a footnote: wire up a gate for *.csproj? There are two answers. Accept, and the setup beat runs. Decline, and craft confirms once what you're waiving ("craft doesn't normally let quality go unwatched, but this is your call") - then never asks about that toolchain again. No answer just means the question returns at the next attended validation; a timeout is not a decision. Autonomous runs ask at launch instead - the pre-flight closes the question while you're still at the keyboard, so a hands-off run never validates toolchains nobody agreed to leave unmeasured.

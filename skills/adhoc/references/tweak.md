@@ -30,7 +30,7 @@ created: [YYYY-MM-DD]
 project: [project name]
 surface: [free-text kebab slug for WHERE in the product, e.g. settings-toolbar]
 kind: [icon | copy | spacing | size | color | motion | content]
-source_story: [story that built the element, if known]
+source_story: [story that built the element, if known - e.g. riff-the-game]
 mockup: [name of the converged mockup this tweak ports, e.g. 2026-07-05-hero-pulse - empty for non-mockup tweaks]
 dial: [name of the dial record this tweak came from, e.g. 2026-08-03-filter-row-spacing - empty for non-dial tweaks]
 reapplies: [name of the original tweak this reapplies, e.g. tweak-toolbar-stroke-weight - empty for a novel tweak]
@@ -108,7 +108,7 @@ Per attempt:
 
 1. **Mid-pass lock pivot check.** When the user's reaction changes the brief's direction ("actually, make it sharper"), re-screen the NEW direction against locked.md (already in context from the Fit Check) before editing. If it crosses a lock the brief didn't: say ONE ignorable line - "that crosses the [X] lock; trying it anyway - we'll settle the lock if this is what you accept" - and proceed. No question, no AUQ, and NO locked.md write mid-pass; the lock settles once, at the Acceptance reconcile. Direction unchanged, or no lock crossed → silence.
 2. **Change.** Make the edits with Edit/Write. Increment `attempts`, update `files_changed` / `lines_changed`.
-3. **Validate.** Run the project's tests/build. For anything visual, use the browser: navigate to the surface, first clear any leftover craft:dial injection (via `evaluate_script`: remove `craft-dial-style`, `craft-dial-panel`, every `[data-craft-dial-injected]` node, and delete `documentElement.dataset.craftDial` - idempotent on a clean page, see `commands/references/dial-inject.md`), then take the after screenshot and confirm the change landed as the fit check intended. Record it in the attempt's Validation.
+3. **Validate.** Run the project's tests/build. For anything visual, use the browser: navigate to the surface, first clear any leftover craft:dial injection (via `evaluate_script`: remove `craft-dial-style`, `craft-dial-panel`, every `[data-craft-dial-injected]` node, and delete `documentElement.dataset.craftDial` - idempotent on a clean page, see `commands/references/dial-inject.md`), then take the after screenshot and confirm the change landed as the fit check intended. Run `python3 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/check-craft-vocab.py --scan <files you changed>` and resolve any reported citation. Record it in the attempt's Validation.
 4. **Commit.** Hand back to the shell's commit step (manifest staging, `tweak:` prefix). Every validated attempt commits - the custody chain holds even if the record stays open.
 5. **Close-out ask.** When the `## Fit Check` carries a pending todo match, the question line names BOTH effects - append to it: "Accepting also closes todo '[todo-slug]' - this work satisfies it." One consent covers both (the graduate-flow precedent, commands/craft-notebook.md); never add a second AskUserQuestion for the close. Only an accepting answer closes the todo - "Not quite", explicit decline, abandonment, and bare validation never do. Use **AskUserQuestion**:
 

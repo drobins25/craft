@@ -1,7 +1,7 @@
 {
   "name": "craft",
   "displayName": "craft",
-  "version": "2.4.2",
+  "version": "2.6.0",
   "description": "A Claude Code plugin whose workshop of expert agents learns as it builds: repeated fixes become permanent rules, loved tweaks become taste it remembers - and every change waits behind a write gate you control.",
   "author": {
     "name": "Darin Drobinski",

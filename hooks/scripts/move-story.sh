@@ -72,6 +72,10 @@ if [ "$DESTINATION" = "backlog" ]; then
   # Set status to backlog
   "$SCRIPT_DIR/update-story-status.sh" "$new_file" backlog
 
+  # Refresh the dashboard graph data. Silenced so callers still read this
+  # script's own final line; guarded so a missing wrapper never fails a flow.
+  bash "$SCRIPT_DIR/../../scripts/dashboard/dashboard-run.sh" --root "${PROJECT_ROOT:-.}" >/dev/null 2>&1 || true
+
   echo "$new_file"
 
 else
@@ -142,6 +146,10 @@ else
 
   # Set status to planning (needs plan-chunks before ready)
   "$SCRIPT_DIR/update-story-status.sh" "$new_file" planning
+
+  # Refresh the dashboard graph data. Silenced so callers still read this
+  # script's own final line; guarded so a missing wrapper never fails a flow.
+  bash "$SCRIPT_DIR/../../scripts/dashboard/dashboard-run.sh" --root "${PROJECT_ROOT:-.}" >/dev/null 2>&1 || true
 
   echo "$new_file"
 fi

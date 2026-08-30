@@ -9,6 +9,8 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 REQUEST_FILE="$1"
 OUTCOME_TYPE="$2"
 OUTCOME_NAME="$3"
@@ -39,5 +41,9 @@ echo "<!-- Processed: $DATE | $OUTCOME_TYPE: $OUTCOME_NAME -->" >> "$REQUEST_FIL
 # Move to processed directory
 FILENAME=$(basename "$REQUEST_FILE")
 mv "$REQUEST_FILE" "$PROCESSED_DIR/$FILENAME"
+
+# Refresh the dashboard graph data. Silenced so callers still read this
+# script's own final line; guarded so a missing wrapper never fails a flow.
+bash "$SCRIPT_DIR/../../scripts/dashboard/dashboard-run.sh" --root "$PROJECT_ROOT" >/dev/null 2>&1 || true
 
 echo "$PROCESSED_DIR/$FILENAME"

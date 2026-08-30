@@ -175,11 +175,24 @@ rm -f "${PROJECT_ROOT}.craft/checkpoints/"*.yaml 2>/dev/null
 # Clean up chunk validation state
 rm -f "${PROJECT_ROOT}.craft/.chunk-state" 2>/dev/null
 
+# Refresh the dashboard graph data - before the deferred abort exit, because
+# the story's state DID change even when the commit was refused. Silenced so
+# callers still read this script's own output; guarded so a missing wrapper
+# never fails a flow.
+bash "$SCRIPT_DIR/../../scripts/dashboard/dashboard-run.sh" --root "${PROJECT_ROOT:-.}" >/dev/null 2>&1 || true
+
 # Deferred abort exit: state transitions above must complete even when the
 # commit was aborted, so the non-zero exit is the very last thing that happens.
 if [ "${COMMIT_ABORTED:-0}" = "1" ]; then
   echo "Error: story state transitions completed, but the commit was aborted - see messages above" >&2
   exit 1
+fi
+
+# The user has never opened the graph page - surface it once, right when
+# the project's story data just grew, so the next turn can mention it.
+# Once the page exists this never fires again; no counter or state needed.
+if [ -n "$PROJECT_ROOT" ] && [ ! -f "${PROJECT_ROOT}.craft/dashboard.html" ]; then
+  echo "DASHBOARD_OFFER=1"
 fi
 
 echo "Story completed: $STORY_FILE"

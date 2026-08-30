@@ -110,9 +110,17 @@ The bash test suite covers hook scripts, state management, and lifecycle operati
 
 Run before opening a PR. All commits should pass.
 
+CI runs these same suites on every pull request targeting `main` - the PR is
+the enforcement layer, the local run is how you stay ahead of it. The suites
+run as five grouped jobs (`dashboard`, `hooks`, `lifecycle`, `flows`, `misc`)
+via `scripts/ci/run-suite-group.sh`; a new test file is picked up
+automatically, no CI edit needed. A non-blocking `browser` job additionally
+opens the built dashboard page in headless Chrome over `file://` and asserts
+it renders - the only check that runs the page rather than reading it.
+
 ## Documentation integrity
 
-Craft's reference docs (`docs/agent-catalog.md`, `reference/decision-tree.md`, `README.md`, `DESIGN.md`) must stay in sync with the source they describe - agent/command/skill counts, the catalog tables, the orchestration map. A deterministic check enforces this:
+Craft's reference docs (`docs/agent-catalog.md`, `docs/decision-tree.md`, `README.md`, `DESIGN.md`) must stay in sync with the source they describe - agent/command/skill counts, the catalog tables, the orchestration map. A deterministic check enforces this:
 
 ```
 bash scripts/check-doc-drift.sh   # exit 0 = clean, exit 1 = drift (prints exactly what to fix)
@@ -120,7 +128,11 @@ bash scripts/check-doc-drift.sh   # exit 0 = clean, exit 1 = drift (prints exact
 
 It derives every expected value from source (`ls agents/*.md`, etc.) and never hardcodes a count. Run it after any change that adds, renames, or removes a command, skill, or agent. It also sanity-checks `CHANGELOG.md` (the newest entry can't be ahead of the plugin version) and, when there are unpushed `feat:` commits, requires a changelog change in that range - a feature can't ship without release notes.
 
-Maintainers can wire it as a local pre-push gate so a drifted `git push` is blocked in-session: keep a small wrapper script in your local, gitignored `.claude/hooks/` that runs `scripts/check-doc-drift.sh` and emits a PreToolUse permission decision, and register it in `.claude/settings.local.json` as a `PreToolUse` hook (matcher `Bash`, `if: "Bash(git push *)"`). The wrapper and its registration stay local; the check script is the shared, version-controlled piece (and drops into CI unchanged).
+Maintainers can wire it as a local pre-push gate so a drifted `git push` is blocked in-session: keep a small wrapper script in your local, gitignored `.claude/hooks/` that runs `scripts/check-doc-drift.sh` and emits a PreToolUse permission decision, and register it in `.claude/settings.local.json` as a `PreToolUse` hook (matcher `Bash`, `if: "Bash(git push *)"`). The wrapper and its registration stay local; the check script is the shared, version-controlled piece.
+
+CI runs this same script on every pull request to `main` (the `doc-drift` job), passing the PR's commit range via `--range` so the changelog gate - a `feat:` commit must ship a `CHANGELOG.md` change - is live there too, including for contributors who never wired the local pre-push gate.
+
+One more CI guard worth knowing before you touch the dashboard template: any edit to `scripts/dashboard/template/index.html` must also bump the `craft-template-version` stamp in its `<meta>` tag, or the `template-stamp` check fails the PR. The stamp is what tells existing users a new page is available - an unbumped edit would strand them on the old one.
 
 This is contributor tooling for developing craft itself - it has no role in projects built *with* craft.
 
@@ -130,6 +142,7 @@ This is contributor tooling for developing craft itself - it has no role in proj
 - If the PR implements a planned story, link the story file in the description
 - Include a brief test plan in the description if the change isn't covered by automated tests
 - The PR title follows the same conventions as commit messages
+- Seven CI checks must be green to merge: `dashboard`, `hooks`, `lifecycle`, `flows`, `misc`, `doc-drift`, `template-stamp` (the `browser` check reports but never blocks). See `docs/ci-branch-protection.md` for how they are enforced
 
 ## Questions
 

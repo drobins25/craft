@@ -8,6 +8,8 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(dirname $(dirname $(dirname "$0")))}"
 TEMPLATES_DIR="$PLUGIN_ROOT/templates"
 
@@ -139,5 +141,9 @@ skills: []
 workflows: []
 EOF
 fi
+
+# Refresh the dashboard graph data. Silenced so callers still read this
+# script's own final line; guarded so a missing wrapper never fails a flow.
+bash "$SCRIPT_DIR/../../scripts/dashboard/dashboard-run.sh" --root "$PROJECT_ROOT" >/dev/null 2>&1 || true
 
 echo "$cycle_dir"

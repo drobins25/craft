@@ -1747,10 +1747,19 @@ craft-plugin/
 ├── plugin.json
 ├── CLAUDE.md
 ├── DESIGN.md                    ← Actionable summary
-├── reference/
-│   ├── design-philosophy.md     ← This file (detailed reference)
+├── docs/                        ← Human-facing documentation (not auto-loaded)
+│   ├── agent-catalog.md
+│   ├── creative-workshop.md
 │   ├── decision-tree.md         ← Routing logic
-│   └── plan-tdd-enforcement.md  ← TDD enforcement details
+│   ├── design-philosophy.md     ← This file (detailed reference)
+│   ├── plan-tdd-enforcement.md  ← TDD enforcement details
+│   ├── research-agentic-research-patterns.md
+│   └── workflow-reference.md
+├── reference/                   ← Loaded by hooks and skills at runtime
+│   ├── calibration-loop.md
+│   ├── cold-start-index.min
+│   ├── hunch-settling.md
+│   └── orchestration-index.min
 ├── commands/
 ├── skills/
 ├── agents/
