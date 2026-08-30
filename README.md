@@ -1,6 +1,6 @@
 ![Craft's dashboard rendering a real project as a living galaxy - records cluster into colored regions with glowing heat behind them, finished work cooled to quiet grey, observation cards quoting the project's own history with arrows into the sky, the whole thing swirling into place and settling still.](https://raw.githubusercontent.com/drobins25/craft/assets/craft-galaxy.gif)
 
-*Your project, as craft sees it. Every dot is a real record of your work - and this page ships with the plugin.*
+**Not a demo - this ships with the plugin.** Run `/craft:dashboard` and it's your own project in here: every story, fix, riff, and idea you've worked through, linked and alive. Your second brain, filling itself in while you build.
 
 # Craft [![version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fdrobins25%2Fcraft%2Fmain%2F.claude-plugin%2Fplugin.json&query=%24.version&label=version&color=blue)](CHANGELOG.md)
 
