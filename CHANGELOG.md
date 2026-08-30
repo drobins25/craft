@@ -2,6 +2,17 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.6.0 - 2026-08-29
+
+The galaxy grew up in one day. This morning the dashboard was a bloom of orange; tonight your records gather into colored neighborhoods, your finished work cools into quiet grey texture, and the color belongs to what's alive. The whole look was designed live against real project data - riffed, dialed, mocked up, annotated with pins on the actual page - and then ported with every value verbatim.
+
+- Changed the galaxy's shape: records now cluster into colored regions by kind, each with a soft glow of its own hue behind it, so the sky reads at a glance without a legend.
+- Changed how history looks: finished stories cool to quiet grey while active work keeps the ember - your dashboard now shows what's alive, not just what exists.
+- Changed the observation cards: solid and readable instead of see-through, with short dotted arrows that point at their region and never cross a single node.
+- Added a bigger entrance: the galaxy swirls into place with real spin, the glow breathes in behind it, and cards always arrive within two seconds - even mid-motion.
+- Added drag-to-pin that feels alive: pull any node out and drop it - it stays put while the rest of the galaxy visibly exhales back into proper spacing. Drag a hub and everything connected to it stretches out to show itself, then flows home.
+- Fixed the page never going to sleep after pinning a node - the render loop now truly rests, so a pinned galaxy costs nothing to keep open.
+
 ## 2.5.0 - 2026-08-29
 
 Craft has a face now. Everything craft has been writing down since your first init - the stories, fixes, tweaks, mockups, dials, riffs, notes - was always a graph waiting to be seen. This release ships the Craft Browser: one page, no server, no setup, that renders the life of your project the way Obsidian renders a vault. It was built entirely through the flows it renders, and its first graph includes its own birth.
