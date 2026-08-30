@@ -63,8 +63,9 @@ All output lands in `<root>/.craft/graph/`, loadable from `file://` via
     `self-reference`. Nothing is silently dropped.
   - `vocabulary` carries the display words the page prints, so the page holds
     no second copy of the rules: `statuses`, `dial_outcomes`, `types`, and
-    `membership` (the kinds that mean containment, which the page clusters
-    on). Relationship verbs are deliberately absent - nothing reads them.
+    `membership` (the kinds that mean containment - still emitted, but the
+    page now clusters records by type and no longer reads it). Relationship
+    verbs are deliberately absent - nothing reads them.
   - `graph.js` carries NO timestamp: an unchanged corpus produces
     byte-identical output and the second build writes zero files.
 - **`records/{id}.js`** (one per record) assigns

@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/test_helper.sh"
 
 TEMPLATE="$PLUGIN_ROOT/scripts/dashboard/template/index.html"
-MOCKUP="$PLUGIN_ROOT/.craft/mockups/2026-08-15-craft-browser-graph/mockup.html"
+MOCKUP="$PLUGIN_ROOT/.craft/mockups/2026-08-29-cluster-anchored-insight-layer/mockup.html"
 
 echo "=== test-dashboard-template.sh ==="
 echo ""
@@ -86,9 +86,6 @@ assert_file_contains "dust bucket maxR 11 bakeR 12" "key: 'dust', maxR: 11, bake
 assert_file_contains "small bucket maxR 19 bakeR 20" "key: 'small', maxR: 19, bakeR: 20" "$TEMPLATE"
 assert_file_contains "medium bucket maxR 29 bakeR 30" "key: 'medium', maxR: 29, bakeR: 30" "$TEMPLATE"
 assert_file_contains "hub bucket maxR Infinity bakeR 42" "key: 'hub', maxR: Infinity, bakeR: 42" "$TEMPLATE"
-assert_file_contains "radial glow stop at 0.8" "rgba(\${cs},0.8)" "$TEMPLATE"
-assert_file_contains "radial glow stop at 0.26 / 0.45" "0.45, \`rgba(\${cs},0.26)\`" "$TEMPLATE"
-assert_file_contains "radial glow stop at 0 / 1" "1, \`rgba(\${cs},0)\`" "$TEMPLATE"
 assert_file_contains "flat circle pad is 6" "const pad = 6;" "$TEMPLATE"
 assert_file_contains "fill sprites bake 4x supersampled" "const SS = 4;" "$TEMPLATE"
 assert_file_contains "bake canvas dimensions scale by the supersample" "(bakeR \\* 2 + pad \\* 2) \\* SS" "$TEMPLATE"
@@ -106,17 +103,146 @@ assert_file_contains "LABEL_HUB_ZOOM is 0.6" "const LABEL_HUB_ZOOM = 0.6;" "$TEM
 assert_file_contains "LABEL_DUST_ZOOM is 3.4" "const LABEL_DUST_ZOOM = 3.4;" "$TEMPLATE"
 assert_file_contains "LABEL_RAMP is 0.9" "const LABEL_RAMP = 0.9;" "$TEMPLATE"
 assert_file_contains "label pass renders at a constant 11px" "11px system-ui" "$TEMPLATE"
-assert_file_contains "Sim options match the locked physics" "repulse: 60000, springK: 2.5, springLength: 110, damping: 0.94, gravity: 12, maxSpeed: 6000, alphaDecay: 0.025" "$TEMPLATE"
-assert_file_contains "RING_R is 380" "const RING_R = 380;" "$TEMPLATE"
+assert_file_contains "Sim options match the accepted stance" "repulse: 30000, springK: 0.9, springLength: 92, damping: 0.94, gravity: 10, maxSpeed: 6000, alphaDecay: 0.026" "$TEMPLATE"
 assert_file_contains "GOLDEN_ANGLE matches the locked value" "2.399963229728653" "$TEMPLATE"
-assert_file_contains "spiral scale is 14 + sqrt(members) * 9" "14 + Math.sqrt(members.length) \* 9" "$TEMPLATE"
-assert_file_contains "FIT_W_FRAC is 0.80" "const FIT_W_FRAC = 0.80;" "$TEMPLATE"
-assert_file_contains "FIT_H_FRAC is 0.74" "const FIT_H_FRAC = 0.74;" "$TEMPLATE"
-assert_file_contains "seedCompactCloud is called at scale 0.06" "0.06)" "$TEMPLATE"
-assert_file_contains "entrance ramp is 0.38s" "/ 0.38" "$TEMPLATE"
+assert_file_contains "spiral scale is (10 + sqrt(members) * 8) * spread" "(10 + Math.sqrt(members.length) \* 8) \* spreadMult" "$TEMPLATE"
+assert_file_contains "the spread multiplier is 1.0" "const SPREAD_MULT = 1.0;" "$TEMPLATE"
+assert_file_contains "the plate fits 0.72 x 0.66 of the viewport" "0.72, 0.66)" "$TEMPLATE"
 assert_file_contains "camera scale clamps to 0.2..6" "clamp(this.scale \* factor, 0.2, 6)" "$TEMPLATE"
 assert_file_contains "wheel-zoom factor expression matches" "Math.pow(2, -px \* (ev.ctrlKey ? 0.02 : 0.002))" "$TEMPLATE"
 assert_file_contains "line-scroll deltaMode is scaled by 50" "ev.deltaMode === 1 ? 50 : 1" "$TEMPLATE"
+
+# --- Test 9b: type-anchor relaxation matches the accepted stance ---
+begin_test "type-anchor relaxation matches the accepted stance"
+assert_file_contains "anchor spread radius is 26 + sqrt(massArea) * 1.15" "26 + Math.sqrt(massArea) \* 1.15" "$TEMPLATE"
+assert_file_contains "anchors seed at 220 + spreadR" "const seedR = 220 + a.spreadR;" "$TEMPLATE"
+assert_file_contains "anchor seed y is scaled 0.7" "Math.sin(ang) \* seedR \* 0.7" "$TEMPLATE"
+assert_file_contains "anchors relax for 420 iterations" "iter < 420" "$TEMPLATE"
+assert_file_contains "pairwise clearance is spreadR + spreadR + 46" "ai.spreadR + bj.spreadR + 46" "$TEMPLATE"
+assert_file_contains "anchor push factor is 0.05" "(minD - d) \* 0.05" "$TEMPLATE"
+assert_file_contains "anchor centre gravity is 0.00016 * spreadR" "0.00016 \* ai.spreadR" "$TEMPLATE"
+assert_file_contains "node mass is 0.6 + t * 2.2" "n.mass = 0.6 + t \* 2.2;" "$TEMPLATE"
+assert_file_contains "repulsion floors at half the combined radii" "Math.max(d, combined \* 0.5)" "$TEMPLATE"
+assert_file_contains "soft collision correction is 3.4x overlap" "(combined - d) \* 3.4" "$TEMPLATE"
+assert_file_not_contains "the old fixed repulsion floor is gone" "Math.max(d, 4)" "$TEMPLATE"
+
+# --- Test 9c: the plate is fitted with one uniform scale ---
+begin_test "the plate is fitted with one uniform scale"
+assert_file_contains "the fit takes the smaller axis scale" "Math.min(scaleX, scaleY)" "$TEMPLATE"
+assert_file_not_contains "homes never scale per-axis on x" "homeRefX - cx0) \* scaleX" "$TEMPLATE"
+assert_file_not_contains "homes never scale per-axis on y" "homeRefY - cy0) \* scaleY" "$TEMPLATE"
+
+# --- Test 9d: the cycle-ring layout is gone ---
+begin_test "the cycle-ring layout is gone"
+assert_file_not_contains "no RING_R" "RING_R" "$TEMPLATE"
+assert_file_not_contains "no computeRealLayout" "computeRealLayout" "$TEMPLATE"
+assert_file_not_contains "no dust ring base radius" "DUST_R0" "$TEMPLATE"
+assert_file_not_contains "no FIT_W_FRAC" "FIT_W_FRAC" "$TEMPLATE"
+assert_file_not_contains "no FIT_H_FRAC" "FIT_H_FRAC" "$TEMPLATE"
+assert_file_not_contains "no MEMBERSHIP_KINDS read" "MEMBERSHIP_KINDS" "$TEMPLATE"
+assert_file_not_contains "the vocabulary fallback drops its membership key" "membership: \[\]" "$TEMPLATE"
+
+# --- Test 9e: the rest predicate reads the held node, not the pinned set ---
+begin_test "the rest predicate reads the held node, not the pinned set"
+HASFIXED_LINE=$(grep "hasFixed()" "$TEMPLATE" | head -1)
+assert_contains "hasFixed reads the held node" "this.dragNode != null" "$HASFIXED_LINE"
+assert_not_contains "hasFixed no longer scans the node set" "for (" "$HASFIXED_LINE"
+
+# --- Test 9f: cluster heat is baked, additive, and analytic ---
+begin_test "cluster heat is baked, additive, and analytic"
+assert_file_contains "heat sprite centre stop is 0.55" "addColorStop(0, rgbCss(rgb, 0.55))" "$TEMPLATE"
+assert_file_contains "heat sprite mid stop is 0.22 at 0.4" "addColorStop(0.4, rgbCss(rgb, 0.22))" "$TEMPLATE"
+assert_file_contains "heat sprite outer stop fades to 0" "addColorStop(1, rgbCss(rgb, 0))" "$TEMPLATE"
+assert_file_contains "heat is stamped additively" "globalCompositeOperation = 'lighter'" "$TEMPLATE"
+assert_file_contains "heat size derives from the analytic final-scatter prediction" "analyticMaxDRef" "$TEMPLATE"
+BAKE_HEAT_FN=$(awk '/  bakeHeat\(\) \{/,/^  \}/' "$TEMPLATE")
+assert_not_contains "no live member-position averaging survives in the bake" "cx += " "$BAKE_HEAT_FN"
+assert_contains "heat position projects the FITTED anchor" "(anchor.x - fit.cx0) \* fit.scale" "$BAKE_HEAT_FN"
+assert_file_contains "heat alpha is 0.5" "const HEAT_ALPHA = 0.5;" "$TEMPLATE"
+assert_file_contains "heat size multiplier is 1.1" "const HEAT_SIZE_MULT = 1.1;" "$TEMPLATE"
+assert_contains "the cooled region's heat drops to 0.7x alpha" "HEAT_ALPHA \* 0.7" "$BAKE_HEAT_FN"
+assert_file_contains "the early heat beat is 1600ms" "const EARLY_HEAT_MS = 1600;" "$TEMPLATE"
+assert_file_contains "the heat fade is 600ms" "const HEAT_FADE_MS = 600;" "$TEMPLATE"
+CAMERA_PASS=$(awk '/ctx.translate\(w \/ 2, h \/ 2\); ctx.scale/,/ctx.restore\(\)/' "$TEMPLATE")
+assert_contains "heat draws inside the camera transform" "drawImage(this.heatCanvas, 0, 0, w, h)" "$CAMERA_PASS"
+
+# --- Test 9g: completed records of the most numerous type cool to grey texture ---
+begin_test "completed records of the most numerous type cool to grey texture"
+assert_file_contains "the dim sprite bakes from the near-neutral triple" "\[220, 4, 36\]" "$TEMPLATE"
+assert_file_contains "the cooled branch draws the dim sprite at 0.8" "cooled ? 0.8 : 1" "$TEMPLATE"
+assert_file_contains "cooling keys on the completed and shipped states" "n.status === 'complete' || n.status === 'shipped'" "$TEMPLATE"
+
+# --- Test 9h: no per-node glow survives anywhere ---
+begin_test "no per-node glow survives anywhere"
+assert_file_not_contains "no bakeAmbientGlow" "bakeAmbientGlow" "$TEMPLATE"
+assert_file_not_contains "no bakeRadialGlow" "bakeRadialGlow" "$TEMPLATE"
+assert_file_not_contains "no GLOW_ACCENT_TO_R" "GLOW_ACCENT_TO_R" "$TEMPLATE"
+assert_file_not_contains "no GLOW_HUB ratios" "GLOW_HUB" "$TEMPLATE"
+assert_file_not_contains "no ambientGlowFor" "ambientGlowFor" "$TEMPLATE"
+assert_file_not_contains "no glowFor" "glowFor" "$TEMPLATE"
+assert_file_not_contains "no hoverGlow bakery" "hoverGlow" "$TEMPLATE"
+
+# --- Test 9i: no silhouette or contour code exists ---
+begin_test "no silhouette or contour code exists"
+assert_file_not_contains "no computeSilhouette" "computeSilhouette" "$TEMPLATE"
+assert_file_not_contains "no marching squares" "marching" "$TEMPLATE"
+assert_file_not_contains "no chaikin smoothing" "chaikin" "$TEMPLATE"
+
+# --- Test 9j: no depth or mesh distance ramp survives ---
+begin_test "no depth or mesh distance ramp survives"
+assert_file_not_contains "no DEPTH_ALPHA_FLOOR" "DEPTH_ALPHA_FLOOR" "$TEMPLATE"
+assert_file_not_contains "no DEPTH_REACH_TO_W" "DEPTH_REACH_TO_W" "$TEMPLATE"
+assert_file_not_contains "no MESH_ALPHA_NEAR" "MESH_ALPHA_NEAR" "$TEMPLATE"
+assert_file_not_contains "no MESH_REACH_TO_W" "MESH_REACH_TO_W" "$TEMPLATE"
+assert_file_not_contains "no heroHub depth origin" "heroHub" "$TEMPLATE"
+assert_file_contains "the resting mesh strokes the accepted quiet value" "rgba(180,190,210,0.085)" "$TEMPLATE"
+
+# --- Test 9k: the swirl entrance matches the accepted stance ---
+begin_test "the swirl entrance matches the accepted stance"
+MATCHMEDIA_COUNT=$(grep -c "matchMedia" "$TEMPLATE")
+assert_eq "reduced motion is evaluated once, at module scope" "1" "$MATCHMEDIA_COUNT"
+assert_file_contains "the reduced-motion query gates the swirl" "prefers-reduced-motion: reduce" "$TEMPLATE"
+assert_file_contains "the seed scales are the accepted pair" "? 0.022 : 0.055" "$TEMPLATE"
+assert_file_not_contains "the old flat seed scale call is gone" "h / 2, 0.06)" "$TEMPLATE"
+assert_file_contains "the launch caps at 900" "Math.min(dist \* 2.6, 900)" "$TEMPLATE"
+assert_file_contains "the launch carries a dominant tangential component" "launch \* 0.35 + tx \* launch \* 0.9" "$TEMPLATE"
+assert_file_contains "the repulsion pop decays over 380ms" "(1 - elapsed / 380) \* 0.7" "$TEMPLATE"
+
+# --- Test 9l: drag tows direct neighbours and release pins where dropped ---
+begin_test "drag tows direct neighbours and release pins where dropped"
+assert_file_contains "the tow coefficient is 26" "const towK = 26;" "$TEMPLATE"
+assert_file_contains "the tow skips already-pinned neighbours" "if (tn.fx != null) continue;" "$TEMPLATE"
+assert_file_contains "grab raises alpha to at least the 0.35 target" "this.sim.alphaTarget = 0.35;" "$TEMPLATE"
+RELEASE_FN=$(awk '/const release = \(\) => \{/,/^    \};/' "$TEMPLATE")
+assert_not_contains "release never clears the held node's pin" "dragNode.fx = null" "$RELEASE_FN"
+assert_not_contains "release never re-seeds" "seedCompactCloud" "$RELEASE_FN"
+assert_not_contains "release never replays the entrance" "replay()" "$RELEASE_FN"
+assert_contains "release reheats the field" "this.sim.alpha = 1;" "$RELEASE_FN"
+assert_contains "release opens the recovery window" "this.sim.recoverT0 = performance.now();" "$RELEASE_FN"
+
+# --- Test 9m: the recovery window eases damping from 0.992 over 1100ms ---
+begin_test "the recovery window eases damping from 0.992 over 1100ms"
+assert_file_contains "the recovery window is 1100ms" "const RECOVER_MS = 1100;" "$TEMPLATE"
+assert_file_contains "damping eases down from 0.992" "(0.992 - damping) \* (1 - elapsed / RECOVER_MS)" "$TEMPLATE"
+
+# --- Test 9n: replay clears every pin before seeding ---
+begin_test "replay clears every pin before seeding"
+REPLAY_ORDER_FN=$(awk '/  replay\(\) \{/,/^  \}/' "$TEMPLATE")
+PIN_CLEAR_LINE=$(echo "$REPLAY_ORDER_FN" | grep -n "n.fx = null; n.fy = null;" | head -1 | cut -d: -f1)
+SEED_LINE=$(echo "$REPLAY_ORDER_FN" | grep -n "seedCompactCloud" | head -1 | cut -d: -f1)
+if [ -n "$PIN_CLEAR_LINE" ] && [ -n "$SEED_LINE" ] && [ "$PIN_CLEAR_LINE" -lt "$SEED_LINE" ]; then
+  echo "  PASS: the pin sweep precedes the seed call in replay()"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: the pin sweep precedes the seed call in replay() (sweep=$PIN_CLEAR_LINE seed=$SEED_LINE)"
+  FAIL=$((FAIL + 1))
+fi
+
+# --- Test 9o: the two-profile decay system and the global entrance fade are gone ---
+begin_test "the two-profile decay system and the global entrance fade are gone"
+assert_file_not_contains "no DECAY_SNAPPY" "DECAY_SNAPPY" "$TEMPLATE"
+assert_file_not_contains "no DECAY_CINEMATIC" "DECAY_CINEMATIC" "$TEMPLATE"
+assert_file_not_contains "no entranceGlobalAlpha" "entranceGlobalAlpha" "$TEMPLATE"
 
 # --- Test 10: ported constants match the mockup (skipped when the mockup is absent) ---
 begin_test "ported constants match the mockup"
@@ -124,22 +250,48 @@ if [ ! -f "$MOCKUP" ]; then
   echo "  SKIP: mockup.html not present (gitignored .craft/ in a fresh clone)"
 else
   PARITY_STRINGS=(
-    "GROUND = '#121214'"
+    "'#121214'"
     "key: 'dust', maxR: 11, bakeR: 12"
     "key: 'hub', maxR: Infinity, bakeR: 42"
-    "const DEG_CAP = 40;"
-    "const MIN_R = 6, MAX_R = 40;"
-    "cycleScale: 0.65"
-    "degreeAlwaysOn: Infinity, hubZoom: 2.2, dustZoom: 4.6, ramp: 0.8"
-    "const LABEL_HUB_ZOOM = 0.6;"
-    "const LABEL_DUST_ZOOM = 3.4;"
-    "const LABEL_RAMP = 0.9;"
-    "repulse: 60000, springK: 2.5, springLength: 110, damping: 0.94, gravity: 12, maxSpeed: 6000, alphaDecay: 0.025"
-    "const RING_R = 380;"
+    "DEG_CAP = 40"
+    "MIN_R = 6, MAX_R = 40"
+    "repulse: 30000, springK: 0.9, springLength: 92,"
     "2.399963229728653"
-    "const FIT_W_FRAC = 0.80;"
-    "const FIT_H_FRAC = 0.74;"
-    "clamp(this.scale * factor, 0.2, 6)"
+    "26 + Math.sqrt(massArea) * 1.15"
+    "const seedR = 220 + a.spreadR;"
+    "const minD = ai.spreadR + bj.spreadR + 46;"
+    "const push = (minD - d) * 0.05;"
+    "const gk = 0.00016 * ai.spreadR;"
+    "(10 + Math.sqrt(members.length) * 8)"
+    "spiralScale * Math.sqrt(j + 0.5)"
+    "const scale = Math.min(scaleX, scaleY);"
+    "0.72, 0.66)"
+    "const dd = Math.max(d, combined * 0.5);"
+    "(combined - d) * 3.4"
+    "n.mass = 0.6 + "
+    "addColorStop(0, rgbCss(rgb, 0.55))"
+    "addColorStop(0.4, rgbCss(rgb, 0.22))"
+    "bake('story_dim', [220, 4, 36])"
+    "const analyticMaxD = Math.max(30, analyticMaxDRef * fit.scale);"
+    "(analyticMaxD + 40) * 2.1"
+    "const EARLY_HEAT_MS = 1600;"
+    "rgba(180,190,210,0.085)"
+    "? 0.022 : 0.055"
+    "const launch = Math.min(dist * 2.6, 900);"
+    "launch * 0.35 + tx * launch * 0.9"
+    "(1 - elapsed / 380) * 0.7"
+    "const towK = 26;"
+    "const RECOVER_MS = 1100;"
+    "(0.992 - damping) * (1 - elapsed / RECOVER_MS)"
+    "rgba(14,15,19,0.94)"
+    "box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 10px 30px rgba(0,0,0,0.45);"
+    "transition: opacity 480ms ease, transform 480ms cubic-bezier(0.16,1,0.3,1);"
+    "(ci * 110) + 'ms'"
+    "{ side: 'left', x: 0.028, y: 0.075 }"
+    "const stepSize = 6, standoff = 14;"
+    "const fallback = Math.max(dist - 60, dist * 0.5);"
+    "'left' ? 1 : -1) * 14"
+    "const back = 8, spread = 4;"
   )
   for s in "${PARITY_STRINGS[@]}"; do
     if grep -qF "$s" "$MOCKUP"; then
@@ -210,20 +362,20 @@ assert_file_contains "the loop-side call is guarded by the still flag AND a pend
 begin_test "entranceStart is not seeded at construction"
 assert_file_not_contains "no entranceStart = performance.now() literal" "entranceStart = performance.now()" "$TEMPLATE"
 assert_file_contains "entranceStart anchors to the first painted frame inside tick" "if (!this.entranceStart) this.entranceStart = now;" "$TEMPLATE"
-assert_file_contains "entranceGlobalAlpha returns 0 while the anchor is unset" "if (!entranceStart) return 0;" "$TEMPLATE"
+assert_file_contains "the simulation's pop window anchors on the same painted frame" "if (!this.sim.entranceT0) this.sim.entranceT0 = now;" "$TEMPLATE"
 
 # --- Test 18: the rest predicate is defined once ---
 begin_test "the rest predicate is defined once"
-REST_THRESHOLD_COUNT=$(grep -c "0.0006" "$TEMPLATE")
-assert_eq "the 0.0006 rest threshold appears exactly once" "1" "$REST_THRESHOLD_COUNT"
+REST_THRESHOLD_COUNT=$(grep -c "0.0008" "$TEMPLATE")
+assert_eq "the 0.0008 rest threshold appears exactly once" "1" "$REST_THRESHOLD_COUNT"
 assert_file_contains "the loop reads rest through the shared predicate" "!this.sim.isAtRest()" "$TEMPLATE"
 
 # --- Test 19: every input path calls requestRender; internal animations use requestFrame ---
 begin_test "every input path calls requestRender"
 REQUEST_RENDER_COUNT=$(grep -c "this.requestRender();" "$TEMPLATE")
-assert_eq "requestRender is called from every input site (mousedown, mousemove, release, mouseleave, wheel, resize, replay, goTo, goBack, chip enter/leave)" "11" "$REQUEST_RENDER_COUNT"
+assert_eq "requestRender is called from every input site (mousedown, mousemove, release, mouseleave, wheel, resize, replay, goTo, goBack)" "9" "$REQUEST_RENDER_COUNT"
 REQUEST_FRAME_COUNT=$(grep -c "this.requestFrame();" "$TEMPLATE")
-assert_eq "requestFrame is called from every internal-animation site (revealCards, mark fade, warmth easing)" "3" "$REQUEST_FRAME_COUNT"
+assert_eq "requestFrame is called from every internal-animation site (revealCards, heat arm, leader fade)" "3" "$REQUEST_FRAME_COUNT"
 
 # --- Test 20: both controls exist ---
 begin_test "both controls exist"
@@ -342,12 +494,15 @@ assert_file_contains "the per-card pass drops null and non-object entries" "filt
 # --- Test 37: card surface constants match the ruled values ---
 begin_test "card surface constants match the ruled values"
 CARD_CSS=$(awk '/#stage #cards .card \{/,/^  \}/' "$TEMPLATE")
-assert_contains "card fill is the glass value" "background: rgba(16,18,24,0.72);" "$CARD_CSS"
+assert_contains "card fill is the near-opaque value" "background: rgba(14,15,19,0.94);" "$CARD_CSS"
 assert_contains "card radius is 11px" "border-radius: 11px;" "$CARD_CSS"
 assert_contains "card padding matches" "padding: 13px 15px 14px;" "$CARD_CSS"
-assert_contains "the inset top highlight is the only card glow" "box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);" "$CARD_CSS"
+assert_contains "the card shadow is the inset highlight plus the ruled drop shadow" "box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 10px 30px rgba(0,0,0,0.45);" "$CARD_CSS"
 assert_contains "card width is 300px" "width: 300px;" "$CARD_CSS"
-assert_file_contains "the border carries the evidence hue at 0.35 alpha" '%,0.35)' "$TEMPLATE"
+assert_file_contains "the border carries the evidence hue at 0.55 alpha" '%,0.55)' "$TEMPLATE"
+assert_contains "the card entrance rests hidden and shifted" "transform: translateY(8px);" "$CARD_CSS"
+assert_contains "the card entrance rides the accepted curve" "transition: opacity 480ms ease, transform 480ms cubic-bezier(0.16,1,0.3,1);" "$CARD_CSS"
+assert_file_contains "cards stagger in 110ms apart" "(ci \* 110) + 'ms'" "$TEMPLATE"
 assert_contains "card face is the zero-download system stack" "font-family: -apple-system, system-ui, 'Segoe UI', sans-serif;" "$CARD_CSS"
 assert_contains "card weight is 450" "font-weight: 450;" "$CARD_CSS"
 assert_contains "card tracking is 0em" "letter-spacing: 0em;" "$CARD_CSS"
@@ -362,7 +517,7 @@ assert_contains "eyebrow tracking is 0.14em" "letter-spacing: 0.14em;" "$EYEBROW
 assert_contains "eyebrow is uppercase" "text-transform: uppercase;" "$EYEBROW_CSS"
 assert_contains "eyebrow lays out as flex with a 6px gap" "gap: 6px;" "$EYEBROW_CSS"
 assert_file_contains "the eyebrow dot is 6px round" '.c-eyebrow .dot { width: 6px; height: 6px; border-radius: 50%;' "$TEMPLATE"
-assert_file_contains "eyebrow colour lifts the hue by 10 lightness" "Math.min(90, hsl\[2\] + 10)" "$TEMPLATE"
+assert_file_contains "eyebrow colour lifts the hue by 12 lightness" "Math.min(90, hsl\[2\] + 12)" "$TEMPLATE"
 BODY_CSS=$(awk '/#stage #cards .card .c-body \{/,/^  \}/' "$TEMPLATE")
 assert_contains "body is 14px" "font-size: 14px;" "$BODY_CSS"
 assert_contains "body line-height is 1.5" "line-height: 1.5;" "$BODY_CSS"
@@ -377,13 +532,17 @@ assert_contains "the body rule pins text-align left" "text-align: left;" "$BODY_
 assert_not_contains "no right-aligned prose in the body rule" "text-align: right" "$BODY_CSS"
 assert_file_contains "right-pinned cards justify only the eyebrow" ".card.pin-right .c-eyebrow { justify-content: flex-end; }" "$TEMPLATE"
 
-# --- Test 40: no drop-shadow, blur or backdrop-filter on the card ---
-begin_test "no drop-shadow, blur or backdrop-filter on the card"
+# --- Test 40: the ruled drop shadow is the card's only non-inset shadow ---
+begin_test "the ruled drop shadow is the card's only non-inset shadow"
 assert_not_contains "no backdrop-filter in the card rule" "backdrop-filter" "$CARD_CSS"
 assert_not_contains "no filter property in the card rule" "filter:" "$CARD_CSS"
 CARD_SHADOWS=$(echo "$CARD_CSS" | grep "box-shadow" || true)
 NON_INSET_SHADOWS=$(echo "$CARD_SHADOWS" | grep -v "inset" || true)
-assert_eq "every card box-shadow is inset" "" "$NON_INSET_SHADOWS"
+assert_eq "every card box-shadow line carries the inset highlight" "" "$NON_INSET_SHADOWS"
+# The surgical allowance: strip the one ruled non-inset literal and only the
+# inset highlight may remain - any other non-inset shadow still fails here.
+STRIPPED_SHADOWS=$(echo "$CARD_SHADOWS" | sed 's/, 0 10px 30px rgba(0,0,0,0.45)//')
+assert_contains "stripping the ruled literal leaves only the inset highlight" "box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);" "$STRIPPED_SHADOWS"
 
 # --- Test 41: the witness footer renders from the sidecar ---
 begin_test "the witness footer renders from the sidecar"
@@ -393,19 +552,19 @@ assert_file_contains "an empty witness skips the footer entirely" "if (card.witn
 # --- Test 42: slot insets match the ported plate percentages ---
 begin_test "slot insets match the ported plate percentages"
 SLOTS_BLOCK=$(awk '/const CARD_SLOTS = \[/,/^\];/' "$TEMPLATE")
-assert_contains "slot 1 is left 2.5% top 6.4%" "side: 'left', x: 0.025, y: 0.064" "$SLOTS_BLOCK"
-assert_contains "slot 2 is right 2.5% top 56%" "side: 'right', x: 0.025, y: 0.56" "$SLOTS_BLOCK"
-assert_contains "slot 3 is left 2.5% top 70%" "side: 'left', x: 0.025, y: 0.70" "$SLOTS_BLOCK"
-assert_contains "slot 4 is right 6.75% top 28%" "side: 'right', x: 0.0675, y: 0.28" "$SLOTS_BLOCK"
+assert_contains "slot 1 is left 2.8% top 7.5%" "side: 'left', x: 0.028, y: 0.075" "$SLOTS_BLOCK"
+assert_contains "slot 2 is right 2.8% top 10%" "side: 'right', x: 0.028, y: 0.10" "$SLOTS_BLOCK"
+assert_contains "slot 3 is left 2.8% top 62%" "side: 'left', x: 0.028, y: 0.62" "$SLOTS_BLOCK"
+assert_contains "slot 4 is right 2.8% top 60%" "side: 'right', x: 0.028, y: 0.60" "$SLOTS_BLOCK"
 assert_file_contains "the layer hides below the desktop floor" "CARD_MIN_W = 1100, CARD_MIN_H = 700" "$TEMPLATE"
 
-# --- Test 43: reveal keys off a fixed load delay, never the physics ---
-begin_test "reveal keys off a fixed load delay, never the physics"
+# --- Test 43: reveal races rest against a 2000ms ceiling ---
+begin_test "reveal races rest against a 2000ms ceiling"
 REVEAL_LINE=$(grep "this.revealCards();" "$TEMPLATE")
-assert_contains "the reveal condition names the load-delay clock" "CARD_REVEAL_DELAY_MS" "$REVEAL_LINE"
-assert_not_contains "the reveal condition does not name isAtRest()" "this.sim.isAtRest()" "$REVEAL_LINE"
-assert_not_contains "entranceGlobalAlpha is not in the reveal path" "entranceGlobalAlpha" "$REVEAL_LINE"
-assert_file_contains "the reveal delay constant is defined" "const CARD_REVEAL_DELAY_MS = 3000;" "$TEMPLATE"
+assert_contains "the reveal condition names the rest predicate" "this.sim.isAtRest()" "$REVEAL_LINE"
+assert_contains "the reveal condition names the hard ceiling" "CARD_REVEAL_MS" "$REVEAL_LINE"
+assert_file_contains "the reveal ceiling is 2000ms" "const CARD_REVEAL_MS = 2000;" "$TEMPLATE"
+assert_file_not_contains "the old fixed-delay reveal constant is gone" "CARD_REVEAL_DELAY_MS" "$TEMPLATE"
 REVEAL_FN=$(awk '/  revealCards\(\) \{/,/^  \}/' "$TEMPLATE")
 assert_contains "the reveal path schedules a frame without stamping input" "this.requestFrame();" "$REVEAL_FN"
 REVEAL_RR_COUNT=$(echo "$REVEAL_FN" | grep -c "this.requestRender();" || true)
@@ -427,20 +586,23 @@ assert_contains "the seam suppresses the card layer" "classList.toggle('suppress
 DIRECT_PANEL_TOGGLES=$(grep -c "panel.classList.toggle('visible'" "$TEMPLATE")
 assert_eq "the panel visible class is toggled only inside the seam" "1" "$DIRECT_PANEL_TOGGLES"
 
-# --- Test 46: reticles are canvas strokes, not SVG ---
-begin_test "reticles are canvas strokes, not SVG"
+# --- Test 46: leaders are canvas strokes, never SVG ---
+begin_test "leaders are canvas strokes, never SVG"
 assert_file_not_contains "no createElementNS" "createElementNS" "$TEMPLATE"
 assert_file_not_contains "no SVG namespace url can exist (http:// gate re-run)" "http://" "$TEMPLATE"
-MARK_PASS=$(awk '/Provenance marks:/,/Screen-space label pass/' "$TEMPLATE")
-assert_contains "the mark pass strokes with ctx.stroke" "ctx.stroke();" "$MARK_PASS"
+LEADER_PASS=$(awk '/Leader pass:/,/Screen-space label pass/' "$TEMPLATE")
+assert_contains "the leader pass strokes with ctx.stroke" "ctx.stroke();" "$LEADER_PASS"
+assert_contains "the leader is a quadratic curve" "quadraticCurveTo" "$LEADER_PASS"
+assert_contains "the leader is dotted 1-on-6" "setLineDash(\[1, 6\])" "$LEADER_PASS"
+assert_contains "the dot caps are round" "lineCap = 'round'" "$LEADER_PASS"
 
 # --- Test 47: every hue stroke rides a casing stroke ---
 begin_test "every hue stroke rides a casing stroke"
-assert_contains "the casing colour is the locked dark value" "rgba(8,9,12,0.65)" "$MARK_PASS"
-CASING_WIDTH_COUNT=$(echo "$MARK_PASS" | grep -c "ctx.lineWidth = 3; ctx.strokeStyle = CASING; ctx.stroke();")
-assert_eq "the 3px casing stroke is drawn once, for the reticle" "1" "$CASING_WIDTH_COUNT"
-FIRST_CASING_LINE=$(echo "$MARK_PASS" | grep -n "strokeStyle = CASING" | head -1 | cut -d: -f1)
-FIRST_HUE_LINE=$(echo "$MARK_PASS" | grep -n "strokeStyle = \`hsla(\${meta.hsl\[0\]}" | head -1 | cut -d: -f1)
+assert_contains "the casing colour is the locked dark value" "rgba(8,9,12,0.65)" "$LEADER_PASS"
+CASING_WIDTH_COUNT=$(echo "$LEADER_PASS" | grep -c "ctx.lineWidth = 3; ctx.strokeStyle = CASING; ctx.stroke();")
+assert_eq "the 3px casing stroke is drawn once, under the hue stroke" "1" "$CASING_WIDTH_COUNT"
+FIRST_CASING_LINE=$(echo "$LEADER_PASS" | grep -n "strokeStyle = CASING" | head -1 | cut -d: -f1)
+FIRST_HUE_LINE=$(echo "$LEADER_PASS" | grep -n "strokeStyle = L.hue" | head -1 | cut -d: -f1)
 if [ -n "$FIRST_CASING_LINE" ] && [ -n "$FIRST_HUE_LINE" ] && [ "$FIRST_CASING_LINE" -lt "$FIRST_HUE_LINE" ]; then
   echo "  PASS: the casing stroke precedes the hue stroke"
   PASS=$((PASS + 1))
@@ -448,57 +610,53 @@ else
   echo "  FAIL: the casing stroke precedes the hue stroke (casing=$FIRST_CASING_LINE hue=$FIRST_HUE_LINE)"
   FAIL=$((FAIL + 1))
 fi
+assert_contains "the arrowhead is a filled triangle at the endpoint" "ctx.closePath(); ctx.fillStyle = L.hue; ctx.fill();" "$LEADER_PASS"
 
-# --- Test 48: the reticle alpha and hover warmth match the locked values ---
-begin_test "the reticle alpha and hover warmth match the locked values"
-assert_contains "the resting reticle hue rides at 0.55 alpha, warming by g*0.35" '0.55 + g \* 0.35' "$MARK_PASS"
-assert_contains "the hover bloom centre peaks at 0.4 alpha" '0.4 \* g' "$MARK_PASS"
-assert_contains "the bloom reaches 2.8 radii" 'r \* 2.8' "$MARK_PASS"
-assert_contains "the warmed ring thickens by g*0.8" '1 + g \* 0.8' "$MARK_PASS"
-assert_file_contains "the warmth eases by the named per-frame fraction" "const CARD_GLOW_EASE = 0.15;" "$TEMPLATE"
+# --- Test 48: the leader stops short of the dot field ---
+begin_test "the leader stops short of the dot field"
+DERIVE_FN=$(awk '/  cloudContact\(/,/^  \}/' "$TEMPLATE")
+assert_contains "the march steps 6px with a 14px standoff" "const stepSize = 6, standoff = 14;" "$DERIVE_FN"
+assert_contains "every node is tested at its projected radius plus a 3px pad" "n.hw \* scale + 3" "$DERIVE_FN"
+assert_contains "first contact backs off by the standoff" "stepSize \* s - standoff" "$DERIVE_FN"
+assert_contains "a rayless miss still stops well short of the centroid" "Math.max(dist - 60, dist \* 0.5)" "$DERIVE_FN"
 
-# --- Test 49: reticle standoff uses the locked 1.35 ratio ---
-begin_test "reticle standoff uses the locked 1.35 ratio"
-assert_contains "the radius expression carries the 1.35 standoff" "this.camera.scale \* 1.35 + 6" "$MARK_PASS"
-assert_contains "the standoff floors at 12" "Math.max(12," "$MARK_PASS"
+# --- Test 49: leader geometry is live, layout-box anchored, and gently bent ---
+begin_test "leader geometry is live, layout-box anchored, and gently bent"
+LEADERS_FN=$(awk '/  deriveLeaders\(/,/^  \}/' "$TEMPLATE")
+assert_contains "the card end reads the untransformed layout box" "el.offsetLeft + el.offsetWidth" "$LEADERS_FN"
+assert_contains "the card end centres on the layout height" "el.offsetTop + el.offsetHeight / 2" "$LEADERS_FN"
+assert_contains "the bend is capped at 14" "'left' ? 1 : -1) \* 14" "$LEADERS_FN"
+assert_contains "the arrowhead sits back 8 with a 4 spread" "const back = 8, spread = 4;" "$LEADERS_FN"
+assert_contains "coordinates round to integers before caching" "Math.round(x1)" "$LEADERS_FN"
+assert_contains "the leader hue lifts the evidence hue by 6" "Math.min(85, meta.hsl\[2\] + 6)" "$LEADERS_FN"
+assert_contains "a card with no resolving evidence carries no leader" "meta.leader = null; continue;" "$LEADERS_FN"
 
-# --- Test 50: the card fade completes inside the calm window ---
-begin_test "the card fade completes inside the calm window"
-FADE_MS=$(grep -o 'const CARD_FADE_MS = [0-9]*' "$TEMPLATE" | grep -o '[0-9]*')
-CALM=$(grep -o 'const CALM_MS = [0-9]*' "$TEMPLATE" | grep -o '[0-9]*')
-if [ -n "$FADE_MS" ] && [ -n "$CALM" ] && [ "$FADE_MS" -lt "$CALM" ]; then
-  echo "  PASS: CARD_FADE_MS ($FADE_MS) is strictly below CALM_MS ($CALM)"
-  PASS=$((PASS + 1))
-else
-  echo "  FAIL: CARD_FADE_MS ($FADE_MS) must be strictly below CALM_MS ($CALM)"
-  FAIL=$((FAIL + 1))
-fi
-assert_file_contains "the mark alpha ramps off the reveal clock" "(performance.now() - this.cardsShownAt) / CARD_FADE_MS" "$TEMPLATE"
+# --- Test 50: the leader fade and re-march ride their own clocks ---
+begin_test "the leader fade and re-march ride their own clocks"
+assert_file_contains "leaders fade in over 500ms" "const LEADER_FADE_MS = 500;" "$TEMPLATE"
+assert_file_contains "the fade starts 400ms after the reveal" "const LEADER_FADE_DELAY_MS = 400;" "$TEMPLATE"
+assert_file_contains "contacts re-derive at most once per 100ms" "const LEADER_REMARCH_MS = 100;" "$TEMPLATE"
+assert_file_contains "the leader alpha ramps off the reveal clock" "(performance.now() - this.cardsShownAt - LEADER_FADE_DELAY_MS) / LEADER_FADE_MS" "$TEMPLATE"
 
-# --- Test 51: no shadowBlur enters the file with the mark pass present ---
-begin_test "no shadowBlur enters the file with the mark pass present"
+# --- Test 51: no shadowBlur enters the file with the leader pass present ---
+begin_test "no shadowBlur enters the file with the leader pass present"
 assert_file_not_contains "no shadowBlur (re-run against the enlarged file)" "shadowBlur" "$TEMPLATE"
 
-# --- Test 52: marks draw only while cards are shown and the panel is closed ---
-begin_test "marks draw only while cards are shown and the panel is closed"
-assert_contains "the mark pass gates on cardsShown" "this.cardsShown && this.cardMeta.length" "$MARK_PASS"
-assert_contains "the mark pass gates on the suppressed class" "classList.contains('suppressed')" "$MARK_PASS"
-assert_contains "the mark pass gates on the desktop viewport floor" "cardsViewportOk()" "$MARK_PASS"
-assert_contains "a card with no resolving evidence draws no marks" "if (!evidence.length) continue;" "$MARK_PASS"
+# --- Test 52: leaders draw only while cards are shown and the panel is closed ---
+begin_test "leaders draw only while cards are shown and the panel is closed"
+assert_contains "the leader pass gates on cardsShown" "this.cardsShown && this.cardMeta.length" "$LEADER_PASS"
+assert_contains "the leader pass gates on the suppressed class" "classList.contains('suppressed')" "$LEADER_PASS"
+assert_contains "the leader pass gates on the desktop viewport floor" "cardsViewportOk()" "$LEADER_PASS"
+assert_contains "a card whose leader never resolved draws nothing" "if (!L) continue;" "$LEADER_PASS"
 
-# --- Test 53: one ring per card on the quote-source node; hover warms it; no leader lines ---
-begin_test "one ring per card on the quote-source node; hover warms it; no leader lines"
-assert_contains "the ring targets the first evidence entry - the quote source" "const src = evidence\[0\];" "$MARK_PASS"
-RETICLE_ARC_COUNT=$(echo "$MARK_PASS" | grep -c "ctx.arc(nx, ny, r, 0, TAU)")
-assert_eq "exactly one reticle ring per card (casing + hue arcs on the quote-source node)" "2" "$RETICLE_ARC_COUNT"
-assert_not_contains "no nearest-node selection survives in the mark pass" "nearD" "$MARK_PASS"
-assert_not_contains "no leader line survives in the mark pass" "ctx.moveTo(ax, ay)" "$MARK_PASS"
-assert_not_contains "no dot terminal survives in the mark pass" "ctx.arc(ex, ey" "$MARK_PASS"
-assert_contains "hover warmth is a radial bloom under the ring" "ctx.createRadialGradient(nx, ny, r \\* 0.3" "$MARK_PASS"
-assert_file_contains "chips accept the mouse only once revealed" "#stage #cards.shown .card { pointer-events: auto; }" "$TEMPLATE"
+# --- Test 53: the ring and hover warmth are ruled deletions ---
+begin_test "the ring and hover warmth are ruled deletions"
+assert_file_not_contains "no card hover index survives" "hoverCardIndex" "$TEMPLATE"
+assert_file_not_contains "no warmth easing constant survives" "CARD_GLOW_EASE" "$TEMPLATE"
+assert_file_not_contains "no hover bloom gradient survives" "createRadialGradient(nx, ny" "$TEMPLATE"
+assert_file_not_contains "no card glow state survives" "cardGlow" "$TEMPLATE"
+assert_file_contains "cards accept the mouse only once revealed" "#stage #cards.shown .card { pointer-events: auto; }" "$TEMPLATE"
 assert_file_contains "a suppressed layer gives the mouse back" "#stage #cards.suppressed .card { pointer-events: none; }" "$TEMPLATE"
-assert_file_contains "hovering a chip warms its node" "this.hoverCardIndex = ci;" "$TEMPLATE"
-assert_file_contains "leaving a chip releases the warmth" "this.hoverCardIndex === ci) this.hoverCardIndex = -1;" "$TEMPLATE"
 
 # --- Test 53b: the eyebrow date badge derives from the quote-source node ---
 begin_test "the eyebrow date badge derives from the quote-source node"

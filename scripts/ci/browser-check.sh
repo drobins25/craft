@@ -6,13 +6,17 @@
 # .craft/dashboard.html - no server), and asserts the page actually loaded
 # its data and rendered a record card:
 #
-#   1. window.CRAFT_GRAPH.nodes.length > 0            (data reached the page)
-#   2. GraphInstance.sim.nodes.length === that count  (the view consumed it)
-#   3. goTo(sim.nodes[0]) renders that node's label   (a card really rendered)
-#      in #panel .p-title
-#   4. #panel .p-summary has >= 1 element child        (the parse produced
-#      after that goTo, when the probed node has a     real DOM, not raw text
-#      summary - otherwise this prints a guarded SKIP)
+#   1.  window.CRAFT_GRAPH.nodes.length > 0            (data reached the page)
+#   2.  GraphInstance.sim.nodes.length === that count  (the view consumed it)
+#   2b. every sim node has finite x/y/homeX/homeY      (the layout fit never
+#                                                       produced NaN)
+#   2c. GraphInstance.heatCanvas.width === innerWidth  (the cluster heat baked
+#       by the probe's late stage                       on its early beat)
+#   3.  goTo(sim.nodes[0]) renders that node's label   (a card really rendered)
+#       in #panel .p-title
+#   4.  #panel .p-summary has >= 1 element child        (the parse produced
+#       after that goTo, when the probed node has a     real DOM, not raw text
+#       summary - otherwise this prints a guarded SKIP)
 #
 
 # All 135 assertions in tests/test-dashboard-template.sh read the template as
@@ -121,6 +125,30 @@ if [ "$MODE" = "build-only" ]; then
   exit 0
 fi
 
+# --- Author an insight sidecar from the corpus's own record ids -------------
+# The fixture corpus carries no hand-authored insights.js (the sidecar is
+# authored, never built), so the card and leader assertions below would be
+# vacuous. Write one whose evidence ids are real records, resolved against
+# the live graph exactly the way a user's sidecar is.
+python3 - "$TMP/.craft" <<'PYEOF'
+import json, os, sys
+root = sys.argv[1]
+records = os.path.join(root, "graph", "records")
+ids = sorted(os.path.splitext(f)[0] for f in os.listdir(records) if f.endswith(".js"))
+cards = [{"body": "CI observation %d over the fixture corpus." % (i + 1),
+          "witness": "browser-check", "evidence_node_ids": [rid]}
+         for i, rid in enumerate(ids[:4])]
+payload = {"version": 1, "cards": cards}
+with open(os.path.join(root, "graph", "insights.js"), "w", encoding="utf-8") as f:
+    f.write("window.CRAFT_INSIGHTS = " + json.dumps(payload) + ";\n")
+PYEOF
+RC=$?
+if [ "$RC" -ne 0 ]; then
+  echo "FAIL: could not author fixture insights.js (python3 exited $RC)"
+  exit "$RC"
+fi
+echo "authored fixture insights.js (4 cards from real record ids)"
+
 # --- Inject the probe into a COPY beside the real page ----------------------
 # Beside, so the sibling <script src="graph/*.js"> tags still resolve. The
 # probe reports through document.title, which --dump-dom captures. It reads
@@ -149,10 +177,35 @@ probe = """
         return;
       }
       res.simNodeCount = gi.sim.nodes.length;
+      var nonFinite = 0;
+      for (var fi = 0; fi < gi.sim.nodes.length; fi++) {
+        var fn = gi.sim.nodes[fi];
+        if (!isFinite(fn.x) || !isFinite(fn.y) || !isFinite(fn.homeX) || !isFinite(fn.homeY)) nonFinite++;
+      }
+      res.nonFiniteNodes = nonFinite;
       var n = gi.sim.nodes[0];
       res.expected = n ? n.label : null;
       gi.goTo(n);
-      setTimeout(function () {
+      // Headless --dump-dom never pumps requestAnimationFrame past the first
+      // couple of frames, so the clock-driven behaviour (entrance, heat beat,
+      // reveal, settle) would silently never run. The probe therefore drives
+      // the page's OWN tick() with real timestamps under virtual time - the
+      // exact production frame path, just externally clocked. The stray real
+      // rAF frames that DO fire use the vsync timebase, which can sit ahead
+      // of performance.now() - a mixed clock would hand tick() a negative dt,
+      // so the pump clamps its timestamps monotonic the way rAF guarantees.
+      function pumpTick() {
+        var t = performance.now();
+        if (gi.lastT && t <= gi.lastT) t = gi.lastT + 16;
+        gi.tick(t);
+      }
+      var pumpStart = performance.now();
+      var PUMP_MS = 2600;
+      (function pump() {
+        try {
+          pumpTick();
+        } catch (e) { res.error = 'tick threw: ' + String(e); report(res); return; }
+        if (performance.now() - pumpStart < PUMP_MS) { setTimeout(pump, 16); return; }
         try {
           var t = document.querySelector('#panel .p-title');
           res.titleText = t ? t.textContent : null;
@@ -161,9 +214,63 @@ probe = """
           var s = document.querySelector('#panel .p-summary');
           res.summaryChildren = s ? s.childElementCount : -1;
           res.probedHasSummary = !!(n && n.summary);
-          report(res);
+          res.heatW = gi.heatCanvas ? gi.heatCanvas.width : -1;
+          res.innerW = window.innerWidth;
+          dragStage();
         } catch (e) { res.error = String(e); report(res); }
-      }, 900);
+      })();
+
+      // Synthetic drag-release over a real node, then pump until the render
+      // loop parks. This is the story's highest-value runtime assertion: a
+      // node pinned where it was dropped must coexist with true stillness -
+      // rafId === null - or the page burns the GPU forever while every text
+      // assertion still passes.
+      function dragStage() {
+        // Leaders share the reading panel's suppression seam - close the
+        // panel the selection probe opened, so the leader pass can draw
+        // and derive its contacts during the settle.
+        gi.selectedNode = null;
+        gi.setPanelVisible(false);
+        var canvas = document.getElementById('canvas');
+        var w = window.innerWidth, h = window.innerHeight;
+        var target = gi.sim.nodes[0];
+        var sx = (target.x - gi.camera.x) * gi.camera.scale + w / 2;
+        var sy = (target.y - gi.camera.y) * gi.camera.scale + h / 2;
+        function mev(type, x, y) {
+          return new MouseEvent(type, { clientX: x, clientY: y, bubbles: true, cancelable: true });
+        }
+        canvas.dispatchEvent(mev('mousedown', sx, sy));
+        canvas.dispatchEvent(mev('mousemove', sx + 12, sy + 8));
+        canvas.dispatchEvent(mev('mousemove', sx + 30, sy + 18));
+        var dragged = gi.dragNode;
+        res.dragEngaged = !!dragged;
+        window.dispatchEvent(mev('mouseup', sx + 30, sy + 18));
+        var settleStart = performance.now();
+        var SETTLE_CAP_MS = 9000;
+        (function settlePump() {
+          try {
+            pumpTick();
+          } catch (e) { res.error = 'settle tick threw: ' + String(e); report(res); return; }
+          var parked = gi.rafId === null;
+          if (!parked && performance.now() - settleStart < SETTLE_CAP_MS) { setTimeout(settlePump, 16); return; }
+          res.pinnedFx = !!(dragged && dragged.fx != null);
+          res.pinnedAtDrop = !!(dragged && dragged.fx != null && dragged.fx === dragged.x);
+          res.loopParked = parked;
+          res.settleMs = Math.round(performance.now() - settleStart);
+          res.cardCount = gi.cardMeta.length;
+          var leaders = 0, finiteLeaders = 0;
+          gi.cardMeta.forEach(function (m) {
+            if (!m.leader) return;
+            leaders++;
+            var L = m.leader;
+            if (isFinite(L.x1) && isFinite(L.y1) && isFinite(L.tx) && isFinite(L.ty) &&
+                isFinite(L.cx) && isFinite(L.cy)) finiteLeaders++;
+          });
+          res.leaders = leaders;
+          res.finiteLeaders = finiteLeaders;
+          report(res);
+        })();
+      }
     } catch (e) { res.error = String(e); report(res); }
   }, 600);
 })();
@@ -210,12 +317,23 @@ if sim_count == graph_count and graph_count > 0:
     print("assert 2 OK: GraphInstance.sim consumed all %d nodes" % sim_count)
 else:
     failures.append("assert 2 FAILED: sim has %s nodes, graph has %s" % (sim_count, graph_count))
+non_finite = data.get("nonFiniteNodes", -1)
+if non_finite == 0:
+    print("assert 2b OK: every node has finite x/y/homeX/homeY (0 non-finite of %d)" % sim_count)
+else:
+    failures.append("assert 2b FAILED: %s of %s nodes carry a non-finite x/y/homeX/homeY" % (non_finite, sim_count))
 expected = data.get("expected")
 title = data.get("titleText")
 if expected and title == expected:
     print("assert 3 OK: selection rendered the card - #panel .p-title == %r" % expected)
 else:
     failures.append("assert 3 FAILED: #panel .p-title is %r, expected %r" % (title, expected))
+heat_w = data.get("heatW", -1)
+inner_w = data.get("innerW", 0)
+if heat_w > 0 and heat_w == inner_w:
+    print("assert 2c OK: cluster heat baked at the viewport's width (%d) after the early beat" % heat_w)
+else:
+    failures.append("assert 2c FAILED: heat canvas width is %s, viewport is %s" % (heat_w, inner_w))
 summary_children = data.get("summaryChildren", -1)
 probed_has_summary = data.get("probedHasSummary", False)
 if probed_has_summary:
@@ -225,6 +343,29 @@ if probed_has_summary:
         failures.append("assert 4 FAILED: #panel .p-summary has no element children after goTo (%s)" % summary_children)
 else:
     print("assert 4 SKIP: probed node has no summary text, nothing to parse")
+if data.get("dragEngaged"):
+    print("assert 5 OK: the synthetic drag engaged a real node")
+else:
+    failures.append("assert 5 FAILED: the synthetic mousedown/mousemove never engaged a node")
+if data.get("pinnedFx") and data.get("pinnedAtDrop"):
+    print("assert 6 OK: release pinned the grabbed node exactly where it was dropped")
+else:
+    failures.append("assert 6 FAILED: pinnedFx=%s pinnedAtDrop=%s - release did not pin where dropped" % (data.get("pinnedFx"), data.get("pinnedAtDrop")))
+if data.get("loopParked"):
+    print("assert 7 OK: the render loop parked with a node pinned (rafId === null after %sms)" % data.get("settleMs"))
+else:
+    failures.append("assert 7 FAILED: the render loop never parked with a node pinned (still alive after %sms)" % data.get("settleMs"))
+card_count = data.get("cardCount", -1)
+if card_count == 4:
+    print("assert 8 OK: four insight cards rendered from the authored sidecar")
+else:
+    failures.append("assert 8 FAILED: expected 4 insight cards, got %s" % card_count)
+leaders = data.get("leaders", -1)
+finite_leaders = data.get("finiteLeaders", -1)
+if leaders == card_count and finite_leaders == leaders and leaders > 0:
+    print("assert 9 OK: every card carries a leader terminating at finite coordinates (%d leaders)" % leaders)
+else:
+    failures.append("assert 9 FAILED: %s leaders for %s cards, %s finite" % (leaders, card_count, finite_leaders))
 if failures:
     for f in failures:
         print(f)

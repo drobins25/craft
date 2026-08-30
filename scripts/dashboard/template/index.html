@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="craft-template-version" content="6">
+<meta name="craft-template-version" content="7">
 <title>Craft Browser</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -520,23 +520,18 @@
     overflow: hidden;
   }
 
-  /* The insight layer: glass chips pinned to the frame edges, composed over
-     the settled galaxy. The fill reads as a backdrop without paying for
-     blur; the only glow a chip gets is one inset top highlight - never a
-     drop-shadow, never a backdrop-filter. Entrance is opacity+transform
-     only, and the 0.6s ride is deliberately shorter than the calm window
-     the render loop grants after its last input, so the fade completes and
-     true stillness still arrives. */
+  /* The insight layer: near-opaque cards pinned to the frame edges,
+     composed over the settled galaxy. The layer itself rests at full
+     opacity - each card owns its own staggered entrance - and the layer
+     fade survives solely as the reading-panel coexistence seam. */
   #stage #cards {
     position: absolute;
     inset: 0;
     z-index: 4;
     pointer-events: none;
-    opacity: 0;
-    transform: translateY(6px);
-    transition: opacity 0.6s ease, transform 0.6s ease;
+    opacity: 1;
+    transition: opacity 0.6s ease;
   }
-  #stage #cards.shown { opacity: 1; transform: translateY(0); }
   /* Chips accept the mouse only once revealed - the reveal itself fires at
      true rest, so this is the calm gate: hover can never catch the bloom. */
   #stage #cards.shown .card { pointer-events: auto; }
@@ -550,19 +545,27 @@
   @media (max-width: 1099px), (max-height: 699px) {
     #stage #cards { display: none; }
   }
+  /* The card surface: near-opaque fill so the galaxy never bleeds through
+     the prose, one inset top highlight, and the accepted soft drop shadow -
+     the one deliberate exception to the inset-only shadow law. Entrance is
+     opacity+transform per card, staggered by an inline transition delay. */
   #stage #cards .card {
     position: absolute;
     width: 300px;
-    background: rgba(16,18,24,0.72);
+    background: rgba(14,15,19,0.94);
     border-radius: 11px;
     padding: 13px 15px 14px;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
-    border: 1px solid transparent; /* per-card evidence hue at 0.35 alpha, set inline */
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 10px 30px rgba(0,0,0,0.45);
+    border: 1px solid transparent; /* per-card evidence hue at 0.55 alpha, set inline */
     font-family: -apple-system, system-ui, 'Segoe UI', sans-serif;
     font-weight: 450;
     letter-spacing: 0em;
     font-optical-sizing: auto;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 480ms ease, transform 480ms cubic-bezier(0.16,1,0.3,1);
   }
+  #stage #cards.shown .card { opacity: 1; transform: translateY(0); }
   #stage #cards .card .c-eyebrow {
     font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
     font-size: 11px;
@@ -634,8 +637,7 @@ const GRAPH = (window.CRAFT_GRAPH && window.CRAFT_GRAPH.nodes) ? window.CRAFT_GR
 // graph envelope, read here instead of held as a second copy of the same rules
 // inside the page. No relationship verbs: the card's Connections region is the
 // commit strip now, so the builder stopped emitting words nothing reads.
-const VOCAB = GRAPH.vocabulary || { statuses: {}, dial_outcomes: {}, types: {}, membership: [] };
-const MEMBERSHIP_KINDS = new Set(VOCAB.membership);
+const VOCAB = GRAPH.vocabulary || { statuses: {}, dial_outcomes: {}, types: {} };
 // The insight sidecar is optional and hand-authored, so absent, stale and
 // malformed must all land in the same branch. A parse error inside a classic
 // script stays inside its own tag - a broken sidecar simply never assigns
@@ -706,93 +708,135 @@ function buildAdjacency(nodes, edges) {
   return adj;
 }
 
-/* Cycles are cluster anchors placed evenly around a ring in a fixed
-   reference box; every other node joins its cycle's cluster via the
-   first membership-kind edge pointing at a cycle, phyllotaxis-scattered
-   around that cluster's anchor with the spiral radius scaled by member
-   count. Anything with no membership edge to a cycle has nowhere to
-   belong and forms the outer dust ring. */
+/* Records semi-cluster by TYPE: a small standalone force relaxation among
+   the ~9 type anchors, weighted by each type's real member count/radius
+   mass, decides where each coloured region lives. Bigger clusters pull
+   harder toward the centre (they end up the visual core); smaller ones get
+   pushed to the periphery by pairwise repulsion sized to their own spread -
+   the real data's lopsidedness, not a fabricated balance. */
 const GOLDEN_ANGLE = 2.399963229728653;
-function computeRealLayout(nodes, edges) {
-  const cycles = nodes.filter(n => n.type === 'cycle');
-  const memberOf = new Map(); // nodeId -> cycleId, first membership edge wins
-  for (const e of edges) {
-    if (!MEMBERSHIP_KINDS.has(e.kind)) continue;
-    if (e.target.type === 'cycle' && !memberOf.has(e.source.id)) memberOf.set(e.source.id, e.target.id);
+const SPREAD_MULT = 1.0;
+let TYPE_ANCHORS = null;
+function computeTypeAnchors(nodes, groups) {
+  const types = [...groups.keys()];
+  const anchors = types.map(t => {
+    const members = groups.get(t);
+    const massArea = members.reduce((s, i) => s + nodes[i].hw * nodes[i].hw, 0);
+    const spreadR = 26 + Math.sqrt(massArea) * 1.15;
+    return { type: t, count: members.length, spreadR, x: 0, y: 0 };
+  });
+  anchors.sort((a, b) => b.spreadR - a.spreadR);
+  const N = anchors.length;
+  anchors.forEach((a, i) => {
+    const ang = (i / N) * TAU;
+    const seedR = 220 + a.spreadR;
+    a.x = Math.cos(ang) * seedR; a.y = Math.sin(ang) * seedR * 0.7;
+  });
+  for (let iter = 0; iter < 420; iter++) {
+    for (let i = 0; i < N; i++) {
+      let fx = 0, fy = 0;
+      const ai = anchors[i];
+      for (let j = 0; j < N; j++) {
+        if (i === j) continue;
+        const bj = anchors[j];
+        let dx = ai.x - bj.x, dy = ai.y - bj.y;
+        let d = Math.hypot(dx, dy) || 0.01;
+        const minD = ai.spreadR + bj.spreadR + 46;
+        if (d < minD) {
+          const push = (minD - d) * 0.05;
+          fx += (dx / d) * push; fy += (dy / d) * push;
+        }
+      }
+      const gk = 0.00016 * ai.spreadR;
+      fx += -ai.x * gk; fy += -ai.y * gk;
+      ai.fx = fx; ai.fy = fy;
+    }
+    for (const a of anchors) { a.x += a.fx; a.y += a.fy; }
   }
-  const clusterMembers = new Map(cycles.map(c => [c.id, []]));
-  for (const n of nodes) {
-    if (n.type === 'cycle') continue;
-    const cid = memberOf.get(n.id);
-    if (cid && clusterMembers.has(cid)) clusterMembers.get(cid).push(n);
-  }
-  const orphans = nodes.filter(n => n.type !== 'cycle' && !memberOf.has(n.id));
-
-  const ordered = [...cycles].sort((a, b) => (clusterMembers.get(b.id) || []).length - (clusterMembers.get(a.id) || []).length);
-  const RING_R = 380;
-  ordered.forEach((c, i) => {
-    const angle = (i / ordered.length) * TAU;
-    c.homeRefX = Math.cos(angle) * RING_R;
-    c.homeRefY = Math.sin(angle) * RING_R;
-  });
-  ordered.forEach((c) => {
-    const members = clusterMembers.get(c.id) || [];
-    const spiralScale = 14 + Math.sqrt(members.length) * 9;
-    members.forEach((m, j) => {
-      const angle = j * GOLDEN_ANGLE;
-      const rad = spiralScale * Math.sqrt(j + 0.5);
-      m.homeRefX = c.homeRefX + Math.cos(angle) * rad;
-      m.homeRefY = c.homeRefY + Math.sin(angle) * rad;
-    });
-  });
-  const DUST_R0 = RING_R + 260;
-  orphans.forEach((n, i) => {
-    const angle = i * GOLDEN_ANGLE;
-    const rad = DUST_R0 + Math.sqrt(i) * 18;
-    n.homeRefX = Math.cos(angle) * rad;
-    n.homeRefY = Math.sin(angle) * rad;
-  });
+  const map = new Map(); anchors.forEach(a => map.set(a.type, a));
+  return map;
 }
 
-// computeRealLayout lays the constellation out in a unitless reference box;
-// computeHomes measures that box and scales it per-axis so the settled
-// graph fills FIT_W_FRAC x FIT_H_FRAC of the actual viewport, any size.
-const FIT_W_FRAC = 0.80;
-const FIT_H_FRAC = 0.74;
-function computeHomes(nodes, w, h) {
-  if (nodes.length === 0) return; // no data yet - nothing to fit, nothing to poison with NaN
-  const xs = nodes.map(n => n.homeRefX), ys = nodes.map(n => n.homeRefY);
-  const minX = Math.min(...xs), maxX = Math.max(...xs);
-  const minY = Math.min(...ys), maxY = Math.max(...ys);
-  const cx0 = (minX + maxX) / 2, cy0 = (minY + maxY) / 2;
-  const scaleX = (w * FIT_W_FRAC) / (maxX - minX || 1);
-  const scaleY = (h * FIT_H_FRAC) / (maxY - minY || 1);
-  for (const n of nodes) {
-    n.homeX = w / 2 + (n.homeRefX - cx0) * scaleX;
-    n.homeY = h / 2 + (n.homeRefY - cy0) * scaleY;
+// Each type's members scatter phyllotaxis-style around their relaxed anchor,
+// spiral radius scaled by member count, in the same unitless reference space.
+function computeHomeRefs(nodes, groups, spreadMult) {
+  for (const [type, members] of groups) {
+    const anchor = TYPE_ANCHORS.get(type);
+    const spiralScale = (10 + Math.sqrt(members.length) * 8) * spreadMult;
+    members.forEach((i, j) => {
+      const angle = j * GOLDEN_ANGLE;
+      const rad = spiralScale * Math.sqrt(j + 0.5);
+      nodes[i].homeRefX = anchor.x + Math.cos(angle) * rad;
+      nodes[i].homeRefY = anchor.y + Math.sin(angle) * rad;
+    });
   }
+}
+// The plate fits the viewport with ONE uniform scale - never per-axis, so
+// the sky is never stretched anisotropically. The returned transform maps
+// reference space to world space; the heat bake projects anchors through it.
+function fitHomes(nodes, w, h, fitWFrac, fitHFrac) {
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const n of nodes) {
+    if (n.homeRefX < minX) minX = n.homeRefX; if (n.homeRefX > maxX) maxX = n.homeRefX;
+    if (n.homeRefY < minY) minY = n.homeRefY; if (n.homeRefY > maxY) maxY = n.homeRefY;
+  }
+  const cx0 = (minX + maxX) / 2, cy0 = (minY + maxY) / 2;
+  const scaleX = (w * fitWFrac) / (maxX - minX || 1);
+  const scaleY = (h * fitHFrac) / (maxY - minY || 1);
+  const scale = Math.min(scaleX, scaleY);
+  for (const n of nodes) {
+    n.homeX = w / 2 + (n.homeRefX - cx0) * scale;
+    n.homeY = h / 2 + (n.homeRefY - cy0) * scale;
+  }
+  return { scale, cx0, cy0 };
 }
 
 class Sim {
   constructor(opts) {
     this.nodes = cloneNodes();
     this.edges = buildEdges(this.nodes);
-    computeRealLayout(this.nodes, this.edges);
     this.idx = new Map(this.nodes.map((n, i) => [n.id, i]));
     this.adj = buildAdjacency(this.nodes, this.edges);
+    // Type-group map (type -> member indexes): the layout scatters by it and
+    // the ambient region treatment reads the same grouping.
+    this.byType = new Map();
+    this.nodes.forEach((n, i) => { if (!this.byType.has(n.type)) this.byType.set(n.type, []); this.byType.get(n.type).push(i); });
     this.opts = opts;
     this.alpha = 0;
     this.alphaTarget = 0;
+    // The node the pointer is actively holding - set by the view on grab,
+    // cleared on release. Distinct from fx/fy pins, which can persist.
+    this.dragNode = null;
+    // Direct neighbours of the held node, towed toward it while it is held -
+    // captured at grab, emptied on release, never pinned themselves.
+    this.towed = [];
+    // Drag-release recovery window anchor - the brief eased-damping bounce
+    // that lets a jammed pocket unpack itself in place.
+    this.recoverT0 = 0;
+    // Entrance anchor mirrored from the view's first painted frame - the
+    // repulsion pop measures its 380ms burst window from here.
+    this.entranceT0 = 0;
+    this.fit = null;
     this.alphaDecay = opts.alphaDecay != null ? opts.alphaDecay : 0.06;
   }
-  resizeHome(w, h) { computeHomes(this.nodes, w, h); }
-  hasFixed() { for (const n of this.nodes) if (n.fx != null) return true; return false; }
+  resizeHome(w, h) {
+    if (this.nodes.length === 0) return; // no data yet - nothing to fit, nothing to poison with NaN
+    // Anchors relax once (node radii are fixed after shaping); the fit
+    // re-derives on every resize so the plate always fills the viewport.
+    if (!TYPE_ANCHORS) TYPE_ANCHORS = computeTypeAnchors(this.nodes, this.byType);
+    computeHomeRefs(this.nodes, this.byType, SPREAD_MULT);
+    this.fit = fitHomes(this.nodes, w, h, 0.72, 0.66);
+  }
+  // The rest predicate reads the node the hand is HOLDING, not the set of
+  // pinned nodes - a node pinned where it was dropped must coexist with
+  // true stillness, or the render loop would never park again.
+  hasFixed() { return this.dragNode != null; }
   isAtRest() {
     let maxSp2 = 0;
     for (const nd of this.nodes) { const s2 = nd.vx * nd.vx + nd.vy * nd.vy; if (s2 > maxSp2) maxSp2 = s2; }
-    return this.alpha < 0.0006 && maxSp2 < 0.002 && !this.hasFixed();
+    return this.alpha < 0.0008 && maxSp2 < 0.003 && !this.hasFixed();
   }
-  step(dt) {
+  step(dt, now) {
     const alphaRetain = Math.pow(1 - this.alphaDecay, dt * 60);
     this.alpha = this.alphaTarget + (this.alpha - this.alphaTarget) * alphaRetain;
     const nodes = this.nodes, n = nodes.length;
@@ -800,9 +844,17 @@ class Sim {
     // entirely rather than compute forces that round to nothing.
     if (this.isAtRest()) return;
 
-    const { repulse, springK, springLength, gravity, maxSpeed, damping } = this.opts;
+    const { springK, springLength, gravity, maxSpeed } = this.opts;
     const fx = new Float64Array(n), fy = new Float64Array(n);
     const forceScale = this.alpha;
+    let repulse = this.opts.repulse;
+    // A brief extra-hot repulsion window right at launch - the bigger pop -
+    // decaying back to the stance's normal repulsion within ~380ms so it
+    // reads as a burst, not a permanent change.
+    if (!REDUCED_MOTION && this.entranceT0) {
+      const elapsed = now - this.entranceT0;
+      if (elapsed < 380) repulse *= 1 + (1 - elapsed / 380) * 0.7;
+    }
 
     for (let i = 0; i < n; i++) {
       for (let j = i + 1; j < n; j++) {
@@ -810,8 +862,10 @@ class Sim {
         let dx = a.x - b.x, dy = a.y - b.y;
         let d = Math.sqrt(dx * dx + dy * dy); if (d < 0.001) d = 0.001;
         const ux = dx / d, uy = dy / d;
-        const dd = Math.max(d, 4);
-        const f = (repulse / (dd * dd)) * forceScale;
+        const combined = a.hw + b.hw;
+        const dd = Math.max(d, combined * 0.5);
+        let f = (repulse / (dd * dd)) * forceScale;
+        if (d < combined) f += (combined - d) * 3.4 * forceScale; // soft collision correction
         fx[i] += ux * f; fy[i] += uy * f;
         fx[j] -= ux * f; fy[j] -= uy * f;
       }
@@ -831,6 +885,35 @@ class Sim {
       fx[i] += (node.homeX - node.x) * gravity * forceScale;
       fy[i] += (node.homeY - node.y) * gravity * forceScale;
     }
+    // Drag towing: a direct neighbour's own gravity is far stronger than the
+    // edge spring pulling it toward a held node - nowhere near enough to
+    // visibly follow. This is a temporary, much stronger pull straight at
+    // the held node's live position, active only while a node is held, so
+    // towed neighbours visibly stretch toward it and flow back to their
+    // normal cluster home the instant it is released. Only the held node
+    // itself ever pins; a neighbour already pinned holds its own spot.
+    if (this.dragNode && this.towed.length) {
+      const towK = 26;
+      const dn = this.dragNode;
+      for (const tn of this.towed) {
+        if (tn.fx != null) continue; // an already-pinned neighbour holds its own spot
+        const ti = this.idx.get(tn.id);
+        fx[ti] += (dn.x - tn.x) * towK * forceScale;
+        fy[ti] += (dn.y - tn.y) * towK * forceScale;
+      }
+    }
+    // Drag-release recovery: ease damping UP toward a bouncier value right
+    // after a pin, easing back down to the stance's normal (heavier)
+    // damping. A jammed pocket needs real velocity to build up before it
+    // can unpack itself, and the normal damping kills that velocity too
+    // fast - this briefly lets the physics relax the jam in place. No
+    // repositioning: nothing moves that wasn't already out of equilibrium.
+    let damping = this.opts.damping;
+    if (this.recoverT0) {
+      const RECOVER_MS = 1100;
+      const elapsed = now - this.recoverT0;
+      if (elapsed < RECOVER_MS) damping = damping + (0.992 - damping) * (1 - elapsed / RECOVER_MS);
+    }
     const dampingStep = Math.pow(damping, dt * 60);
     for (let i = 0; i < n; i++) {
       const node = nodes[i];
@@ -845,13 +928,31 @@ class Sim {
   }
 }
 
-function seedCompactCloud(nodes, cx, cy, scale) {
+// Seed tight, then launch with real angular momentum: a radial component
+// for the burst plus a dominant tangential component (perpendicular to each
+// node's own outward direction, same handedness for every node), so the
+// whole galaxy visibly spins up out of the flash as gravity reels it back
+// into formation. Under reduced motion: a plain, slightly looser seed with
+// zero velocity.
+function seedCompactCloud(nodes, cx, cy) {
+  const swirl = !REDUCED_MOTION;
+  const seedScale = swirl ? 0.022 : 0.055;
   nodes.forEach((n, i) => {
     const hx = n.homeX != null ? n.homeX : cx, hy = n.homeY != null ? n.homeY : cy;
     const jitter = (i % 2 === 0 ? 1 : -1) * (3 + (i * 7) % 9);
-    n.x = cx + (hx - cx) * scale + jitter;
-    n.y = cy + (hy - cy) * scale - jitter * 0.6;
-    n.vx = 0; n.vy = 0;
+    n.x = cx + (hx - cx) * seedScale + jitter;
+    n.y = cy + (hy - cy) * seedScale - jitter * 0.6;
+    if (swirl) {
+      const dx = hx - n.x, dy = hy - n.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      const ux = dx / dist, uy = dy / dist;
+      const tx = -uy, ty = ux; // perpendicular - same rotational sense for every node
+      const launch = Math.min(dist * 2.6, 900);
+      n.vx = ux * launch * 0.35 + tx * launch * 0.9;
+      n.vy = uy * launch * 0.35 + ty * launch * 0.9;
+    } else {
+      n.vx = 0; n.vy = 0;
+    }
   });
 }
 
@@ -948,34 +1049,17 @@ function bucketFor(r) {
   return 'hub';
 }
 
-function bakeRadialGlow(rgb, size) {
-  size = size || 96;
+// Ambient cluster heat: one soft radial bloom per type region, baked once
+// to an offscreen canvas and stamped additively. No canvas blur-shadow
+// property, no live blur - the same no-blur bakery discipline as the node
+// sprites above.
+function bakeHeatBlob(rgb, size) {
   const c = document.createElement('canvas'); c.width = size; c.height = size;
   const g = c.getContext('2d');
-  const cs = `${rgb[0]},${rgb[1]},${rgb[2]}`;
   const grad = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-  grad.addColorStop(0, `rgba(${cs},0.8)`);
-  grad.addColorStop(0.45, `rgba(${cs},0.26)`);
-  grad.addColorStop(1, `rgba(${cs},0)`);
-  g.fillStyle = grad; g.beginPath(); g.arc(size / 2, size / 2, size / 2, 0, TAU); g.fill();
-  return c;
-}
-
-// A quieter, always-on sibling to bakeRadialGlow above (that one stays a
-// hover-only interaction cue). This sprite paints permanently under a
-// handful of rare or high-degree nodes so the sky itself reads as alive
-// at rest, not only when a visitor points at something. Same no-blur
-// baking approach, its own gradient curve (1.0 -> 0.32 @ 45% -> 0, per
-// tokens.yaml visual.node_treatment.glow_sprite).
-function bakeAmbientGlow(rgb, size) {
-  size = size || 96;
-  const c = document.createElement('canvas'); c.width = size; c.height = size;
-  const g = c.getContext('2d');
-  const cs = `${rgb[0]},${rgb[1]},${rgb[2]}`;
-  const grad = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-  grad.addColorStop(0, `rgba(${cs},1)`);
-  grad.addColorStop(0.45, `rgba(${cs},0.32)`);
-  grad.addColorStop(1, `rgba(${cs},0)`);
+  grad.addColorStop(0, rgbCss(rgb, 0.55));
+  grad.addColorStop(0.4, rgbCss(rgb, 0.22));
+  grad.addColorStop(1, rgbCss(rgb, 0));
   g.fillStyle = grad; g.beginPath(); g.arc(size / 2, size / 2, size / 2, 0, TAU); g.fill();
   return c;
 }
@@ -1022,10 +1106,6 @@ function bakeBackground(w, h) {
   bctx.fillStyle = vg; bctx.fillRect(0, 0, w, h);
   return c;
 }
-function entranceGlobalAlpha(entranceStart) {
-  if (!entranceStart) return 0;
-  return clamp((performance.now() - entranceStart) / 1000 / 0.38, 0, 1);
-}
 function drawLabelHalo(ctx, text, x, y, fillStyle) {
   ctx.lineWidth = 3;
   ctx.strokeStyle = 'rgba(8,8,10,0.85)';
@@ -1037,36 +1117,41 @@ function drawLabelHalo(ctx, text, x, y, fillStyle) {
 const DEG_CAP = 40;
 const MIN_R = 6, MAX_R = 40;
 
-// Ambient node-treatment ratios - everything scales off each node's own
-// radius or the current viewport width, never a fixed pixel count, so the
-// look holds at any window size.
-const GLOW_ACCENT_TO_R = 4.2;      // rare/hero nodes: reach 4.2x their own radius
-const GLOW_HUB_QUIET_TO_R = 1.5;   // large cycle hubs: a quieter 1.5x halo
-const GLOW_ACCENT_HERO_ALPHA = 0.7;
-const GLOW_ACCENT_RARE_ALPHA = 0.55;
-const GLOW_HUB_QUIET_ALPHA = 0.15;
-const DEPTH_ALPHA_FLOOR = 0.45;    // fill alpha never drops below this far from the core
-const DEPTH_REACH_TO_W = 0.94;     // world-units of viewport width the falloff spans
-const MESH_REACH_TO_W = 0.094;     // hairline links quiet down to a floor past this reach
-const MESH_ALPHA_FLOOR = 0.08;
-const MESH_ALPHA_NEAR = 0.19;
+// The cluster heat's own clock. The bloom bakes early rather than waiting
+// for true rest (which a drag or a slow settle can push out indefinitely).
+// The beat is derived from the stance's own alphaDecay (0.026), not guessed:
+// alpha reaches ~95% decayed - the point the launch has visibly resolved
+// into a gentle settle - at ln(0.05)/ln(1-0.026)/60 =~ 1.9s. Landing the
+// beat at 1.6s puts it just ahead of that read, so heat arrives after the
+// entrance's big gesture rather than cutting in front of it; its 600ms fade
+// then reads as continuing atmosphere behind the insight layer landing.
+const EARLY_HEAT_MS = 1600;
+const HEAT_FADE_MS = 600;
+// Heat stamps additively at this alpha with this size multiplier; the
+// cooled region's bloom drops to 0.7x so grey dots never sit on a warm haze.
+const HEAT_ALPHA = 0.5;
+const HEAT_SIZE_MULT = 1.1;
 // A trackpad zoom stream fires many wheel events per second; a shorter
 // window would stutter the loop stopping and restarting between them.
 const CALM_MS = 900;
-// The chip fade and the mark fade share one clock. The mark fade keeps the
-// loop alive through requestFrame (pure scheduling, no input stamp) until it
-// completes, so the loop still reaches true stillness.
-const CARD_FADE_MS = 600;
-// The chips arrive on a fixed clock from the first painted frame - a load
-// delay, deliberately NOT chained to the physics reaching rest. Movement on
-// the page (a settle running long, a drag mid-entrance) must never hold the
-// insight layer hostage.
-const CARD_REVEAL_DELAY_MS = 3000;
+// The swirl launch and the repulsion pop collapse to a plain seed under
+// reduced motion - checked once at load, never per frame. The heat and
+// insight-layer opacity fades still run either way.
+const REDUCED_MOTION = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+// The insight layer reveals at whichever comes FIRST: the simulation
+// reaching true rest, or this hard ceiling from the first painted frame -
+// so a drag keeping the loop alive can never hold the insight layer
+// hostage, and a fast settle never leaves it waiting on a clock.
+const CARD_REVEAL_MS = 2000;
 // Eyebrow badge months - uppercase to match the eyebrow's machine voice.
 const CARD_MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-// Hover warmth eases toward its target by this fraction per frame - the
-// bloom breathes in and out instead of snapping.
-const CARD_GLOW_EASE = 0.15;
+// Leaders fade in over 500ms starting 400ms after the reveal, and their
+// contact ray-march re-derives at most once per 100ms while the camera or
+// the field is moving - the march tests every node, so an unthrottled
+// rebuild would run it four times per frame during a drag.
+const LEADER_FADE_MS = 500;
+const LEADER_FADE_DELAY_MS = 400;
+const LEADER_REMARCH_MS = 100;
 // Hover unlocks on a fixed clock from the first painted frame - a load
 // delay, deliberately NOT chained to the sim's energy. The early violent
 // fling (where a cursor over flying nodes strobes the glow and flickers the
@@ -1079,10 +1164,10 @@ const HOVER_CALM_MS = 1500;
 // free slot to its evidence centroid in screen space - never recomputed
 // during pan, zoom or drag, so the composition stays quiet under a hand.
 const CARD_SLOTS = [
-  { side: 'left', x: 0.025, y: 0.064 },
-  { side: 'right', x: 0.025, y: 0.56 },
-  { side: 'left', x: 0.025, y: 0.70 },
-  { side: 'right', x: 0.0675, y: 0.28 },
+  { side: 'left', x: 0.028, y: 0.075 },
+  { side: 'right', x: 0.028, y: 0.10 },
+  { side: 'left', x: 0.028, y: 0.62 },
+  { side: 'right', x: 0.028, y: 0.60 },
 ];
 // Below these viewport sizes the edge slots start eating the luminous core,
 // so the whole insight layer (chips and marks alike) stays hidden.
@@ -1133,10 +1218,11 @@ class GraphView {
     this._relsFade = this.wireVerticalFade(this.panel.querySelector('.p-rels'));
     this.cardsShown = false;
     this.cardsShownAt = 0;
-    this.hoverCardIndex = -1;
-    this.cardGlow = 0;
     this.calm = false;
     this.cardMeta = [];
+    this._leaderMarchAt = 0;
+    this._leaderCamSig = '';
+    this._leaderRestMarched = false;
     const { ctx, resize: resizeCanvas } = makeCanvasCtx(canvas);
     this.ctx = ctx;
     this._resizeCanvas = resizeCanvas;
@@ -1163,25 +1249,17 @@ class GraphView {
     this.lastInputAt = 0;
     this.rafId = null;
 
-    // Slow-bloom entrance: slower alpha decay + higher damping + lighter
-    // gravity = tighter spawn, grander expansion, floatier ~5s settle.
-    // Two decay profiles: the cinematic pair is for the entrance only. Applied
-    // to a drag's residual energy it holds the O(n^2) pass + full glow overdraw
-    // hot for ~5.5s per drag (measured), and overlapping drags never sleep - so
-    // drag release switches to the snappy pair (~2s cool-down) and replay()
-    // restores cinematic before each bloom.
-    // DECAY_CINEMATIC mirrors the damping/alphaDecay in the Sim constructor
-    // below (the locked-physics test pins that line verbatim).
-    this.DECAY_CINEMATIC = { damping: 0.94, alphaDecay: 0.025 };
-    this.DECAY_SNAPPY = { damping: 0.90, alphaDecay: 0.06 };
-    this.sim = new Sim({ repulse: 60000, springK: 2.5, springLength: 110, damping: 0.94, gravity: 12, maxSpeed: 6000, alphaDecay: 0.025 });
+    // One damping value and one alphaDecay - the accepted stance's own. The
+    // drag-release recovery window inside the simulation is the only
+    // modulation either ever gets.
+    this.sim = new Sim({ repulse: 30000, springK: 0.9, springLength: 92, damping: 0.94, gravity: 10, maxSpeed: 6000, alphaDecay: 0.026 });
     this.sim.nodes.forEach(n => this.shapeNode(n));
-    // The single largest cluster anchor earns the brightest always-on glow -
-    // a sky needs one point the eye lands on first.
-    this.heroHub = null;
-    for (const n of this.sim.nodes) {
-      if (n.type === 'cycle' && (!this.heroHub || n.hw > this.heroHub.hw)) this.heroHub = n;
-    }
+    // Cluster heat state: the baked bloom canvas and the moment its fade-in
+    // began. heatFadeStart doubles as the already-handled guard, so the
+    // early beat and the first-rest path can never double-fire the fade.
+    this.heatCanvas = null;
+    this.heatFadeStart = 0;
+    this.settledOnce = false;
     this.bakeAssets();
     this.attachInteraction();
     this.tick = this.tick.bind(this);
@@ -1195,35 +1273,78 @@ class GraphView {
     n.degree = degree;
     const t = Math.sqrt(Math.min(degree, DEG_CAP) / DEG_CAP);
     n.hw = n.hh = (MIN_R + (MAX_R - MIN_R) * t) * (n.type === 'cycle' ? window.NS.cycleScale : 1);
-    n.mass = 0.5 + t * 2.2;
+    n.mass = 0.6 + t * 2.2;
     n.bucket = bucketFor(n.hw);
   }
 
   bakeAssets() {
     this.fill = {};
-    this.hoverGlow = {};
-    this.ambientGlow = {};
+    this.heat = {};
     // Rim colour is the node's own hue lifted +16 lightness (clamped), so it
-    // needs the HSL triple, not the precomputed RGB. Ambient glow bakes at
-    // 256px: it now stretches to the glow's full DIAMETER (2x its reach), and
-    // a 100px bake would band at hero size.
+    // needs the HSL triple, not the precomputed RGB.
     const bake = (key, hsl) => {
       const rgb = hsl2rgb(hsl[0], hsl[1], hsl[2]);
       const rim = hsl2rgb(hsl[0], hsl[1], Math.min(90, hsl[2] + 16));
       this.fill[key] = {};
       for (const b of SIZE_BUCKETS) this.fill[key][b.key] = bakeFlatCircle(rgb, b.bakeR, rim);
-      this.hoverGlow[key] = bakeRadialGlow(rgb, 100);
-      this.ambientGlow[key] = bakeAmbientGlow(rgb, 256);
+      this.heat[key] = bakeHeatBlob(rgb, 320);
     };
     for (const t in TYPE_HSL) bake(t, TYPE_HSL[t]);
     bake(FALLBACK_TYPE, FALLBACK_HSL);
+    // Completed records of the most numerous type cool to near-neutral grey
+    // texture - saturation dropped hard, lightness pulled down - so only
+    // living work still carries the ember-coral. The same dim key feeds that
+    // region's ambient heat, cooled to match the dimmed dots (grey dots over
+    // a still-warm haze read as olive, not neutral).
+    bake('story_dim', [220, 4, 36]);
   }
 
   // A record type this page has no hue for still resolves - to the baked
   // fallback sprite set - rather than throwing on the first draw frame.
   spriteFor(type, bucket) { return (this.fill[type] || this.fill[FALLBACK_TYPE])[bucket]; }
-  ambientGlowFor(type) { return this.ambientGlow[type] || this.ambientGlow[FALLBACK_TYPE]; }
-  glowFor(type) { return this.hoverGlow[type] || this.hoverGlow[FALLBACK_TYPE]; }
+  heatFor(type) { return this.heat[type] || this.heat[FALLBACK_TYPE]; }
+
+  // One bloom per type region, stamped additively into a world-sized canvas.
+  // Both POSITION and SIZE are ANALYTIC - the anchor's fitted position and a
+  // final-scatter prediction from member count - never a live centroid. A
+  // bloom baked from mid-flight positions sits in the wrong place looking
+  // settled, then silently jumps at true rest; the anchor and the final
+  // centroid agree within ~1-2px, so baking from the anchor the whole time
+  // removes the jump entirely rather than hiding it better.
+  bakeHeat() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const fit = this.sim.fit;
+    if (!fit || !TYPE_ANCHORS) return null; // no fitted plate yet - nothing to bloom
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, w); c.height = Math.max(1, h);
+    const g = c.getContext('2d');
+    g.globalCompositeOperation = 'lighter';
+    for (const [type, idxs] of this.sim.byType) {
+      const anchor = TYPE_ANCHORS.get(type);
+      if (!anchor || !idxs.length) continue;
+      const cooled = type === 'story';
+      const sprite = cooled ? this.heatFor('story_dim') : this.heatFor(type);
+      const cx = w / 2 + (anchor.x - fit.cx0) * fit.scale;
+      const cy = h / 2 + (anchor.y - fit.cy0) * fit.scale;
+      const memberCount = idxs.length;
+      const spiralScale = (10 + Math.sqrt(memberCount) * 8) * SPREAD_MULT;
+      const analyticMaxDRef = spiralScale * Math.sqrt(Math.max(0, memberCount - 1) + 0.5);
+      const analyticMaxD = Math.max(30, analyticMaxDRef * fit.scale);
+      const size = Math.max(180, (analyticMaxD + 40) * 2.1) * HEAT_SIZE_MULT;
+      g.globalAlpha = cooled ? HEAT_ALPHA * 0.7 : HEAT_ALPHA;
+      g.drawImage(sprite, cx - size / 2, cy - size / 2, size, size);
+    }
+    g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+    return c;
+  }
+
+  // Bakes (or re-bakes) the bloom and starts its one fade-in. The fade
+  // starts only once - a later re-bake (first rest, a resize) refreshes the
+  // canvas without restarting the fade.
+  armHeat(now) {
+    this.heatCanvas = this.bakeHeat();
+    if (this.heatCanvas && !this.heatFadeStart) { this.heatFadeStart = now; this.requestFrame(); }
+  }
 
   // ---- the commit strip -------------------------------------------------
   // One cell = one record, at a FIXED size. A longer span makes the strip
@@ -1693,6 +1814,14 @@ class GraphView {
     this.camera.x = window.innerWidth / 2;
     this.camera.y = window.innerHeight / 2;
     this.bg = bakeBackground(window.innerWidth, window.innerHeight);
+    // The fitted plate moved, so an already-baked bloom re-bakes to the new
+    // anchors - a refresh, never a second fade (armHeat guards the clock).
+    if (this.heatCanvas) this.heatCanvas = this.bakeHeat();
+    // The card slots are viewport-fraction positioned, so every leader's
+    // card end moved with the resize - the cache re-derives on the next
+    // painted frame.
+    this._leaderMarchAt = 0;
+    this._leaderRestMarched = false;
     this.requestRender();
   }
 
@@ -1770,10 +1899,11 @@ class GraphView {
       el.className = 'card' + (slot.side === 'right' ? ' pin-right' : '');
       el.style[slot.side] = (slot.x * 100) + '%';
       el.style.top = (slot.y * 100) + '%';
-      el.style.borderColor = `hsla(${hsl[0]},${hsl[1]}%,${hsl[2]}%,0.35)`;
+      el.style.transitionDelay = (ci * 110) + 'ms';
+      el.style.borderColor = `hsla(${hsl[0]},${hsl[1]}%,${hsl[2]}%,0.55)`;
       const eyebrow = document.createElement('div');
       eyebrow.className = 'c-eyebrow';
-      eyebrow.style.color = `hsl(${hsl[0]},${hsl[1]}%,${Math.min(90, hsl[2] + 10)}%)`;
+      eyebrow.style.color = `hsl(${hsl[0]},${hsl[1]}%,${Math.min(90, hsl[2] + 12)}%)`;
       const dot = document.createElement('span');
       dot.className = 'dot';
       dot.style.background = `hsl(${hsl[0]},${hsl[1]}%,${hsl[2]}%)`;
@@ -1806,21 +1936,95 @@ class GraphView {
         witness.textContent = 'witnessed by ' + card.witness;
         el.appendChild(witness);
       }
-      // Hover is the chip's only pointer verb: it warms the quote-source
-      // node across the sky (see the mark pass) and nothing else.
-      el.addEventListener('mouseenter', () => { this.hoverCardIndex = ci; this.requestRender(); });
-      el.addEventListener('mouseleave', () => { if (this.hoverCardIndex === ci) this.hoverCardIndex = -1; this.requestRender(); });
       this.cardsEl.appendChild(el);
-      // Height is measured once here - the chip never changes size, so the
-      // per-frame mark pass can anchor without touching layout again.
-      this.cardMeta.push({ card, slot, hsl, el, h: el.offsetHeight });
+      // The leader pass derives its geometry from this entry: the element's
+      // untransformed layout box (offsetLeft/offsetTop are immune to the
+      // translateY entrance) and the evidence hue. The cached leader
+      // geometry lands on the same entry when the throttled march runs.
+      this.cardMeta.push({ card, slot, hsl, el, leader: null });
     });
+    this._leaderMarchAt = 0;
+    this._leaderCamSig = '';
+    this._leaderRestMarched = false;
   }
 
-  // Fires from the render loop once CARD_REVEAL_DELAY_MS has elapsed since
-  // the first painted frame - a fixed load delay, independent of the physics.
-  // The requestFrame kicks the fade's first frame; the mark fade keeps the
-  // loop alive until it completes, and stillness then returns.
+  // Ray-marches from the card edge toward the evidence cluster's projected
+  // centroid in small screen-space steps, testing every node's projected
+  // radius, and returns the first contact backed off by a standoff - so the
+  // leader travels only over empty background and stops at the dot field's
+  // true outer edge, never crossing ANY dot (not just the evidence
+  // cluster's own members).
+  cloudContact(x1, y1, cx, cy, w, h) {
+    const dx = cx - x1, dy = cy - y1;
+    const dist = Math.hypot(dx, dy) || 1;
+    const ux = dx / dist, uy = dy / dist;
+    const stepSize = 6, standoff = 14;
+    const steps = Math.max(1, Math.floor(dist / stepSize));
+    const cam = this.camera, scale = cam.scale;
+    for (let s = 1; s <= steps; s++) {
+      const px = x1 + ux * stepSize * s, py = y1 + uy * stepSize * s;
+      for (const n of this.sim.nodes) {
+        const nx = (n.x - cam.x) * scale + w / 2;
+        const ny = (n.y - cam.y) * scale + h / 2;
+        const dd = Math.hypot(px - nx, py - ny);
+        if (dd <= n.hw * scale + 3) {
+          const backDist = Math.max(0, stepSize * s - standoff);
+          return { x: x1 + ux * backDist, y: y1 + uy * backDist };
+        }
+      }
+    }
+    // No contact along the whole ray - stop well short of the centroid
+    // rather than reaching all the way in.
+    const fallback = Math.max(dist - 60, dist * 0.5);
+    return { x: x1 + ux * fallback, y: y1 + uy * fallback };
+  }
+
+  // Re-derives every leader's cached geometry from live projected node
+  // positions. The card end reads the untransformed layout box
+  // (offsetLeft/offsetTop), so a leader measured mid-entrance never anchors
+  // low; the node end re-projects, so pan, zoom, resize and drag never
+  // leave a leader pointing at empty space. All coordinates round to
+  // integers before caching.
+  deriveLeaders(w, h) {
+    for (const meta of this.cardMeta) {
+      const evidence = meta.card.nodes;
+      if (!evidence.length) { meta.leader = null; continue; }
+      const src = evidence[0];
+      const grp = this.sim.byType.get(src.type) || [];
+      let gx = 0, gy = 0;
+      for (const ni of grp) { gx += this.sim.nodes[ni].x; gy += this.sim.nodes[ni].y; }
+      const count = grp.length || 1;
+      const cx = (gx / count - this.camera.x) * this.camera.scale + w / 2;
+      const cy = (gy / count - this.camera.y) * this.camera.scale + h / 2;
+      const el = meta.el;
+      const x1 = meta.slot.side === 'left' ? el.offsetLeft + el.offsetWidth : el.offsetLeft;
+      const y1 = el.offsetTop + el.offsetHeight / 2;
+      const contact = this.cloudContact(x1, y1, cx, cy, w, h);
+      const tx = contact.x, ty = contact.y;
+      // A shallow bend only - a wider bow risks bowing the curve's belly
+      // back over a dot near the boundary it just stopped short of.
+      const bend = (y1 < ty ? 1 : -1) * (meta.slot.side === 'left' ? 1 : -1) * 14;
+      const cxp = (x1 + tx) / 2, cyp = (y1 + ty) / 2 + bend;
+      const dirx = tx - cxp, diry = ty - cyp;
+      const dl2 = Math.hypot(dirx, diry) || 1;
+      const uxa = dirx / dl2, uya = diry / dl2;
+      const perpx = -uya, perpy = uxa;
+      const back = 8, spread = 4;
+      meta.leader = {
+        x1: Math.round(x1), y1: Math.round(y1),
+        cx: Math.round(cxp), cy: Math.round(cyp),
+        tx: Math.round(tx), ty: Math.round(ty),
+        a1x: Math.round(tx - uxa * back + perpx * spread), a1y: Math.round(ty - uya * back + perpy * spread),
+        a2x: Math.round(tx - uxa * back - perpx * spread), a2y: Math.round(ty - uya * back - perpy * spread),
+        hue: `hsl(${meta.hsl[0]},${meta.hsl[1]}%,${Math.min(85, meta.hsl[2] + 6)}%)`,
+      };
+    }
+  }
+
+  // Fires from the render loop at whichever comes first: the simulation
+  // reaching rest, or the CARD_REVEAL_MS ceiling from the first painted
+  // frame. The requestFrame kicks the entrance's first frame; the leader
+  // fade keeps the loop alive until it completes, and stillness returns.
   revealCards() {
     // The viewport bail precedes the latch: a settle below the size floor
     // leaves the reveal armed, so enlarging the window fires it on the next
@@ -1866,13 +2070,17 @@ class GraphView {
   replay() {
     const w = window.innerWidth, h = window.innerHeight;
     this.sim.resizeHome(w, h);
-    seedCompactCloud(this.sim.nodes, w / 2, h / 2, 0.06);
-    // A drag may have left the sim on the snappy cool-down profile; the
-    // entrance always blooms on the cinematic one.
-    this.sim.opts.damping = this.DECAY_CINEMATIC.damping;
-    this.sim.alphaDecay = this.DECAY_CINEMATIC.alphaDecay;
+    // A Replay is a genuinely fresh start - a node pinned from an earlier
+    // drag must not survive it and sit frozen while everything else
+    // re-enters. Every pin clears BEFORE the seed.
+    this.sim.nodes.forEach(n => { n.fx = null; n.fy = null; });
+    seedCompactCloud(this.sim.nodes, w / 2, h / 2);
     this.sim.alpha = 1;
     this.sim.alphaTarget = 0;
+    this.sim.dragNode = null;
+    this.sim.towed = [];
+    this.sim.recoverT0 = 0;
+    this.sim.entranceT0 = 0;
     this.selectedNode = null;
     this.hoverNode = null;
     this.dragNode = null;
@@ -1883,11 +2091,15 @@ class GraphView {
     // calm latch re-arms with it, so hover goes quiet for the re-run too.
     this.cardsShown = false;
     this.cardsShownAt = 0;
-    this.hoverCardIndex = -1;
-    this.cardGlow = 0;
     this.calm = false;
     this.cardMeta = [];
+    this._leaderMarchAt = 0;
+    this._leaderCamSig = '';
+    this._leaderRestMarched = false;
     if (this.cardsEl) { this.cardsEl.classList.remove('shown'); this.cardsEl.innerHTML = ''; }
+    this.heatCanvas = null;
+    this.heatFadeStart = 0;
+    this.settledOnce = false;
     this.entranceStart = 0;
     this.requestRender();
   }
@@ -1921,9 +2133,14 @@ class GraphView {
           if (Math.hypot(dx, dy) > 4) {
             this.dragging = true;
             this.dragNode = this.dragCandidate;
+            // Mirror the held node onto the simulation: the rest predicate
+            // reads it, and the tow pass pulls its direct neighbours toward
+            // it - captured here, emptied on release, never pinned.
+            this.sim.dragNode = this.dragNode;
+            this.sim.towed = (this.sim.adj.get(this.dragNode.id) || []).map(r => r.other);
             this.dragNode.fx = this.dragNode.x; this.dragNode.fy = this.dragNode.y;
-            this.sim.alphaTarget = 0.3;
-            this.sim.alpha = Math.max(this.sim.alpha, 0.4);
+            this.sim.alphaTarget = 0.35;
+            if (this.sim.alpha < this.sim.alphaTarget) this.sim.alpha = this.sim.alphaTarget;
           }
         }
         if (this.dragging && this.dragNode) { this.dragNode.fx = wp.x; this.dragNode.fy = wp.y; }
@@ -1950,12 +2167,17 @@ class GraphView {
     const release = () => {
       this.requestRender();
       if (this.dragging && this.dragNode) {
-        this.dragNode.fx = null; this.dragNode.fy = null;
+        // Pin exactly where dropped - no fx/fy clear, no spring home, and no
+        // repositioning of anything else. The field recovers IN PLACE: a
+        // full reheat (alpha 1 draining to 0) plus the simulation's brief
+        // eased-damping window relaxes the disturbed pocket with real
+        // physics. Nodes already in equilibrium have ~zero net force, so
+        // raising alpha moves nothing that wasn't actually disturbed.
+        this.sim.dragNode = null;
+        this.sim.towed = [];
+        this.sim.alpha = 1;
         this.sim.alphaTarget = 0;
-        // Post-drag cool-down runs on the snappy profile: the cinematic decay
-        // is an entrance treatment, not a price every drag should pay.
-        this.sim.opts.damping = this.DECAY_SNAPPY.damping;
-        this.sim.alphaDecay = this.DECAY_SNAPPY.alphaDecay;
+        this.sim.recoverT0 = performance.now();
       } else if (this.panning) {
         // pan release - camera state just stays where it is, nothing to undo
       } else if (this.dragCandidate) {
@@ -1994,9 +2216,19 @@ class GraphView {
   draw() {
     const ctx = this.ctx, sim = this.sim, w = window.innerWidth, h = window.innerHeight;
     ctx.drawImage(this.bg, 0, 0, w, h);
-    const ea = entranceGlobalAlpha(this.entranceStart);
     ctx.save();
     ctx.translate(w / 2, h / 2); ctx.scale(this.camera.scale, this.camera.scale); ctx.translate(-this.camera.x, -this.camera.y);
+
+    // The bloom pans and zooms locked to the galaxy it belongs to: the bake
+    // canvas and the fitted world plate are the same w x h rectangle, so one
+    // drawImage inside the camera transform is the whole registration.
+    if (this.heatCanvas) {
+      let heatMul = 1;
+      if (this.heatFadeStart) heatMul = clamp((performance.now() - this.heatFadeStart) / HEAT_FADE_MS, 0, 1);
+      if (heatMul < 1) ctx.globalAlpha = heatMul;
+      ctx.drawImage(this.heatCanvas, 0, 0, w, h);
+      if (heatMul < 1) ctx.globalAlpha = 1;
+    }
 
     const active = this.selectedNode || this.hoverNode;
     const connectedIds = active ? new Set(sim.adj.get(active.id).map(e => e.other.id)) : null;
@@ -2022,126 +2254,81 @@ class GraphView {
     // Always-on first, then most prominent (bigger radius) first.
     labelCandidates.sort((a, b) => (b.alwaysOn - a.alwaysOn) || (b.n.hw - a.n.hw));
 
-    // Ambient hairline reach: the resting mesh (no node under the pointer or
-    // selected) reads as a quiet constellation instead of a flat wireframe -
-    // nearby links carry more of the line, distant ones settle to a floor
-    // rather than vanish, so no real connection goes fully invisible.
-    const meshReach = w * MESH_REACH_TO_W;
-    for (const e of sim.edges) {
-      const isConn = !!(active && (e.source.id === active.id || e.target.id === active.id));
-      ctx.beginPath(); ctx.moveTo(e.source.x, e.source.y); ctx.lineTo(e.target.x, e.target.y);
-      if (isConn) {
-        ctx.strokeStyle = 'rgba(220,225,235,0.6)';
-        ctx.lineWidth = 1.6;
-      } else if (active) {
-        ctx.strokeStyle = 'rgba(190,195,205,0.04)';
-        ctx.lineWidth = 1;
-      } else {
-        const d = Math.hypot(e.source.x - e.target.x, e.source.y - e.target.y);
-        const near = 1 - Math.min(d / meshReach, 1);
-        ctx.strokeStyle = `rgba(190,195,205,${MESH_ALPHA_FLOOR + near * (MESH_ALPHA_NEAR - MESH_ALPHA_FLOOR)})`;
-        ctx.lineWidth = 1;
+    // The resting mesh is one quiet batched stroke - the coloured regions
+    // and their heat carry the composition now, so the hairlines only need
+    // to whisper the connective tissue. The selected/hover branches survive
+    // for the reading panel's connected-highlight affordance.
+    if (active) {
+      for (const e of sim.edges) {
+        const isConn = e.source.id === active.id || e.target.id === active.id;
+        ctx.beginPath(); ctx.moveTo(e.source.x, e.source.y); ctx.lineTo(e.target.x, e.target.y);
+        ctx.strokeStyle = isConn ? 'rgba(220,225,235,0.6)' : 'rgba(190,195,205,0.04)';
+        ctx.lineWidth = isConn ? 1.6 : 1;
+        ctx.stroke();
       }
-      ctx.globalAlpha = ea;
+    } else {
+      ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(180,190,210,0.085)';
+      ctx.beginPath();
+      for (const e of sim.edges) {
+        ctx.moveTo(e.source.x, e.source.y); ctx.lineTo(e.target.x, e.target.y);
+      }
       ctx.stroke();
-      ctx.globalAlpha = 1;
     }
 
-    // Depth: fill alpha eases off with distance from the sky's brightest
-    // anchor, so the composition reads as a core with a fading field around
-    // it instead of a flat scatter of equally-weighted dots.
-    const depthOrigin = this.heroHub || { x: 0, y: 0 };
-    const depthReach = w * DEPTH_REACH_TO_W;
-
+    // No per-node glow anywhere: the region heat IS the luminosity, and the
+    // absence on individual dots is the design. Completed records of the
+    // most numerous type swap to the dim sprite and step back to 0.8 alpha -
+    // finished work as quiet grey texture, living work carrying the colour.
     for (const n of sim.nodes) {
       const dim = active && n !== active && !(connectedIds && connectedIds.has(n.id)) ? 0.3 : 1;
-      const isActive = n === active;
-      // Glow ratios are the gradient's outer RADIUS in node-radii (the mockup's
-      // glow(x, y, r * 4.2) contract), so the sprite is drawn at 2x that reach
-      // for its width. Compositing is plain source-over with the glow UNDER the
-      // fill - per tokens.yaml hero.fill, the luminous read is emergent, "never
-      // a lighter paint"; additive blending is what made these read neon-tight
-      // instead of atmospheric.
-      if (isActive) {
-        const gs = n.hw * 4.4 * 2;
-        ctx.globalAlpha = 0.7 * ea;
-        ctx.drawImage(this.glowFor(n.type), n.x - gs / 2, n.y - gs / 2, gs, gs);
-      } else {
-        // Always-on ambient glow: the hero hub, and any rare riff/dial node,
-        // burn bright; other large cycle hubs get a much quieter halo. Every
-        // other node stays glow-free so the effect reads as rare, not busy.
-        let glowRatio = 0, glowAlpha = 0;
-        if (n === this.heroHub) { glowRatio = GLOW_ACCENT_TO_R; glowAlpha = GLOW_ACCENT_HERO_ALPHA; }
-        else if (n.type === 'riff' || n.type === 'dial') { glowRatio = GLOW_ACCENT_TO_R; glowAlpha = GLOW_ACCENT_RARE_ALPHA; }
-        else if (n.type === 'cycle' && (n.bucket === 'medium' || n.bucket === 'hub')) { glowRatio = GLOW_HUB_QUIET_TO_R; glowAlpha = GLOW_HUB_QUIET_ALPHA; }
-        if (glowRatio) {
-          const gs = n.hw * glowRatio * 2;
-          ctx.globalAlpha = glowAlpha * ea;
-          ctx.drawImage(this.ambientGlowFor(n.type), n.x - gs / 2, n.y - gs / 2, gs, gs);
-        }
-      }
-      const dist = Math.hypot(n.x - depthOrigin.x, n.y - depthOrigin.y);
-      const depthAlpha = Math.max(DEPTH_ALPHA_FLOOR, 1 - Math.min(dist / depthReach, 1) * (1 - DEPTH_ALPHA_FLOOR));
-      ctx.globalAlpha = dim * ea * depthAlpha;
+      const cooled = n.type === 'story' && (n.status === 'complete' || n.status === 'shipped');
+      const sprite = cooled ? this.spriteFor('story_dim', n.bucket) : this.spriteFor(n.type, n.bucket);
+      ctx.globalAlpha = (cooled ? 0.8 : 1) * dim;
       const d2 = n.hw * 2;
-      ctx.drawImage(this.spriteFor(n.type, n.bucket), n.x - n.hw, n.y - n.hh, d2, d2);
+      ctx.drawImage(sprite, n.x - n.hw, n.y - n.hh, d2, d2);
       ctx.globalAlpha = 1;
     }
     ctx.restore(); // back to screen space - DPR-scaled, no camera transform
 
-    // Provenance marks: a thin standoff ring around each chip's QUOTE-SOURCE
-    // node - the first evidence entry, whose order the sidecar contract makes
-    // normative (it already keys the witness; here it keys the ring, the
-    // hover warmth, and the eyebrow date). No leader lines: the connection
-    // is the hover - resting the mouse on a chip warms its node across the
-    // sky, and the warmth breathes out again on leave. Every 1px hue stroke
-    // rides a 3px dark casing on the same path - the label-halo idiom - and
-    // positions recompute from live node state every frame, so a mark never
-    // drifts during pan or zoom. Evidence that stopped resolving simply
-    // draws nothing: the chip stays, the pointer goes quiet.
+    // Leader pass: each card draws ONE dotted, gently-curved 1px reach in
+    // its evidence hue, riding a 3px dark casing - the label-halo idiom -
+    // ending in a filled arrowhead at the first node contact along the ray,
+    // standoff included, so no leader ever crosses a dot. Geometry re-derives
+    // from live projected positions (throttled), and the whole pass shares
+    // the reading panel's suppression seam. Evidence that stopped resolving
+    // simply draws nothing: the card stays, the pointer goes quiet.
     if (this.cardsShown && this.cardMeta.length && cardsViewportOk() &&
         this.cardsEl && !this.cardsEl.classList.contains('suppressed')) {
-      const markAlpha = clamp((performance.now() - this.cardsShownAt) / CARD_FADE_MS, 0, 1);
-      // The mark fade schedules its own frames until complete - internal
+      const leaderAlpha = clamp((performance.now() - this.cardsShownAt - LEADER_FADE_DELAY_MS) / LEADER_FADE_MS, 0, 1);
+      // The leader fade schedules its own frames until complete - internal
       // animation, not input.
-      if (markAlpha < 1) this.requestFrame();
-      if (markAlpha > 0) {
-        // The warmth eases toward its target each frame; while it is still
-        // travelling, keep the loop alive so the breath completes.
-        const glowTarget = this.hoverCardIndex >= 0 ? 1 : 0;
-        this.cardGlow += (glowTarget - this.cardGlow) * CARD_GLOW_EASE;
-        if (Math.abs(glowTarget - this.cardGlow) > 0.01) this.requestFrame();
-        else this.cardGlow = glowTarget;
+      if (leaderAlpha < 1) this.requestFrame();
+      if (leaderAlpha > 0) {
+        const nowMs = performance.now();
+        const atRest = this.sim.isAtRest();
+        const camSig = this.camera.x + '|' + this.camera.y + '|' + this.camera.scale;
+        const stale = camSig !== this._leaderCamSig || !atRest || !this._leaderRestMarched;
+        if (stale && (!this._leaderMarchAt || nowMs - this._leaderMarchAt >= LEADER_REMARCH_MS || (atRest && !this._leaderRestMarched))) {
+          this.deriveLeaders(w, h);
+          this._leaderMarchAt = nowMs;
+          this._leaderCamSig = camSig;
+          this._leaderRestMarched = atRest;
+        }
         ctx.save();
-        ctx.globalAlpha = markAlpha;
+        ctx.globalAlpha = leaderAlpha;
         const CASING = 'rgba(8,9,12,0.65)';
-        for (let mi = 0; mi < this.cardMeta.length; mi++) {
-          const meta = this.cardMeta[mi];
-          const evidence = meta.card.nodes;
-          if (!evidence.length) continue;
-          const src = evidence[0];
-          const nx = Math.round((src.x - this.camera.x) * this.camera.scale + w / 2);
-          const ny = Math.round((src.y - this.camera.y) * this.camera.scale + h / 2);
-          const r = Math.round(Math.max(12, src.hw * this.camera.scale * 1.35 + 6));
-          const g = this.hoverCardIndex === mi ? this.cardGlow : 0;
-          // Hover warmth: a soft radial bloom under the ring, in the chip's
-          // own hue - drawn first so the cased ring stays crisp above it.
-          if (g > 0.01) {
-            const glowR = r * 2.8;
-            const grad = ctx.createRadialGradient(nx, ny, r * 0.3, nx, ny, glowR);
-            grad.addColorStop(0, `hsla(${meta.hsl[0]},${meta.hsl[1]}%,${Math.min(85, meta.hsl[2] + 15)}%,${0.4 * g})`);
-            grad.addColorStop(1, `hsla(${meta.hsl[0]},${meta.hsl[1]}%,${meta.hsl[2]}%,0)`);
-            ctx.beginPath(); ctx.arc(nx, ny, glowR, 0, TAU);
-            ctx.fillStyle = grad; ctx.fill();
-          }
-          // Reticle: casing first, hue second, same path. The hue stroke
-          // thickens and brightens with the hover warmth.
-          ctx.beginPath(); ctx.arc(nx, ny, r, 0, TAU);
+        for (const meta of this.cardMeta) {
+          const L = meta.leader;
+          if (!L) continue;
+          ctx.setLineDash([1, 6]);
+          ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.moveTo(L.x1, L.y1); ctx.quadraticCurveTo(L.cx, L.cy, L.tx, L.ty);
           ctx.lineWidth = 3; ctx.strokeStyle = CASING; ctx.stroke();
-          ctx.beginPath(); ctx.arc(nx, ny, r, 0, TAU);
-          ctx.lineWidth = 1 + g * 0.8;
-          ctx.strokeStyle = `hsla(${meta.hsl[0]},${meta.hsl[1]}%,${Math.min(85, meta.hsl[2] + g * 12)}%,${0.55 + g * 0.35})`;
-          ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(L.x1, L.y1); ctx.quadraticCurveTo(L.cx, L.cy, L.tx, L.ty);
+          ctx.lineWidth = 1; ctx.strokeStyle = L.hue; ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.beginPath(); ctx.moveTo(L.tx, L.ty); ctx.lineTo(L.a1x, L.a1y); ctx.lineTo(L.a2x, L.a2y);
+          ctx.closePath(); ctx.fillStyle = L.hue; ctx.fill();
         }
         ctx.restore();
       }
@@ -2170,8 +2357,8 @@ class GraphView {
       const dim = active && n !== active && !(connectedIds && connectedIds.has(n.id)) ? 0.3 : 1;
       const isActive = n === active;
       ctx.font = (isActive ? '600 ' : '400 ') + '11px system-ui, -apple-system, sans-serif';
-      const labelAlpha = cand.alpha * dim * ea;
-      const col = isActive ? `rgba(255,255,255,${ea})` : `rgba(222,226,232,${0.78 * labelAlpha})`;
+      const labelAlpha = cand.alpha * dim;
+      const col = isActive ? 'rgba(255,255,255,1)' : `rgba(222,226,232,${0.78 * labelAlpha})`;
       drawLabelHalo(ctx, n.short, cand.sx, labelY, col);
     }
   }
@@ -2182,10 +2369,11 @@ class GraphView {
     if (!this.rafId) this.rafId = requestAnimationFrame(this.tick);
   }
 
-  // Pure frame scheduling for the page's OWN animations (card fades, glow
-  // easing). Unlike requestRender it does not stamp the input timer, so an
-  // internal ease can never masquerade as user activity and extend the calm
-  // window - the loop parks the moment the animation truly finishes.
+  // Pure frame scheduling for the page's OWN animations (heat fade, leader
+  // fade, card reveal). Unlike requestRender it does not stamp the input
+  // timer, so an internal ease can never masquerade as user activity and
+  // extend the calm window - the loop parks the moment the animation truly
+  // finishes.
   requestFrame() {
     if (!this.rafId) this.rafId = requestAnimationFrame(this.tick);
   }
@@ -2193,21 +2381,26 @@ class GraphView {
   tick(now) {
     this.rafId = null;
     if (!this.entranceStart) this.entranceStart = now;
+    // The simulation reads the same anchor for its launch-pop window - the
+    // swirl IS the entrance, there is no global fade softening it.
+    if (!this.sim.entranceT0) this.sim.entranceT0 = now;
     if (!this.lastT) this.lastT = now;
     const dt = Math.min((now - this.lastT) / 1000, 0.05);
     this.lastT = now;
     this.simT += dt;
-    this.sim.step(dt);
+    this.sim.step(dt, now);
     this.draw(now);
     this.frameCount++;
 
-    const entranceActive = entranceGlobalAlpha(this.entranceStart) < 1;
     if (this.interactionActive && !this.dragging && !this.panning && (now - this.lastInputAt) > CALM_MS) {
       this.interactionActive = false;
     }
-    const still = entranceActive || !this.sim.isAtRest() || this.dragging || this.panning || this.interactionActive;
+    // True stillness also waits for the heat fade - a loop parked mid-fade
+    // would snap the bloom to full alpha on the frame that stopped it.
+    const heatFading = !!this.heatFadeStart && (now - this.heatFadeStart) < HEAT_FADE_MS;
+    const still = !this.sim.isAtRest() || this.dragging || this.panning || this.interactionActive || heatFading;
     /* Guarded reschedule only: draw() may already have booked the next frame
-       (mark fade, hover-glow easing). A bare requestAnimationFrame here would
+       (heat fade, leader fade). A bare requestAnimationFrame here would
        stack a second loop on top of that one - and the population doubles
        every frame both fire, collapsing the page to a crawl. */
     if (still && !this.rafId) this.rafId = requestAnimationFrame(this.tick);
@@ -2215,13 +2408,21 @@ class GraphView {
     // energy: once the entrance's violent fling window has passed, pointing
     // at nodes feels natural again. Latched - later re-heats (a drag warms
     // the sim back up) never re-close it; only Replay does.
-    if (!entranceActive && (now - this.entranceStart) > HOVER_CALM_MS) this.calm = true;
-    // The insight reveal keys on a fixed load-delay clock from the first
-    // painted frame - never on the physics: rest timing is a rendering
-    // concern, and movement on the page must not delay the insight layer.
-    // It runs after the frame's scheduling decision so its requestFrame
-    // never races the still-guarded reschedule above.
-    if (!entranceActive && !this.cardsShown && (now - this.entranceStart) > CARD_REVEAL_DELAY_MS) this.revealCards();
+    if ((now - this.entranceStart) > HOVER_CALM_MS) this.calm = true;
+    // The insight reveal races the physics against a hard ceiling: true
+    // rest, or CARD_REVEAL_MS from the first painted frame, whichever
+    // arrives first - so a fast settle brings the layer in early and a
+    // long-held drag can never push it out indefinitely. It runs after the
+    // frame's scheduling decision so its requestFrame never races the
+    // still-guarded reschedule above.
+    if (!this.cardsShown && (this.sim.isAtRest() || (now - this.entranceStart) > CARD_REVEAL_MS)) this.revealCards();
+    // The bloom bakes on its own early beat, or at first true rest -
+    // whichever arrives first; armHeat guards the fade clock so it never
+    // double-fires. Both sit after the scheduling decision for the same
+    // reason the reveal does: their requestFrame must never race the
+    // still-guarded reschedule above.
+    if (!this.heatFadeStart && (now - this.entranceStart) > EARLY_HEAT_MS) this.armHeat(now);
+    if (!this.settledOnce && this.sim.isAtRest()) { this.settledOnce = true; this.armHeat(now); }
   }
 }
 
