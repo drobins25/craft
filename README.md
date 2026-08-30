@@ -1,4 +1,6 @@
-![Craft - a Claude Code plugin. Claude proposes. You decide. Craft builds. Stop Vibing. Start Crafting. Your codebase is read-only until a tweak, a fix, or a story opens it. Claude proposes a researched plan, you decide, and every code change leaves a paper trail in your project's .craft directory. And your taste compounds - say "Love it!" once, and craft builds with it next time, without being asked.](https://raw.githubusercontent.com/drobins25/craft/assets/hero.svg)
+![Craft's dashboard rendering a real project as a living galaxy - records cluster into colored regions with glowing heat behind them, finished work cooled to quiet grey, observation cards quoting the project's own history with arrows into the sky, the whole thing swirling into place and settling still.](https://raw.githubusercontent.com/drobins25/craft/assets/craft-galaxy.gif)
+
+*Your project, as craft sees it. Every dot is a real record of your work - and this page ships with the plugin.*
 
 # Craft [![version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fdrobins25%2Fcraft%2Fmain%2F.claude-plugin%2Fplugin.json&query=%24.version&label=version&color=blue)](CHANGELOG.md)
 
