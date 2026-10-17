@@ -88,8 +88,8 @@ This sets the story status to `complete` and clears `CURRENT_STORY`. The story c
 ## Commit conventions
 
 - Use conventional prefixes: `feat:` / `fix:` / `chore:` / `refactor:` / `docs:` / `test:`
-- Bump `.claude-plugin/plugin.json` once per feature or fix - one bump per logical change, in its final commit. Never per chunk
-- Notable changes add a `CHANGELOG.md` entry in that same final commit: a `## <version> - <YYYY-MM-DD>` heading with verb-first, user-facing bullets ("Added...", "Fixed...", "Changed..."). Features always count as notable; fixes only when a user would notice. Internal changes (tests, refactors, contributor tooling) bump with no entry. The doc-drift check blocks a changelog ahead of plugin.json and blocks pushing `feat:` commits with no changelog change
+- Bump `.claude-plugin/plugin.json` once per feature or fix that changes a file craft runs (commands, skills, agents, hooks and the scripts they call) - one bump per logical change, in its final commit. Changes to tests, CI or contributor tooling alone never bump. Never per chunk
+- Notable changes add a `CHANGELOG.md` entry in that same final commit: a `## <version> - <YYYY-MM-DD>` heading with verb-first, user-facing bullets ("Added...", "Fixed...", "Changed..."). Features always count as notable; fixes only when a user would notice. Internal changes to files craft runs (refactors, prompt rewording) bump with no entry. The doc-drift check blocks a changelog ahead of plugin.json and blocks pushing `feat:` commits with no changelog change
 - Translate internal jargon to what the change DOES. Public craft terms (skills, agents, commands, hooks, cycles, stories, backlog, phases) are fine. Internal mechanism names need explanation
 - Regular dashes only, never em dashes (they read as AI-generated)
 
