@@ -14,7 +14,7 @@
 // own arguments are missing.
 
 import { spawn } from 'node:child_process';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, openSync } from 'node:fs';
 import { join } from 'node:path';
 
 const [chromeBin, pageUrl, profileDir] = process.argv.slice(2);
@@ -40,19 +40,29 @@ const finish = () => {
 setTimeout(() => { result.error = result.error || 'probe exceeded ' + HARD_CAP_MS + 'ms'; finish(); }, HARD_CAP_MS).unref();
 
 // --- launch Chrome on a free port it chooses itself --------------------------
+const diagLog = join(profileDir, '..', 'chrome-stderr.log');
+const diagFd = openSync(diagLog, 'w');
+const diagT0 = Date.now();
 chrome = spawn(chromeBin, [
   '--headless=new', '--disable-gpu', '--no-sandbox', '--no-first-run',
   '--remote-debugging-port=0', '--user-data-dir=' + profileDir,
+  '--enable-logging=stderr', '--v=1',
   '--window-size=' + WIDTH + ',' + HEIGHT, 'about:blank'
-], { stdio: 'ignore' });
+], { stdio: ['ignore', diagFd, diagFd] });
+let diagExit = null;
+chrome.on('exit', (code, signal) => { diagExit = { code, signal, atMs: Date.now() - diagT0 }; });
 chrome.on('error', e => { result.error = 'chrome did not start: ' + e.message; finish(); });
 
 const portFile = join(profileDir, 'DevToolsActivePort');
+// DIAG (throwaway): wait up to 60s, record how long the port took and what Chrome did.
 let port = null;
-for (let i = 0; i < 100 && !port; i++) {
+for (let i = 0; i < 600 && !port; i++) {
   if (existsSync(portFile)) port = readFileSync(portFile, 'utf8').split('\n')[0].trim() || null;
   if (!port) await sleep(100);
 }
+const diagTail = () => { try { return readFileSync(diagLog, 'utf8').split('\n').slice(-40).join('\n'); } catch (e) { return 'no stderr log: ' + e.message; } };
+const chromeStart = { portMs: port ? Date.now() - diagT0 : null, wouldFail10s: !port || Date.now() - diagT0 > 10000, exit: diagExit, stderrTail: (!port || Date.now() - diagT0 > 3000) ? diagTail() : '' };
+result.chromeStart = chromeStart;
 if (!port) { result.error = 'chrome never opened its debugging port'; finish(); }
 
 let target = null;

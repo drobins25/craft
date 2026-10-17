@@ -88,6 +88,8 @@ jobs:
       CRAFT_CI_LIVE: "1"
     steps:
       - uses: actions/checkout@v4
+      - name: DIAG chrome start (throwaway)
+        run: node scripts/ci/chrome-start-diag.mjs "$(command -v google-chrome)"
       - run: bash tests/test-ci-annotate-check.sh
 
   browser:
@@ -98,4 +100,6 @@ jobs:
       CRAFT_CI_LIVE: "1"
     steps:
       - uses: actions/checkout@v4
+      - name: DIAG chrome start (throwaway)
+        run: node scripts/ci/chrome-start-diag.mjs "$(command -v google-chrome)"
       - run: bash tests/test-ci-browser-check.sh

@@ -15,7 +15,7 @@
 // script exits 0 unless its own arguments are missing.
 
 import { spawn, execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync, existsSync, statSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, statSync, openSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -41,7 +41,7 @@ const finish = () => {
   try { if (ws) ws.close(); } catch (e) { /* already closed */ }
   for (const w of watches) { try { w.proc.kill('SIGKILL'); } catch (e) { /* already gone */ } }
   try { if (chrome) process.kill(-chrome.pid, 'SIGKILL'); } catch (e) { /* already gone */ }
-  console.log(JSON.stringify({ error: verdictError, asserts }));
+  console.log(JSON.stringify({ error: verdictError, asserts, chromeStart }));
   process.exit(0);
 };
 setTimeout(() => { verdictError = verdictError || 'probe exceeded ' + HARD_CAP_MS + 'ms'; finish(); }, HARD_CAP_MS).unref();
@@ -49,22 +49,32 @@ setTimeout(() => { verdictError = verdictError || 'probe exceeded ' + HARD_CAP_M
 const check = (n, text, ok, detail) => { asserts.push({ n, text, ok: !!ok, detail: ok ? '' : String(detail || '') }); };
 
 // --- launch Chrome on a debugging port it chooses itself ----------------------
+let chromeStart = null;
+const diagLog = join(profileDir, '..', 'chrome-stderr.log');
+const diagFd = openSync(diagLog, 'w');
+const diagT0 = Date.now();
 chrome = spawn(chromeBin, [
   '--headless=new', '--disable-gpu', '--no-sandbox', '--no-first-run',
   '--remote-debugging-port=0', '--user-data-dir=' + profileDir,
   // A name that is not local, served by this machine: lets the run open a page on a foreign origin.
   '--host-resolver-rules=MAP external.test 127.0.0.1',
+  '--enable-logging=stderr', '--v=1',
   '--window-size=' + WIDTH + ',' + HEIGHT, 'about:blank'
-], { stdio: 'ignore', detached: true });
+], { stdio: ['ignore', diagFd, diagFd], detached: true });
+let diagExit = null;
+chrome.on('exit', (code, signal) => { diagExit = { code, signal, atMs: Date.now() - diagT0 }; });
 chrome.on('error', e => { verdictError = 'chrome did not start: ' + e.message; finish(); });
 if (chrome.pid) writeFileSync(chromePidFile, String(chrome.pid));
 
 const portFile = join(profileDir, 'DevToolsActivePort');
+// DIAG (throwaway): wait up to 60s, record how long the port took and what Chrome did.
 let port = null;
-for (let i = 0; i < 100 && !port; i++) {
+for (let i = 0; i < 600 && !port; i++) {
   if (existsSync(portFile)) port = readFileSync(portFile, 'utf8').split('\n')[0].trim() || null;
   if (!port) await sleep(100);
 }
+const diagTail = () => { try { return readFileSync(diagLog, 'utf8').split('\n').slice(-40).join('\n'); } catch (e) { return 'no stderr log: ' + e.message; } };
+chromeStart = { portMs: port ? Date.now() - diagT0 : null, wouldFail10s: !port || Date.now() - diagT0 > 10000, exit: diagExit, stderrTail: (!port || Date.now() - diagT0 > 3000) ? diagTail() : '' };
 if (!port) { verdictError = 'chrome never opened its debugging port'; finish(); }
 
 let target = null;

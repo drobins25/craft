@@ -267,6 +267,7 @@ for n in range(1, int(sys.argv[2]) + 1):
     else:
         print("assert %d FAIL: %s (%s)" % (n, item["text"], item.get("detail", "")))
         failed = True
+print("DIAG chromeStart: %s" % json.dumps(data.get("chromeStart")))
 if data.get("error"):
     print("probe error: %s" % data["error"])
     failed = True
