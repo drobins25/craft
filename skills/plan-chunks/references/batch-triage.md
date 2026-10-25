@@ -10,8 +10,8 @@ Concerns and decisions from agent plan reports are sorted into three tiers based
 
 | Tier | Confidence | Agent Behavior | Triage Behavior |
 |------|-----------|----------------|-----------------|
-| **Needs review** | Low | Agent flagged it, made a tentative recommendation but isn't sure | Individual AskUserQuestion per item (BT-2) |
-| **Worth noting** | Medium | Agent decided but thinks user should verify | Individual AskUserQuestion per item (BT-3) — same pattern as BT-2 |
+| **Needs review** | Low | Agent flagged it, made a tentative recommendation but isn't sure | One question card per item (BT-2) |
+| **Worth noting** | Medium | Agent decided but thinks user should verify | Never asked: joins the batch settled list (BT-3), and the user reopens an item by name |
 | **Informational** | High | Agent decided confidently, included for visibility | Not surfaced during triage — shown in plan presentation only |
 
 ### Collecting Concerns Across Stories
@@ -37,60 +37,23 @@ informational_count = items with confidence: high
 
 ---
 
-## AskUserQuestion Templates
+## Question Templates
 
-**Before constructing any BT-2/BT-3/BT-4 AskUserQuestion, Read `${CLAUDE_PLUGIN_ROOT}/commands/references/auq-grammar.md` and mirror the worked gate that matches the question** - these are forks (a recommendation weighed against a real alternative). The exemplar carries the whole grammar (question field, option shapes, header chip); mirror it rather than reconstructing it from a summary. The grammar governs how options read; it never changes which outcomes a template offers - the distinct closers below survive as-is.
+**Before asking any BT-2 or BT-4 card, or printing the BT-3 settled list, Read `${CLAUDE_PLUGIN_ROOT}/commands/references/question-card.md` once.** The reference owns the card and the list; the sections below choose which items reach a card and what each outcome does.
 
-**Answer-time write (same rule as S-3):** after each answered BT-2/BT-3/BT-4 question, apply that answer's edit to the affected story file immediately (per "Story File Writing" below) and print one truthful receipt line before the next question renders; a no-op answer prints "kept as planned". A BT-4 cohesion answer writes BOTH stories' coordination notes at answer time - the second-side note is a one-line append to the other story's chunk, not a plan load, so the never-hold-two-plans rule is not violated. Per-answer writes touch one story file at a time. Answers must survive a session that dies mid-triage.
+**Answer-time write (same rule as S-3):** after each answered BT-2/BT-4 card, apply that answer's edit to the affected story file immediately (per "Story File Writing" below) and print the read-back the reference gives before the next card renders; a no-op answer reads "kept as planned". A reopened settled item is written the same way. A BT-4 cohesion answer writes BOTH stories' coordination notes at answer time - the second-side note is a one-line append to the other story's chunk, not a plan load, so the never-hold-two-plans rule is not violated. Per-answer writes touch one story file at a time. Answers must survive a session that dies mid-triage.
 
 ### BT-2: Needs Review (per item)
 
-```yaml
-question: "[Story Name] — [the concern and the ask, self-contained: what the agent found, what it trades off, which way to go]"
-header: "Review"
-multiSelect: false
-options:
-  - label: "[Agent's recommendation] (Recommended)"
-    description: "[Agent's reasoning — 1-2 sentences explaining why]"
-  - label: "[Alternative approach]"
-    description: "[Honest verdict — why this might be better, or its cost in a phrase]"
-  - label: "Skip for now"
-    description: "Leave this for implementation to figure out"
-```
+One card per item. The first words of the question paragraph name the story, then the concern and the ask, self-contained: what the agent found, what it trades off, which way to go. The agent's recommendation is the proposed option; the other option is the honest alternative from the concern description (a yes/no decision's alternative is the opposite).
 
-**Deriving the alternative:** Look at the agent's concern description. If it mentions two approaches, use the non-recommended one. If it's a yes/no decision, the alternative is the opposite. If no natural alternative exists, use "Different approach" as the second option - the built-in "Chat about this" exit already covers discussion.
+### BT-3: Worth Noting (settled list)
 
-### BT-3: Worth Noting (per item — same as BT-2)
-
-```yaml
-question: "[Story Name] — [the decision and the ask, self-contained: what the agent decided, what it trades off, keep or change]"
-header: "Worth noting"
-multiSelect: false
-options:
-  - label: "[Agent's recommendation] (Recommended)"
-    description: "[Agent's reasoning — 1-2 sentences explaining why]"
-  - label: "[Alternative approach]"
-    description: "[Honest verdict — why this might be better, or its cost in a phrase]"
-  - label: "Accept as-is"
-    description: "Agent's call is fine, move on"
-```
-
-**Deriving the alternative:** Same as BT-2 — look at the concern description for a natural alternative. Use "Different approach" if no natural alternative exists.
+Worth-noting items are never asked. Each joins the batch settled list with the informational items, grouped by story. An entry is the story name, then the call in product words, then an indented line of code facts - the same shape as the reference's settled list. The list prints once under `Settled without asking - say which to reopen`, before Question 1, or heading the BT-5 plan presentation when BT-2 and BT-4 ask no card. A listed item is accepted by not reopening it; when the user names one, it is asked on a card in the normal order.
 
 ### BT-4: Cohesion Issue (per issue)
 
-```yaml
-question: "[The overlap and the ask, self-contained — e.g., 'Login and Signup both modify auth-form.tsx; who owns it, or extract a shared component?']"
-header: "Overlap"
-multiSelect: false
-options:
-  - label: "[Recommended resolution] (Recommended)"
-    description: "[What this means for implementation — and why it wins]"
-  - label: "[Alternative resolution]"
-    description: "[Honest verdict — what this means for implementation, its cost in a phrase]"
-  - label: "Flag for implementation"
-    description: "Note the overlap, handle during implementation"
-```
+One card per issue. The first words of the question paragraph name the stories and the overlap, self-contained (for example, Login and Signup both modify the auth form: who owns it, or extract a shared component?). Outcomes: the recommended resolution (proposed), an alternative resolution, and "Flag for implementation", which writes a coordination note to both stories and leaves the overlap to the implementer.
 
 A resolved BT-4 answer lands in BOTH story files at answer time (see the answer-time write rule above) — never defer the second side to BT-6.
 
@@ -139,7 +102,7 @@ options:
     description: "Go through them one by one"
 ```
 
-**Trigger condition:** 5+ stories AND BT-2 had zero needs-review items AND BT-3 had zero worth-noting items AND BT-4 had zero cohesion issues. If any phase had interaction, fall back to individual approval.
+**Trigger condition:** 5+ stories AND BT-2 had zero needs-review items AND no settled item was reopened AND BT-4 had zero cohesion issues. If any phase had interaction, fall back to individual approval.
 
 ### BT-7: Next Steps
 
@@ -227,7 +190,7 @@ If every agent fails (all stories in the failure queue):
 If every concern across all stories has confidence: high:
 
 1. BT-1 reports: "Planned [N] stories successfully. No items need review — agents were confident across the board."
-2. Skip BT-2 and BT-3 entirely
+2. Skip BT-2 entirely; the informational items go on the settled list that heads the BT-5 presentation
 3. Proceed to BT-4 (cohesion check still runs — file overlap isn't about confidence)
 4. BT-5 uses batch approval fast path if 5+ stories
 
@@ -243,7 +206,7 @@ If `MODE: batch` is passed but only one story has `status: planning`:
 
 User fatigue risk is real with 8+ stories. Mitigations built into the flow:
 
-- BT-3 uses individual questions (same as BT-2) but medium-confidence items are typically fewer and quicker to resolve
+- BT-3 asks nothing: worth-noting items join the settled list, so only a reopened item costs an interaction
 - BT-5 batch approval fast path (for clean batches) reduces to one interaction
 - BT-2 groups needs-review items by story (mental context stays coherent)
 - If the batch is fully clean (all informational, no cohesion issues), the user sees: BT-1 overview → BT-5 batch approve → BT-7 next steps. Three interactions total.

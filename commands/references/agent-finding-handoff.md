@@ -9,7 +9,7 @@ This file is Read inline by agents that surface findings to the user after deep 
 This file is Read by three specific agents RIGHT BEFORE they surface findings to the user. Not at task start, not during research - at the output handoff boundary:
 
 - **`plan-chunks-agent`** - before formatting concerns and findings for return to the orchestrator
-- **`alignment-check.md` Step 3** - before constructing the AskUserQuestion that surfaces gaps to the user
+- **`alignment-check.md` Step 3** - before writing the question cards that surface gaps to the user
 - **`pr-reviewer-expert`** - before writing the review report
 
 These three agents do most of their thinking in isolated contexts (deep research, codebase scans, diff reads). The user is not in that context. Reading this file at the output boundary closes the context-handoff gap.

@@ -117,7 +117,7 @@ flowchart TD
     ALIGNMENT["Step 8: Codebase Alignment Check<br/>Spawn Explore agent, investigate codebase"]
     ALIGNMENT --> INVESTIGATE["Read commands/references/alignment-check.md<br/>Surface product questions"]
     INVESTIGATE --> GAPS{"Unasked product<br/>questions remain?"}
-    GAPS -->|Yes| ASK_GAPS["AskUserQuestion:<br/>Conflicts, adjacencies, assumptions"]
+    GAPS -->|Yes| ASK_GAPS["Question cards:<br/>Conflicts, adjacencies, assumptions"]
     ASK_GAPS --> SCOPE_CHECK{"Answers expanded scope?"}
     SCOPE_CHECK -->|Yes| SENDMSG["SendMessage to same Explore agent<br/>Investigate new scope implications"]
     SENDMSG --> GAPS
@@ -275,7 +275,7 @@ flowchart TD
     STORY_DECIDE --> STORY_LOCK["lock-decision (typed keys)"]
     STORY_LOCK --> STORY_ALIGN["3c: Codebase Alignment Check<br/>(commands/references/alignment-check.md)"]
     STORY_ALIGN --> STORY_GAPS{"Unasked product<br/>questions remain?"}
-    STORY_GAPS -->|Yes| STORY_ASK["AskUserQuestion +<br/>SendMessage loop"]
+    STORY_GAPS -->|Yes| STORY_ASK["Question cards +<br/>SendMessage loop"]
     STORY_ASK --> STORY_GAPS
     STORY_GAPS -->|No| STORY_ALIGNED["Set alignment: complete"]
     STORY_ALIGNED --> STORY_ACCEPT["3d: Define acceptance"]

@@ -41,9 +41,8 @@ done
 begin_test "two-readings test and both outcomes present"
 assert_contains_literal "test question" 'Would a different reading of the ask produce a different set of branches?' "$REF_TEXT"
 assert_contains_literal "disclosure line" 'Researching: <question>. Branches: <a>, <b>, <c>.' "$REF_TEXT"
-assert_contains_literal "fork-gate header" 'header: "1 of 1"' "$REF_TEXT"
-assert_contains_literal "recommended marker" '(Recommended)' "$REF_TEXT"
-assert_contains_literal "grammar exemplar named" 'auq-grammar.md' "$REF_TEXT"
+assert_contains_literal "card reference named" 'question-card.md' "$REF_TEXT"
+assert_contains_literal "proposed marker" '(proposed)' "$REF_TEXT"
 
 begin_test "landing defines run line and anchors"
 assert_contains_literal "run line template" '_Research run <YYYY-MM-DD>, <DOOR> door:' "$REF_TEXT"

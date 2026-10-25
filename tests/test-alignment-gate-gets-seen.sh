@@ -2,15 +2,14 @@
 # test-alignment-gate-gets-seen.sh - Guard story 16's alignment-gate contract.
 # The gate's five fixes live as exact strings: the Explore prompt's plain-language
 # instruction (Step 1), the objective ask-vs-act filter (Step 2), the gate-time Read
-# of the worked exemplar in place of the deleted batching mandate (Step 3), and the
-# exemplar file itself modeling the full gate (lean + (Recommended)-first widget +
-# 3-option shape). A paraphrase or a resurrected "group related findings" mandate
-# should fail the suite, not slip through review.
+# of the question card reference in place of the deleted batching mandate (Step 3).
+# A paraphrase or a resurrected "group related findings" mandate should fail the
+# suite, not slip through review. The card's own shape is pinned in
+# test-question-cards.sh.
 
 source "$(dirname "${BASH_SOURCE[0]}")/test_helper.sh"
 
 ALIGN="$PLUGIN_ROOT/commands/references/alignment-check.md"
-GRAMMAR="$PLUGIN_ROOT/commands/references/auq-grammar.md"
 
 # --- Step 1: findings arrive in the user's language ---
 begin_test "Step 1 instructs plain-language findings at the source"
@@ -39,64 +38,24 @@ assert_file_contains "collapse rule present" 'Collapse before you surface.' "$AL
 
 begin_test "Step 2 keeps the lean when it does ask"
 assert_file_contains "choice-vs-opinion reconciliation" 'the CHOICE is theirs - not that you have no opinion' "$ALIGN"
-assert_file_contains "every surfaced fork ends on the lean" 'ends on your lean and marks the recommended option' "$ALIGN"
+assert_file_contains "every surfaced fork ends on the lean" 'ends on your lean and the card marks it' "$ALIGN"
 
-# --- Step 3: reads the exemplar, one finding at a time ---
-begin_test "Step 3 reads the worked exemplar at gate time"
-assert_file_contains "exemplar Read mandate present" 'auq-grammar.md' "$ALIGN"
-assert_file_contains "mirror matched to the finding kind" 'mirror the worked gate that matches your finding' "$ALIGN"
-assert_file_contains "both gate kinds named" 'That file holds two' "$ALIGN"
-assert_file_contains "dead end named as a kind" 'a fact that decides itself is a dead end' "$ALIGN"
-
-begin_test "Step 3 heading frozen for the agent-finding-handoff hardcode"
-assert_file_contains "Step 3 heading byte-identical" '### Step 3: Surface Gaps via AskUserQuestion' "$ALIGN"
+# --- Step 3: reads the card reference, one finding at a time ---
+begin_test "Step 3 reads the card reference at gate time"
+assert_file_contains "card reference Read mandate present" 'question-card.md' "$ALIGN"
 assert_file_contains "Self-Contained Test paragraph survives" 'Self-Contained Test' "$ALIGN"
+
+begin_test "Step 3 heading names the cards, matching the agent-finding-handoff cross-reference"
+assert_file_contains "Step 3 heading present" '### Step 3: Surface Gaps on Question Cards' "$ALIGN"
+assert_file_contains "skip-ahead names the new heading" 'Step 3 (Surface Gaps on Question Cards)' "$ALIGN"
 
 begin_test "batching mandate stays dead"
 assert_file_not_contains "group-findings mandate gone" 'Group related findings in a single message' "$ALIGN"
 assert_file_not_contains "pepper-the-user framing gone" 'pepper the user' "$ALIGN"
-assert_file_contains "one finding per widget, sequenced" 'One finding per AskUserQuestion, sequenced' "$ALIGN"
+assert_file_contains "one finding per card, sequenced" 'One finding per card, sequenced' "$ALIGN"
 
-begin_test "worked example lives only in the exemplar"
+begin_test "worked example lives only in the card reference"
 assert_file_not_contains "no inline checkout widget in alignment-check" 'Checkout only (Recommended)' "$ALIGN"
-assert_file_contains "checkout widget lives in the exemplar" 'Checkout only (Recommended)' "$GRAMMAR"
-
-# --- The exemplar models the full gate ---
-begin_test "exemplar models the dead-end gate"
-assert_file_contains "dead-end worked example present" '## The worked dead end' "$GRAMMAR"
-assert_file_contains "dead ends decide themselves" 'a dead end decides itself' "$GRAMMAR"
-assert_file_contains "story-fate question modeled" 'What should this story become' "$GRAMMAR"
-
-begin_test "exemplar models the full gate shape"
-assert_file_exists "auq-grammar.md exists" "$GRAMMAR"
-assert_file_contains "shape-not-content rule" 'mirror the shape, not the content' "$GRAMMAR"
-assert_file_contains "scenario declared invented" 'invented' "$GRAMMAR"
-assert_file_contains "visible prose named as requirement" 'Visible prose' "$GRAMMAR"
-assert_file_contains "airy paragraphs modeled" 'Short, airy paragraphs' "$GRAMMAR"
-assert_file_contains "opens from the user's intent" 'Opens from the user' "$GRAMMAR"
-assert_file_not_contains "prose counter retired - the chip carries position" 'Finding 1 of 1' "$GRAMMAR"
-assert_file_contains "fork finding opens on a problem title" 'The address check fits three forms - the story covers one' "$GRAMMAR"
-assert_file_contains "dead-end finding opens on a problem title" 'The saved-cart reminder is already built' "$GRAMMAR"
-assert_file_contains "bold lean modeled" '\*\*My lean:\*\*' "$GRAMMAR"
-assert_file_contains "evidence cited once as a coordinate" 'three call sites' "$GRAMMAR"
-assert_file_not_contains "authored escape option retired (any case)" "et's discuss" "$GRAMMAR"
-assert_file_not_contains "authored escape retired from the gate doc too" "et's discuss" "$ALIGN"
-assert_file_contains "built-in exit named, authoring forbidden" 'never author an escape option' "$GRAMMAR"
-assert_file_contains "built-in exit is the harness's" 'Chat about this' "$GRAMMAR"
-assert_file_contains "header chip carries the position counter" 'header: "1 of 1"' "$GRAMMAR"
-assert_file_contains "chip's job stated in prose, not just modeled" 'running position counter' "$GRAMMAR"
-assert_file_contains "topic labels forbidden on gate chips" 'never a topic label' "$GRAMMAR"
-assert_file_contains "question field stands alone: problem then ask" 'one or two sentences of the problem, then' "$GRAMMAR"
-assert_file_contains "prose is enrichment, never load-bearing" 'the prose enriches, it is never load-bearing' "$GRAMMAR"
-assert_file_contains "honest runner-up verdicts" 'honest one-line verdict' "$GRAMMAR"
-
-begin_test "option count follows substance, not a quota"
-assert_file_contains "count-follows-substance stated" 'the worked count is never a quota' "$GRAMMAR"
-assert_file_contains "argued middle path modeled in the fork" 'Checkout plus the account page' "$GRAMMAR"
-
-begin_test "options carry the answer contract"
-assert_file_contains "label is the spoken decision" 'the decision in plain words' "$GRAMMAR"
-assert_file_contains "description leads with consequence" 'opens with the consequence' "$GRAMMAR"
-assert_file_contains "one-sided widgets route back to the filter" "not a fork - that is Step 2's filter" "$GRAMMAR"
+assert_file_not_contains "authored escape retired from the gate doc" "et's discuss" "$ALIGN"
 
 finish_tests

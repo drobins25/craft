@@ -1,49 +1,38 @@
 #!/bin/bash
-# test-plan-chunks-triage-grammar.sh - Guard story 17's plan-chunks gate-grammar contract.
-# Plan-chunks' insight-bearing questions (the S-2 PLAN FORK, all five S-3 triage
-# questions, batch BT-2/BT-3/BT-4) read the worked exemplar (auq-grammar.md) at
-# question time; answers land in the story file at answer time with a truthful
-# receipt line; BT-6 demotes to reconciliation; BT-5 "Adjust" re-planning binds
-# already-landed decisions. The distinct closers survive, and NO non-insight AUQ
-# surface (content-spark prerequisite, direction gate, S-4 approval, S-6 offer)
-# adopts the grammar - that boundary is asserted with scoped block extraction.
-# A paraphrase, a resurrected bare question stem, or a boundary leak should fail
-# the suite, not slip through review.
+# test-plan-chunks-triage-grammar.sh - Guard plan-chunks' triage contract.
+# The single-story questions (the S-2 PLAN FORK and all five S-3 triage
+# questions) ask on question cards and read question-card.md at question time;
+# batch BT-2 and BT-4 ask on cards too, and BT-3 worth-noting items join the
+# settled list instead of being asked. Answers land in the story file at answer time with a
+# truthful read-back; BT-6 demotes to reconciliation; BT-5 "Adjust" re-planning
+# binds already-landed decisions. The staying widgets (content-spark
+# prerequisite, direction gate, S-4 approval, S-6 offer) do not name the card
+# reference - that boundary is asserted with scoped block extraction.
 
 source "$(dirname "${BASH_SOURCE[0]}")/test_helper.sh"
 
 SKILL="$PLUGIN_ROOT/skills/plan-chunks/SKILL.md"
 BATCH="$PLUGIN_ROOT/skills/plan-chunks/references/batch-triage.md"
-GRAMMAR="$PLUGIN_ROOT/commands/references/auq-grammar.md"
 
-# --- The exemplar names plan-chunks as a reader ---
-begin_test "exemplar intro names plan-chunks as a second reader"
-assert_file_exists "auq-grammar.md exists" "$GRAMMAR"
-assert_file_contains "plan-chunks named as gate-time reader" "plan-chunks' fork and triage" "$GRAMMAR"
-assert_file_contains "alignment check still named first" 'the alignment check at Step 3' "$GRAMMAR"
-
-# --- S-2 Step 0: the PLAN FORK reads the exemplar ---
+# --- S-2 Step 0: the PLAN FORK asks on a card ---
 FORK_BLOCK="$(sed -n '/\*\*Step 0 - PLAN FORK check:\*\*/,/\*\*Step 1 - Validate/p' "$SKILL")"
+S3_OPEN="$(sed -n '/^### S-3/,/^\*\*Answer-time write/p' "$SKILL")"
 
-begin_test "S-2 PLAN FORK reads the exemplar and mirrors the fork gate"
+begin_test "S-2 PLAN FORK reads the card reference"
 assert_contains "fork block exists" 'PLAN FORK' "$FORK_BLOCK"
-assert_contains "fork reads auq-grammar at gate time" 'auq-grammar.md' "$FORK_BLOCK"
-assert_contains "fork mirrors the exemplar, not a summary" 'mirror the fork gate it models' "$FORK_BLOCK"
-assert_contains "exemplar named as the whole grammar" 'the exemplar carries the whole grammar' "$FORK_BLOCK"
+assert_contains "fork reads question-card at question time" 'question-card.md' "$FORK_BLOCK"
+assert_contains "fork asks as one card" 'one question card' "$FORK_BLOCK"
 assert_not_contains "authored escape retired from the fork" "et's discuss" "$FORK_BLOCK"
 
-# --- S-3: one gate-time Read covers all five triage questions ---
-begin_test "S-3 opens on the gate-time Read of the exemplar"
-assert_file_contains "S-3 reads auq-grammar before constructing questions" 'Before constructing any triage AskUserQuestion (Steps 1-5), Read' "$SKILL"
-assert_file_contains "mirror matched to the question kind" 'mirror the worked gate that matches the question' "$SKILL"
-assert_file_contains "fork vs dead end named" 'a fact that decides itself is a dead end' "$SKILL"
-assert_file_contains "question fields stand alone (locked in the exemplar)" 'answerable by someone who saw nothing above it' "$GRAMMAR"
-assert_file_contains "digests point, never respec" 'mirror it rather than reconstructing it' "$SKILL"
-assert_file_contains "grammar governs shape, never outcomes" 'it never changes which outcomes' "$SKILL"
+# --- S-3: one Read covers all five triage questions ---
+begin_test "S-3 opens on the Read of the card reference"
+assert_contains "S-3 reads question-card before the first question" 'question-card.md' "$S3_OPEN"
+assert_contains "one Read covers Steps 1-5" 'Steps 1-5' "$S3_OPEN"
+assert_contains "the card reference owns the shape" 'The reference owns the card' "$S3_OPEN"
 
 begin_test "S-3 answer-time write with truthful receipts"
 assert_file_contains "write after each answered question" 'after each answered triage question (Steps 1-5), apply' "$SKILL"
-assert_file_contains "receipt before the next question" 'one truthful receipt line before the next question renders' "$SKILL"
+assert_file_contains "read-back follows the reference before the next question" 'read-back the reference gives, before the next question renders' "$SKILL"
 assert_file_contains "no-op answers say so" 'kept as planned' "$SKILL"
 assert_file_contains "durability motive named" 'survive a session that dies mid-triage' "$SKILL"
 
@@ -53,28 +42,38 @@ assert_file_not_contains "cycle-impact bare stem gone" 'Planning revealed a cycl
 
 begin_test "anti-collapse and distinct closers survive in SKILL.md"
 assert_file_contains "anti-collapse principle intact" 'the anti-collapse principle' "$SKILL"
-assert_file_contains "one question per concern intact" 'each concern gets its own individual AskUserQuestion' "$SKILL"
-assert_file_contains "Step 2 medium keeps Accept as-is" 'Accept as-is' "$SKILL"
-assert_file_contains "Step 5 keeps Continue as-is" 'Continue as-is' "$SKILL"
+assert_file_contains "one question per concern intact" 'each concern gets its own individual question card' "$SKILL"
+assert_file_contains "Step 2 medium keeps the plan as written" 'keep the plan as the agent wrote it' "$SKILL"
+assert_file_contains "Step 5 keeps one story as an outcome" 'the story stays one story' "$SKILL"
 
 begin_test "S-5 knows answers already landed"
 assert_file_contains "mark-ready is reconciliation" 'Triage answers already landed in the story file at answer time' "$SKILL"
 assert_file_contains "BT-6 flow row reads as reconcile" 'Reconcile - triage adjustments already landed at answer time' "$SKILL"
 
-# --- Batch triage: BT-2/3/4 read the exemplar, closers survive ---
-begin_test "batch templates read the exemplar and mirror the fork gate"
-assert_file_contains "batch reads auq-grammar before BT-2/3/4" 'Before constructing any BT-2/BT-3/BT-4 AskUserQuestion, Read' "$BATCH"
-assert_file_contains "batch mirror rule present" 'mirror the worked gate that matches the question' "$BATCH"
-assert_file_contains "recommendation first in batch templates" '(Recommended)' "$BATCH"
-assert_file_contains "grammar never changes outcomes in batch" 'it never changes which outcomes a template offers' "$BATCH"
+# --- Batch triage: BT-2/BT-4 ask on cards, BT-3 joins the settled list ---
+BT3_SPAN="$(sed -n '/^### BT-3/,/^### BT-4/p' "$BATCH")"
 
-begin_test "batch distinct closers survive verbatim"
-assert_file_contains "BT-2 keeps Skip for now" 'Skip for now' "$BATCH"
-assert_file_contains "BT-3 keeps Accept as-is" 'Accept as-is' "$BATCH"
+begin_test "batch cards read the card reference"
+assert_file_contains "batch reads question-card before BT-2/BT-4" 'question-card.md' "$BATCH"
+assert_file_contains "templates section renamed" '## Question Templates' "$BATCH"
+assert_file_not_contains "widget templates heading gone" 'AskUserQuestion Templates' "$BATCH"
+assert_file_contains "proposed option marker lives in the reference" '(proposed)' "$PLUGIN_ROOT/commands/references/question-card.md"
+
+begin_test "batch outcomes survive, pure escapes go"
+assert_file_not_contains "BT-2 no longer offers Skip for now" 'Skip for now' "$BATCH"
+assert_file_not_contains "BT-3 has no Accept as-is" 'Accept as-is' "$BATCH"
 assert_file_contains "BT-4 keeps Flag for implementation" 'Flag for implementation' "$BATCH"
+assert_file_contains "flag writes a coordination note to both stories" 'writes a coordination note to both stories' "$BATCH"
+
+begin_test "BT-3 worth-noting items join the settled list"
+assert_contains "BT-3 section found" 'Worth Noting (settled list)' "$BT3_SPAN"
+assert_contains "BT-3 items print under the settled list" 'Settled without asking' "$BT3_SPAN"
+assert_contains "the user reopens an item by name" 'reopen' "$BT3_SPAN"
+assert_not_contains "BT-3 holds no option block" 'label:' "$BT3_SPAN"
 
 begin_test "batch answer-time write covers both sides of BT-4"
-assert_file_contains "batch write-per-answer present" 'after each answered BT-2/BT-3/BT-4 question, apply' "$BATCH"
+assert_file_contains "batch write-per-answer present" 'after each answered BT-2/BT-4 card, apply' "$BATCH"
+assert_file_contains "a reopened settled item is written the same way" 'reopened settled item is written the same way' "$BATCH"
 assert_file_contains "batch no-op receipt present" 'kept as planned' "$BATCH"
 assert_file_contains "BT-4 writes both story files at answer time" "writes BOTH stories' coordination notes at answer time" "$BATCH"
 assert_file_contains "second side never deferred to BT-6" 'never defer the second side to BT-6' "$BATCH"
@@ -92,20 +91,20 @@ assert_file_not_contains "escape absent from batch-triage.md (any case)" "et's d
 
 # --- The hard boundary: non-insight AUQ surfaces stay ungated ---
 # Each block is extracted by its stable heading (never edited by this story) so the
-# negative is scoped - auq-grammar.md legitimately appears elsewhere in SKILL.md.
+# negative is scoped - the card reference legitimately appears elsewhere in SKILL.md.
 CONTENT_SPARK_BLOCK="$(sed -n '/^## Phase 0.4: Content Spark Prerequisite Check/,/^## Phase 0.45/p' "$SKILL")"
 DIRECTION_BLOCK="$(sed -n '/^## Phase 0.5: Direction Confirmation Gate/,/^## Single-Story Planning/p' "$SKILL")"
 S4_BLOCK="$(sed -n '/^### S-4: Present Plan for Approval/,/^### S-5/p' "$SKILL")"
 S6_BLOCK="$(sed -n '/^### S-6: Offer Implementation/,/^## Multi-Story Planning/p' "$SKILL")"
 
-begin_test "boundary: non-insight AUQ surfaces do not reference the exemplar"
+begin_test "boundary: staying widgets do not name the card reference"
 assert_contains "content-spark block extracted" 'Content Direction' "$CONTENT_SPARK_BLOCK"
-assert_not_contains "content-spark prerequisite stays ungated" 'auq-grammar' "$CONTENT_SPARK_BLOCK"
+assert_not_contains "content-spark prerequisite stays ungated" 'question-card' "$CONTENT_SPARK_BLOCK"
 assert_contains "direction gate block extracted" 'Ready to plan this story?' "$DIRECTION_BLOCK"
-assert_not_contains "direction gate stays ungated" 'auq-grammar' "$DIRECTION_BLOCK"
+assert_not_contains "direction gate stays ungated" 'question-card' "$DIRECTION_BLOCK"
 assert_contains "S-4 block extracted" 'Does this implementation plan look complete?' "$S4_BLOCK"
-assert_not_contains "S-4 approval stays ungated" 'auq-grammar' "$S4_BLOCK"
+assert_not_contains "S-4 approval stays ungated" 'question-card' "$S4_BLOCK"
 assert_contains "S-6 block extracted" 'Start now?' "$S6_BLOCK"
-assert_not_contains "S-6 offer stays ungated" 'auq-grammar' "$S6_BLOCK"
+assert_not_contains "S-6 offer stays ungated" 'question-card' "$S6_BLOCK"
 
 finish_tests
