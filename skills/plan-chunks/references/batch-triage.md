@@ -12,7 +12,7 @@ Concerns and decisions from agent plan reports are sorted into three tiers based
 |------|-----------|----------------|-----------------|
 | **Needs review** | Low | Agent flagged it, made a tentative recommendation but isn't sure | One question card per item (BT-2) |
 | **Worth noting** | Medium | Agent decided but thinks user should verify | Never asked: joins the batch settled list (BT-3), and the user reopens an item by name |
-| **Informational** | High | Agent decided confidently, included for visibility | Not surfaced during triage — shown in plan presentation only |
+| **Informational** | High | Agent decided confidently, included for visibility | Never asked: joins the batch settled list (BT-3) |
 
 ### Collecting Concerns Across Stories
 

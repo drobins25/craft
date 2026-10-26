@@ -93,4 +93,4 @@ Apply the test to each finding you're about to surface. Examples:
 
 ## Apply Then Surface
 
-After running the test and expanding identifiers that need it, surface the finding via your agent's normal output mechanism (concerns table, AskUserQuestion, review report). This file does not change WHEN or HOW findings are surfaced - only the CONTENT of each finding.
+After running the test and expanding identifiers that need it, surface the finding via your agent's normal output mechanism (concerns table, question card, review report). This file does not change WHEN or HOW findings are surfaced - only the CONTENT of each finding.

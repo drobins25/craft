@@ -400,7 +400,7 @@ Review the Decisions Made table from the concerns summary. Route by the **Produc
 
 Check the Cycle Impact section from the concerns summary. If any item is non-"none":
 
-Ask one card, showing only the outcomes the impact actually argues for, the agent's recommendation `(proposed)` and listed first: split this story (2-3 stories, briefly listed); reorder stories (this needs X done first); add a new story (the new work becomes its own story); or the story stays one story and planning proceeds.
+Ask one card with at most three outcomes, the agent's recommendation `(proposed)` and listed first, chosen from: split this story (2-3 stories, briefly listed); reorder stories (this needs X done first); add a new story (the new work becomes its own story); or the story stays one story and planning proceeds. The "stays one story" outcome is always kept; when the impact argues for more than three, fold reorder and add-new into one "re-sequence the cycle" outcome.
 
 **Settled list:** the items that reach no card - mention-tier rows of Decisions Made and high-confidence Flagged Concerns - are printed under the heading `Settled without asking - say which to reopen`, in the reference's shape, before Question 1. When no card is asked (the fast path), it heads the S-4 presentation instead. Silent-tier rows stay in the story's tables only. A named item is asked on a card in the normal order.
 
@@ -806,9 +806,9 @@ The batch triage flow (BT-1 through BT-7) reviews all plans with the user after 
 
 | Phase | What | Key Behavior |
 |-------|------|-------------|
-| **BT-1** | Overview | Count concerns by tier. Fast path if zero needs-review AND zero worth-noting. |
+| **BT-1** | Overview | Count concerns by tier. Fast path if zero needs-review. |
 | **BT-2** | Needs Review (ask-tier product-stake, or low confidence) | One card per item, grouped by story. |
-| **BT-3** | Worth Noting (mention-tier product-stake, or medium confidence) | Presented visibly per story; questions only where the user reacts. |
+| **BT-3** | Worth Noting (mention-tier product-stake, or medium confidence) | Never asked: joins the batch settled list with the informational items; a reopened item is asked on a card. |
 | **BT-4** | Cohesion/Coordination | Surface file overlaps, component duplication, decision conflicts. One card per issue. |
 | **BT-5** | Per-Story Approval | Read story file fresh. Present ONE story at a time. Never hold two plans in context. Each gets Approve/Adjust/Reject. |
 | **BT-6** | Finalize | Reconcile - triage adjustments already landed at answer time; verify consistency, update status to ready. Queue adjusted stories for re-planning. |

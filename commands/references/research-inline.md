@@ -34,7 +34,7 @@ Ask: "Would a different reading of the ask produce a different set of branches?"
 
 `Researching: <question>. Branches: <a>, <b>, <c>.`
 
-**When it fires:** Read `${CLAUDE_PLUGIN_ROOT}/commands/references/question-card.md` and ask one card with two options: the drafted reading, marked `(proposed)`, and the other reading the test found. Write each option as where the research goes - the branches it researches. The card names the outside thing, the reading the branches assume, and the research question. An answer in the user's own words rewrites the branches from those words and the run starts - no second ask.
+**When it fires:** Read `${CLAUDE_PLUGIN_ROOT}/commands/references/question-card.md` and ask one card with two options: the drafted reading, marked `(proposed)`, and the other reading the test found. Write each option as where the research goes - the branches it researches. The card names the outside thing, the reading the branches assume, and the research question. An answer in the user's own words rewrites the branches from those words, you print the new `Researching: <question>. Branches: <a>, <b>, <c>.` line, and the run starts - no redrawn card, so this is the one place the card's redraw rule does not apply.
 
 ## Step 3: Create the Research Folder
 
