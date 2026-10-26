@@ -19,7 +19,7 @@ Concerns and decisions from agent plan reports are sorted into three tiers based
 1. Iterate through all successful plan reports
 2. From each report, extract:
    - Flagged Concerns table entries (concern, confidence, recommendation)
-   - Decisions Made table entries where confidence is low
+   - Decisions Made table entries routed by the Product-stake column as in SKILL.md S-3 Step 4: `ask` rows are BT-2 items regardless of confidence, `mention` rows join the settled list (BT-3); with no Product-stake column, low-confidence rows are BT-2 items
    - Design Decision Validation entries where status is `concern` or `invalid`
    - Critical Blockers (always treated as needs-review)
    - Critical Blockers of type `research` are not asked as BT-2 questions: before BT-2, run each through S-2 Step 0's RESEARCH REQUEST steps R1-R3 in SKILL.md (the user is at the desk now; the request block is in that story's `output_file` from the registry), comparing its "plan assumes" line against the story's Reference Materials entry `_plan.md -> "Convergence Points"` that the run landed. Premise held: retag the story's class-claim conditions row `verified - research: <slug> -> "Convergence Points"`, print "kept as planned - research confirmed <premise> (<the Convergence Point matched>)" and drop the item. Premise overturned: queue the story through "Adjusted Story Re-Planning" with the research citations as BINDING context. Gap still open after the run, or R1 stopped on an existing planner door run: one BT-2 item; triage never asks it directly, and the answer retags that same row `verified - user ruled at triage: <answer>` (see the answer-time write rule below).
