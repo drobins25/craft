@@ -7,6 +7,7 @@ Notable, user-facing changes per version. Internal changes (tests, refactors, co
 - Changed the questions that need real thought. Craft now asks them as a card in the conversation: the question, the options with the reasoning for each, and its recommendation. You answer by typing a letter, or "yes" to take the recommendation, instead of squinting at a picker that hides the reasoning.
 - Kept the picker for questions with fixed answers, where a click is all it takes.
 - Improved how answers are kept: each answer is saved as you give it, so nothing is lost if a session stops partway through a set of questions.
+- Fixed batch planning skipping decisions the planner had flagged for you. When planning several stories at once, every call the planner marked as yours to make is now asked, and every call it made on your behalf is listed, whatever its confidence.
 
 ## 2.11.1 - 2026-10-22
 
