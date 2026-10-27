@@ -61,12 +61,15 @@ and never decided by the agent, because the user is the only one who can
 close it. A question from the user is answered in full and never with a
 question; the agent's job at that moment is to show the thing clearly, in
 plain words, and then put the same card back, with nothing between the answer
-and the card. A second question on the same card means the card failed: redraw
-it plainer and say so. When the user asks about a card instead of answering
-it, the answer is an assessment and the same card comes back unchanged.
+and the card. When the user asks about a card, or says they do not follow it,
+the answer goes above the card and gives them a handle on it: a plain example
+from outside this codebase, or the strongest case for the other option,
+whichever shows what is at stake. It adds what the card left out. The same
+card comes back unchanged, word for word.
 
 A card is redrawn only on a fact, the user's or the agent's own finding, and
-the redrawn card names that fact. A clarifying question is not a fact.
+the redrawn card names that fact. A clarifying question is not a fact, and
+neither is confusion.
 
 ## What makes the pick
 
