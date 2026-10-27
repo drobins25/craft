@@ -11,45 +11,49 @@ Concerns and decisions from agent plan reports are sorted into three tiers based
 | Tier | Confidence | Agent Behavior | Triage Behavior |
 |------|-----------|----------------|-----------------|
 | **Needs review** | Low | Agent flagged it, made a tentative recommendation but isn't sure | One question card per item (BT-2) |
-| **Worth noting** | Medium | Agent decided but thinks user should verify | Never asked: joins the batch settled list (BT-3), and the user reopens an item by name |
-| **Informational** | High | Agent decided confidently, included for visibility | Never asked: joins the batch settled list (BT-3) |
+| **Worth noting** | Medium | Agent decided but thinks user should verify | One question card per item (BT-3), with keeping the plan as written as an outcome |
+| **Informational** | High | Agent decided confidently, included for visibility | Never asked: joins the batch settled list with the mention-tier decisions |
 
 ### Collecting Concerns Across Stories
 
 1. Iterate through all successful plan reports
 2. From each report, extract:
    - Flagged Concerns table entries (concern, confidence, recommendation)
-   - Decisions Made table entries routed by the Product-stake column as in SKILL.md S-3 Step 4: `ask` rows are BT-2 items regardless of confidence, `mention` rows join the settled list (BT-3); with no Product-stake column, low-confidence rows are BT-2 items
+   - Decisions Made table entries routed by the Product-stake column as in SKILL.md S-3 Step 4: `ask` rows are BT-2 items regardless of confidence, `mention` rows join the batch settled list; with no Product-stake column, low-confidence rows are BT-2 items
    - Design Decision Validation entries where status is `concern` or `invalid`
    - Critical Blockers (always treated as needs-review)
    - Critical Blockers of type `research` are not asked as BT-2 questions: before BT-2, run each through S-2 Step 0's RESEARCH REQUEST steps R1-R3 in SKILL.md (the user is at the desk now; the request block is in that story's `output_file` from the registry), comparing its "plan assumes" line against the story's Reference Materials entry `_plan.md -> "Convergence Points"` that the run landed. Premise held: retag the story's class-claim conditions row `verified - research: <slug> -> "Convergence Points"`, print "kept as planned - research confirmed <premise> (<the Convergence Point matched>)" and drop the item. Premise overturned: queue the story through "Adjusted Story Re-Planning" with the research citations as BINDING context. Gap still open after the run, or R1 stopped on an existing planner door run: one BT-2 item; triage never asks it directly, and the answer retags that same row `verified - user ruled at triage: <answer>` (see the answer-time write rule below).
 3. Tag each item with its source story name
-4. Sort BT-2 items first, then settled-list items
+4. Sort BT-2 items first, then BT-3 items, then settled-list items
 5. Within each group, group by story (keeps mental context together)
 
 ### Counting for BT-1 Overview
 
 ```
-needs_review_count = BT-2 items (ask-tier rows, plus low-confidence items)
-worth_noting_count = settled-list items (mention-tier rows, plus medium-confidence items)
-informational_count = high-confidence items that are neither BT-2 items nor mention-tier rows
+needs_review_count = BT-2 items (ask-tier rows, low-confidence concerns, blockers, design checks marked concern or invalid)
+worth_noting_count = BT-3 items (medium-confidence concerns)
+informational_count = settled-list items (mention-tier rows, plus high-confidence concerns)
 ```
 
 ---
 
 ## Question Templates
 
-**Before asking any BT-2 or BT-4 card, or printing the BT-3 settled list, Read `${CLAUDE_PLUGIN_ROOT}/commands/references/question-card.md` once.** The reference owns the card and the list; the sections below choose which items reach a card and what each outcome does.
+**Before asking any BT-2, BT-3 or BT-4 card, or printing the batch settled list, Read `${CLAUDE_PLUGIN_ROOT}/commands/references/question-card.md` once.** The reference owns the card and the list; the sections below choose which items reach a card and what each outcome does.
 
-**Answer-time write (same rule as S-3):** after each answered BT-2/BT-4 card, apply that answer's edit to the affected story file immediately (per "Story File Writing" below) and print the read-back the reference gives before the next card renders; a no-op answer reads "kept as planned". A reopened settled item is written the same way. A BT-4 cohesion answer writes BOTH stories' coordination notes at answer time - the second-side note is a one-line append to the other story's chunk, not a plan load, so the never-hold-two-plans rule is not violated. Per-answer writes touch one story file at a time. Answers must survive a session that dies mid-triage.
+**Answer-time write (same rule as S-3):** after each answered BT-2/BT-3/BT-4 card, apply that answer's edit to the affected story file immediately (per "Story File Writing" below) and print the read-back the reference gives before the next card renders; a no-op answer reads "kept as planned". A reopened settled item is written the same way. A BT-4 cohesion answer writes BOTH stories' coordination notes at answer time - the second-side note is a one-line append to the other story's chunk, not a plan load, so the never-hold-two-plans rule is not violated. Per-answer writes touch one story file at a time. Answers must survive a session that dies mid-triage.
 
 ### BT-2: Needs Review (per item)
 
 One card per item. The first words of the question paragraph name the story, then the concern and the ask, self-contained: what the agent found, what it trades off, which way to go. The agent's recommendation is the proposed option; the other option is the honest alternative from the concern description (a yes/no decision's alternative is the opposite).
 
-### BT-3: Worth Noting (settled list)
+### BT-3: Worth Noting (per item)
 
-Worth-noting items are never asked. Each joins the batch settled list with the informational items, grouped by story. An entry is the story name, then the call in product words, then an indented line of code facts - the same shape as the reference's settled list. The list prints once under `Settled without asking - say which to reopen`, before Question 1, or heading the BT-5 plan presentation when BT-2 and BT-4 ask no card. A listed item is accepted by not reopening it; when the user names one, it is asked on a card in the normal order.
+One card per item, the same shape as BT-2: the first words of the question paragraph name the story, then the decision and the ask, self-contained: what the agent decided, what it trades off, keep or change. The agent's decision is the proposed option, beside the honest alternative, and a third outcome keeps the plan as the agent wrote it.
+
+### The batch settled list
+
+The mention-tier decisions and the high-confidence concerns are never asked. They join the batch settled list, grouped by story. An entry is the story name, then the call in product words, then an indented line of code facts - the same shape as the reference's settled list. The list prints once under `Settled without asking - say which to reopen`, before Question 1, or heading the BT-5 plan presentation when BT-2, BT-3 and BT-4 ask no card. A listed item is accepted by not reopening it; when the user names one, it is asked on a card in the normal order.
 
 ### BT-4: Cohesion Issue (per issue)
 
@@ -102,7 +106,7 @@ options:
     description: "Go through them one by one"
 ```
 
-**Trigger condition:** 5+ stories AND BT-2 had zero needs-review items AND no settled item was reopened AND BT-4 had zero cohesion issues. If any phase had interaction, fall back to individual approval.
+**Trigger condition:** 5+ stories AND BT-2 had zero needs-review items AND BT-3 had zero worth-noting items AND no settled item was reopened AND BT-4 had zero cohesion issues. If any phase had interaction, fall back to individual approval.
 
 ### BT-7: Next Steps
 
@@ -187,10 +191,10 @@ If every agent fails (all stories in the failure queue):
 
 ### All Concerns Are Informational
 
-If no item is a BT-2 item (no `ask` row, no low-confidence item, no blocker):
+If no item is a BT-2 or BT-3 item (no `ask` row, no low- or medium-confidence concern, no blocker, no design check marked concern or invalid):
 
-1. BT-1 reports: "Planned [N] stories successfully. No items need review — agents were confident across the board."
-2. Skip BT-2 entirely; the informational items go on the settled list that heads the BT-5 presentation
+1. BT-1 reports: "Planned [N] stories successfully. No items need review - agents were confident across the board."
+2. Skip BT-2 and BT-3 entirely; the settled list (mention-tier decisions and high-confidence concerns) heads the BT-5 presentation
 3. Proceed to BT-4 (cohesion check still runs — file overlap isn't about confidence)
 4. BT-5 uses batch approval fast path if 5+ stories
 
@@ -206,7 +210,7 @@ If `MODE: batch` is passed but only one story has `status: planning`:
 
 User fatigue risk is real with 8+ stories. Mitigations built into the flow:
 
-- BT-3 asks nothing: worth-noting items join the settled list, so only a reopened item costs an interaction
+- BT-3 asks one card per medium-confidence concern; these are usually fewer than BT-2 items, and each carries the agent's pick
 - BT-5 batch approval fast path (for clean batches) reduces to one interaction
 - BT-2 groups needs-review items by story (mental context stays coherent)
 - If the batch is fully clean (all informational, no cohesion issues), the user sees: BT-1 overview → BT-5 batch approve → BT-7 next steps. Three interactions total.
@@ -219,7 +223,7 @@ When a story is marked "Adjust" in BT-5:
 2. The story is queued for re-planning AFTER the batch triage completes
 3. Re-planning uses the single-story path (S-1 through S-6)
 4. The user's feedback from step 1 is included as `APPROACH:` context in the agent prompt — e.g., `APPROACH: User wants fewer chunks, plan is over-scoped`
-5. Previous triage decisions (from BT-2/BT-4) that apply to this story are included as BINDING constraints, not just don't-re-ask context — those answers already landed in the story file at answer time and were receipted to the user; the re-planning agent must preserve them in the new plan or flag a conflict in its concerns summary, never silently drop a receipted answer
+5. Previous triage decisions (from BT-2/BT-3/BT-4) that apply to this story are included as BINDING constraints, not just don't-re-ask context — those answers already landed in the story file at answer time and were receipted to the user; the re-planning agent must preserve them in the new plan or flag a conflict in its concerns summary, never silently drop a receipted answer
 6. After re-planning, the story goes through single-story triage (S-3/S-4) — NOT back through batch triage
 
 ### Cohesion Issues That Can't Be Resolved

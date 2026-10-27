@@ -2,8 +2,8 @@
 # test-plan-chunks-triage-grammar.sh - Guard plan-chunks' triage contract.
 # The single-story questions (the S-2 PLAN FORK and all five S-3 triage
 # questions) ask on question cards and read question-card.md at question time;
-# batch BT-2 and BT-4 ask on cards too, and BT-3 worth-noting items join the
-# settled list instead of being asked. Answers land in the story file at answer time with a
+# batch BT-2, BT-3 and BT-4 ask on cards too, and the batch settled list holds the
+# mention-tier decisions and high-confidence concerns. Answers land in the story file at answer time with a
 # truthful read-back; BT-6 demotes to reconciliation; BT-5 "Adjust" re-planning
 # binds already-landed decisions. The staying widgets (content-spark
 # prerequisite, direction gate, S-4 approval, S-6 offer) do not name the card
@@ -50,8 +50,9 @@ begin_test "S-5 knows answers already landed"
 assert_file_contains "mark-ready is reconciliation" 'Triage answers already landed in the story file at answer time' "$SKILL"
 assert_file_contains "BT-6 flow row reads as reconcile" 'Reconcile - triage adjustments already landed at answer time' "$SKILL"
 
-# --- Batch triage: BT-2/BT-4 ask on cards, BT-3 joins the settled list ---
-BT3_SPAN="$(sed -n '/^### BT-3/,/^### BT-4/p' "$BATCH")"
+# --- Batch triage: BT-2/BT-3/BT-4 ask on cards, the settled list holds the rest ---
+BT3_SPAN="$(sed -n '/^### BT-3/,/^### The batch settled list/p' "$BATCH")"
+SETTLED_SPAN="$(sed -n '/^### The batch settled list/,/^### BT-4/p' "$BATCH")"
 
 begin_test "batch cards read the card reference"
 assert_file_contains "batch reads question-card before BT-2/BT-4" 'question-card.md' "$BATCH"
@@ -65,14 +66,15 @@ assert_file_not_contains "BT-3 has no Accept as-is" 'Accept as-is' "$BATCH"
 assert_file_contains "BT-4 keeps Flag for implementation" 'Flag for implementation' "$BATCH"
 assert_file_contains "flag writes a coordination note to both stories" 'writes a coordination note to both stories' "$BATCH"
 
-begin_test "BT-3 worth-noting items join the settled list"
-assert_contains "BT-3 section found" 'Worth Noting (settled list)' "$BT3_SPAN"
-assert_contains "BT-3 items print under the settled list" 'Settled without asking' "$BT3_SPAN"
-assert_contains "the user reopens an item by name" 'reopen' "$BT3_SPAN"
+begin_test "BT-3 worth-noting items ask on cards"
+assert_contains "BT-3 section found" 'Worth Noting (per item)' "$BT3_SPAN"
+assert_contains "BT-3 keeps the plan as written" 'keeps the plan as the agent wrote it' "$BT3_SPAN"
 assert_not_contains "BT-3 holds no option block" 'label:' "$BT3_SPAN"
+assert_contains "settled list prints under its heading" 'Settled without asking' "$SETTLED_SPAN"
+assert_contains "the user reopens an item by name" 'reopen' "$SETTLED_SPAN"
 
 begin_test "batch answer-time write covers both sides of BT-4"
-assert_file_contains "batch write-per-answer present" 'after each answered BT-2/BT-4 card, apply' "$BATCH"
+assert_file_contains "batch write-per-answer present" 'after each answered BT-2/BT-3/BT-4 card, apply' "$BATCH"
 assert_file_contains "a reopened settled item is written the same way" 'reopened settled item is written the same way' "$BATCH"
 assert_file_contains "batch no-op receipt present" 'kept as planned' "$BATCH"
 assert_file_contains "BT-4 writes both story files at answer time" "writes BOTH stories' coordination notes at answer time" "$BATCH"

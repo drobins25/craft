@@ -128,7 +128,7 @@ BT_ASK_SPAN="$(sed -n '/^### BT-2/,/^### BT-5: Per-Story Approval/p' "$BATCH" 2>
 BT_TIER_SPAN="$(sed -n '/^## Concern Tier Definitions/,/^### Collecting/p' "$BATCH" 2>/dev/null)"
 BT_SKILL_SPAN="$(sed -n '/^## Batch Triage/,/^### Critical Rules/p' "$PLAN_SKILL" 2>/dev/null)"
 M1B_SPAN="$(sed -n '/Verify "Blocked by: None" declarations/,/^4\. Build the dependency graph/p' "$PLAN_SKILL" 2>/dev/null)"
-BT3_SPAN="$(sed -n '/^### BT-3/,/^### BT-4/p' "$BATCH" 2>/dev/null)"
+BT3_SPAN="$(sed -n '/^### BT-3/,/^### The batch settled list/p' "$BATCH" 2>/dev/null)"
 
 begin_test "batch concern questions carry no widget"
 assert_contains_literal "BT-2 to BT-5 span found" 'Needs Review' "$BT_ASK_SPAN"
@@ -140,15 +140,17 @@ for NAME in BT_ASK_SPAN BT_TIER_SPAN BT_SKILL_SPAN M1B_SPAN; do
   assert_eq "no question: line in $NAME" "0" "$(printf '%s\n' "${!NAME}" | grep -cF 'question: "' || true)"
 done
 
-begin_test "worth-noting items join the settled list"
-assert_contains_literal "BT-3 span found" 'Worth Noting' "$BT3_SPAN"
-assert_contains_literal "BT-3 feeds the settled list" 'Settled without asking' "$BT3_SPAN"
-for NEEDLE in 'AskUserQuestion' 'question: "' 'label:' '(proposed)'; do
+SETTLED_SPAN="$(sed -n '/^### The batch settled list/,/^### BT-4/p' "$BATCH" 2>/dev/null)"
+begin_test "worth-noting items ask on cards; the settled list holds the rest"
+assert_contains_literal "BT-3 span found" 'Worth Noting (per item)' "$BT3_SPAN"
+assert_contains_literal "BT-3 keeps the plan as written" 'keeps the plan as the agent wrote it' "$BT3_SPAN"
+assert_contains_literal "settled list prints under its heading" 'Settled without asking' "$SETTLED_SPAN"
+for NEEDLE in 'AskUserQuestion' 'question: "' 'label:'; do
   assert_eq "BT-3 span holds no $NEEDLE" "0" "$(printf '%s\n' "$BT3_SPAN" | grep -cF -- "$NEEDLE" || true)"
 done
 
 begin_test "batch answer-time write covers the cards"
-assert_file_contains "write after each answered card" 'after each answered BT-2/BT-4 card, apply' "$BATCH"
+assert_file_contains "write after each answered card" 'after each answered BT-2/BT-3/BT-4 card, apply' "$BATCH"
 
 begin_test "batch reads the card reference"
 assert_file_contains "batch points at question-card.md" 'question-card.md' "$BATCH"
