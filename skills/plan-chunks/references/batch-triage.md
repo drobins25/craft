@@ -30,8 +30,8 @@ Concerns and decisions from agent plan reports are sorted into three tiers based
 ### Counting for BT-1 Overview
 
 ```
-needs_review_count = items with confidence: low
-worth_noting_count = items with confidence: medium
+needs_review_count = BT-2 items (ask-tier rows, plus low-confidence items)
+worth_noting_count = settled-list items (mention-tier rows, plus medium-confidence items)
 informational_count = items with confidence: high
 ```
 
