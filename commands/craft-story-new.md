@@ -330,61 +330,38 @@ Before defining acceptance criteria or planning chunks, investigate the codebase
 
 After the alignment loop completes, continue to Step 9.
 
-### Step 9: Define Acceptance Criteria
+### Step 9: Full Design, One Pass
 
-> "What defines 'done' for this story?"
+Draft all five sections from the discussion and the alignment findings, show
+them together, and ask once. A concern the agents or the codebase raised that
+Step 8 has not already put to the user becomes a line in its section of the
+draft. The Hardest constraint names a specific risk, never "none".
+
+> "Here is the full design."
 >
-> Based on our discussion, I'd suggest:
+> **Acceptance** (what defines done)
 > - [ ] Given [context], when [action], then [outcome]
 > - [ ] Given [context], when [action], then [outcome]
-> - [ ] Given [context], when [action], then [outcome]
 >
-> Add or adjust any criteria?
+> **Scope**
+> Included: [what we are building]
+> Excluded: [what we are explicitly not doing]
+>
+> **Preserve** (must keep working)
+> - [existing feature, related functionality, integration point]
+>
+> **Hardest constraint**
+> [the biggest risk or challenge, and why]
+>
+> **Dependencies**
+> Blocked by: [stories or features that must land first, or none]
+> Blocks: [stories or features waiting on this, or none]
+>
+> Anything to change?
 
-### Step 9b: Define Scope Boundaries
-
-> "Let's be explicit about scope."
->
-> **Included** (what we're building):
-> - [Feature/change 1]
-> - [Feature/change 2]
->
-> **Excluded** (explicitly NOT doing):
-> - [Thing we won't touch]
-> - [Out of scope item]
->
-> Does this capture the boundaries?
-
-### Step 9c: Identify Preserve List
-
-> "What must remain working? These are DO NOT TOUCH items."
->
-> Based on the codebase, I'd suggest preserving:
-> - [Existing feature that must keep working]
-> - [Related functionality that could break]
-> - [Integration point that must stay intact]
->
-> Anything else that must remain untouched?
-
-### Step 9d: Surface Hardest Constraint (REQUIRED)
-
-> "What's the biggest risk or challenge here?"
->
-> I see: [Identified constraint — technical challenge, dependency, complexity]
->
-> Is that the main concern, or is there something else?
-
-### Step 9e: Map Dependencies
-
-> "Any dependencies to track?"
->
-> **Blocked by** (must complete first):
-> - [Other story or feature this depends on]
->
-> **Blocks** (waiting on this):
-> - [Stories or features that need this done first]
->
-> If none, that's fine — this story can run independently.
+The reply edits the draft in place: a changed line is rewritten and a new
+concern becomes a line in its section. Confirm the edits in one sentence
+without re-posting the draft, then continue to Step 10.
 
 ### Step 10: Save & Place
 
