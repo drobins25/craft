@@ -24,15 +24,15 @@ Concerns and decisions from agent plan reports are sorted into three tiers based
    - Critical Blockers (always treated as needs-review)
    - Critical Blockers of type `research` are not asked as BT-2 questions: before BT-2, run each through S-2 Step 0's RESEARCH REQUEST steps R1-R3 in SKILL.md (the user is at the desk now; the request block is in that story's `output_file` from the registry), comparing its "plan assumes" line against the story's Reference Materials entry `_plan.md -> "Convergence Points"` that the run landed. Premise held: retag the story's class-claim conditions row `verified - research: <slug> -> "Convergence Points"`, print "kept as planned - research confirmed <premise> (<the Convergence Point matched>)" and drop the item. Premise overturned: queue the story through "Adjusted Story Re-Planning" with the research citations as BINDING context. Gap still open after the run, or R1 stopped on an existing planner door run: one BT-2 item; triage never asks it directly, and the answer retags that same row `verified - user ruled at triage: <answer>` (see the answer-time write rule below).
 3. Tag each item with its source story name
-4. Sort all items: low confidence first, then medium, then high
-5. Within the same confidence tier, group by story (keeps mental context together)
+4. Sort BT-2 items first, then settled-list items
+5. Within each group, group by story (keeps mental context together)
 
 ### Counting for BT-1 Overview
 
 ```
 needs_review_count = BT-2 items (ask-tier rows, plus low-confidence items)
 worth_noting_count = settled-list items (mention-tier rows, plus medium-confidence items)
-informational_count = items with confidence: high
+informational_count = high-confidence items that are neither BT-2 items nor mention-tier rows
 ```
 
 ---
@@ -187,7 +187,7 @@ If every agent fails (all stories in the failure queue):
 
 ### All Concerns Are Informational
 
-If every concern across all stories has confidence: high:
+If no item is a BT-2 item (no `ask` row, no low-confidence item, no blocker):
 
 1. BT-1 reports: "Planned [N] stories successfully. No items need review — agents were confident across the board."
 2. Skip BT-2 entirely; the informational items go on the settled list that heads the BT-5 presentation
