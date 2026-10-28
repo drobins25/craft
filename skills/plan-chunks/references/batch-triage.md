@@ -30,7 +30,7 @@ Concerns and decisions from agent plan reports are sorted into three tiers based
 ### Counting for BT-1 Overview
 
 ```
-needs_review_count = BT-2 items (ask-tier rows, low-confidence concerns, blockers, design checks marked concern or invalid)
+needs_review_count = BT-2 items (ask-tier rows, low-confidence decisions from a summary without a Product-stake column, low-confidence concerns, blockers, design checks marked concern or invalid)
 worth_noting_count = BT-3 items (medium-confidence concerns)
 informational_count = settled-list items (mention-tier rows, plus high-confidence concerns)
 ```
@@ -191,7 +191,7 @@ If every agent fails (all stories in the failure queue):
 
 ### All Concerns Are Informational
 
-If no item is a BT-2 or BT-3 item (no `ask` row, no low- or medium-confidence concern, no blocker, no design check marked concern or invalid):
+If no item is a BT-2 or BT-3 item (no `ask` row, no low-confidence decision in a summary without a Product-stake column, no low- or medium-confidence concern, no blocker, no design check marked concern or invalid):
 
 1. BT-1 reports: "Planned [N] stories successfully. No items need review - agents were confident across the board."
 2. Skip BT-2 and BT-3 entirely; the settled list (mention-tier decisions and high-confidence concerns) heads the BT-5 presentation

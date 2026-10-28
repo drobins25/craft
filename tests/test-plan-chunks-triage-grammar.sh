@@ -52,9 +52,11 @@ assert_file_contains "BT-6 flow row reads as reconcile" 'Reconcile - triage adju
 
 # The shortcuts that skip cards test the same items the steps send to a card.
 assert_file_contains "single-story fast path lists every card trigger" 'no low- or medium-confidence concern, no design check marked concern or invalid, no Cycle Impact outcome' "$SKILL"
+assert_file_contains "single-story fast path covers old-format low decisions" 'no low-confidence decision in a summary without a Product-stake column' "$SKILL"
 assert_file_contains "BT-1 fast path needs zero worth-noting" 'zero needs-review AND zero worth-noting' "$SKILL"
 assert_file_contains "batch-approve needs zero BT-3 items" 'BT-3 had zero worth-noting items' "$BATCH"
 assert_file_contains "all-informational edge covers medium" 'no low- or medium-confidence concern' "$BATCH"
+assert_file_contains "all-informational edge covers old-format low decisions" 'no low-confidence decision in a summary without a Product-stake column' "$BATCH"
 
 # --- Batch triage: BT-2/BT-3/BT-4 ask on cards, the settled list holds the rest ---
 BT3_SPAN="$(sed -n '/^### BT-3/,/^### The batch settled list/p' "$BATCH")"

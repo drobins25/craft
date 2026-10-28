@@ -404,7 +404,7 @@ Ask one card with at most three outcomes, the agent's recommendation `(proposed)
 
 **Settled list:** the items that reach no card - mention-tier rows of Decisions Made and high-confidence Flagged Concerns - are printed under the heading `Settled without asking - say which to reopen`, in the reference's shape, before Question 1. When no card is asked (the fast path), it heads the S-4 presentation instead. Silent-tier rows stay in the story's tables only. A named item is asked on a card in the normal order.
 
-**Fast path:** If no item reaches a card across all five steps (no blocker, no `ask` row, no low- or medium-confidence concern, no design check marked concern or invalid, no Cycle Impact outcome) → report "No risks or concerns flagged - plan looks clean." and skip straight to plan presentation, headed by the settled list. Don't create artificial interaction.
+**Fast path:** If no item reaches a card across all five steps (no blocker, no `ask` row, no low-confidence decision in a summary without a Product-stake column, no low- or medium-confidence concern, no design check marked concern or invalid, no Cycle Impact outcome) → report "No risks or concerns flagged - plan looks clean." and skip straight to plan presentation, headed by the settled list. Don't create artificial interaction.
 
 ### S-4: Present Plan for Approval
 
