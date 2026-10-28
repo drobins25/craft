@@ -23,6 +23,7 @@ Concerns and decisions from agent plan reports are sorted into three tiers based
    - Design Decision Validation entries where status is `concern` or `invalid`
    - Critical Blockers (always treated as needs-review)
    - Critical Blockers of type `research` are not asked as BT-2 questions: before BT-2, run each through S-2 Step 0's RESEARCH REQUEST steps R1-R3 in SKILL.md (the user is at the desk now; the request block is in that story's `output_file` from the registry), comparing its "plan assumes" line against the story's Reference Materials entry `_plan.md -> "Convergence Points"` that the run landed. Premise held: retag the story's class-claim conditions row `verified - research: <slug> -> "Convergence Points"`, print "kept as planned - research confirmed <premise> (<the Convergence Point matched>)" and drop the item. Premise overturned: queue the story through "Adjusted Story Re-Planning" with the research citations as BINDING context. Gap still open after the run, or R1 stopped on an existing planner door run: one BT-2 item; triage never asks it directly, and the answer retags that same row `verified - user ruled at triage: <answer>` (see the answer-time write rule below).
+   - Cycle Impact rows that are not `none` (story size, new dependencies, scope creep, new story needed): BT-2 items, one card per row with the two outcomes S-3 Step 5 gives that row
 3. Tag each item with its source story name
 4. Sort BT-2 items first, then BT-3 items, then settled-list items
 5. Within each group, group by story (keeps mental context together)
@@ -30,7 +31,7 @@ Concerns and decisions from agent plan reports are sorted into three tiers based
 ### Counting for BT-1 Overview
 
 ```
-needs_review_count = BT-2 items (ask-tier rows, low-confidence decisions from a summary without a Product-stake column, low-confidence concerns, blockers, design checks marked concern or invalid)
+needs_review_count = BT-2 items (ask-tier rows, low-confidence decisions from a summary without a Product-stake column, low-confidence concerns, blockers, design checks marked concern or invalid, Cycle Impact rows that are not none)
 worth_noting_count = BT-3 items (medium-confidence concerns)
 informational_count = settled-list items (mention-tier rows, plus high-confidence concerns)
 ```
@@ -191,7 +192,7 @@ If every agent fails (all stories in the failure queue):
 
 ### All Concerns Are Informational
 
-If no item is a BT-2 or BT-3 item (no `ask` row, no low-confidence decision in a summary without a Product-stake column, no low- or medium-confidence concern, no blocker, no design check marked concern or invalid):
+If no item is a BT-2 or BT-3 item (no `ask` row, no low-confidence decision in a summary without a Product-stake column, no low- or medium-confidence concern, no blocker, no design check marked concern or invalid, no Cycle Impact row that is not none):
 
 1. BT-1 reports: "Planned [N] stories successfully. No items need review - agents were confident across the board."
 2. Skip BT-2 and BT-3 entirely; the settled list (mention-tier decisions and high-confidence concerns) heads the BT-5 presentation

@@ -59,6 +59,9 @@ assert_file_contains "BT-1 fast path needs zero worth-noting" 'zero needs-review
 assert_file_contains "batch-approve needs zero BT-3 items" 'BT-3 had zero worth-noting items' "$BATCH"
 assert_file_contains "all-informational edge covers medium" 'no low- or medium-confidence concern' "$BATCH"
 assert_file_contains "all-informational edge covers old-format low decisions" 'no low-confidence decision in a summary without a Product-stake column' "$BATCH"
+assert_file_contains "batch collects cycle-impact rows as BT-2 items" 'Cycle Impact rows that are not `none`' "$BATCH"
+assert_file_contains "batch needs-review count includes cycle-impact rows" 'Cycle Impact rows that are not none)' "$BATCH"
+assert_file_contains "all-informational edge covers cycle impact" 'no Cycle Impact row that is not none' "$BATCH"
 
 # --- Batch triage: BT-2/BT-3/BT-4 ask on cards, the settled list holds the rest ---
 BT3_SPAN="$(sed -n '/^### BT-3/,/^### The batch settled list/p' "$BATCH")"

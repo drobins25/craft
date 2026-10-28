@@ -807,7 +807,7 @@ The batch triage flow (BT-1 through BT-7) reviews all plans with the user after 
 | Phase | What | Key Behavior |
 |-------|------|-------------|
 | **BT-1** | Overview | Count concerns by tier; the settled list (mention-tier decisions, high-confidence concerns) prints before Question 1. Fast path if zero needs-review AND zero worth-noting. |
-| **BT-2** | Needs Review (ask-tier product-stake, or low confidence) | One card per item, grouped by story. |
+| **BT-2** | Needs Review (ask-tier product-stake, low confidence, or a cycle-impact row) | One card per item, grouped by story. |
 | **BT-3** | Worth Noting (medium confidence) | One card per item, grouped by story, with keeping the plan as written as an outcome. |
 | **BT-4** | Cohesion/Coordination | Surface file overlaps, component duplication, decision conflicts. One card per issue. |
 | **BT-5** | Per-Story Approval | Read story file fresh. Present ONE story at a time. Never hold two plans in context. Each gets Approve/Adjust/Reject. |
