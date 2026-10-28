@@ -400,7 +400,7 @@ Review the Decisions Made table from the concerns summary. Route by the **Produc
 
 Check the Cycle Impact section from the concerns summary. If any item is non-"none":
 
-Ask one card with at most three outcomes, the agent's recommendation `(proposed)` and listed first, chosen from: split this story (2-3 stories, briefly listed); reorder stories (this needs X done first); add a new story (the new work becomes its own story); or the story stays one story and planning proceeds. The "stays one story" outcome is always kept; when the impact argues for more than three, fold reorder and add-new into one "re-sequence the cycle" outcome.
+Ask one card per non-"none" row, in the order the summary lists them, two outcomes each, the agent's pick `(proposed)` and listed first. Story size: split this story (2-3 stories, briefly listed), or the story stays one story and planning proceeds. New dependencies: reorder the cycle (this needs X done first), or keep the order. Scope creep and new story needed: the extra work becomes its own story, or it stays out of this one; when both rows name the same work, they are one card. A row marked none asks nothing.
 
 **Settled list:** the items that reach no card - mention-tier rows of Decisions Made and high-confidence Flagged Concerns - are printed under the heading `Settled without asking - say which to reopen`, in the reference's shape, before Question 1. When no card is asked (the fast path), it heads the S-4 presentation instead. Silent-tier rows stay in the story's tables only. A named item is asked on a card in the normal order.
 

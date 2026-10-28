@@ -45,6 +45,8 @@ assert_file_contains "anti-collapse principle intact" 'the anti-collapse princip
 assert_file_contains "one question per concern intact" 'each concern gets its own individual question card' "$SKILL"
 assert_file_contains "Step 2 medium keeps the plan as written" 'keep the plan as the agent wrote it' "$SKILL"
 assert_file_contains "Step 5 keeps one story as an outcome" 'the story stays one story' "$SKILL"
+assert_file_contains "Step 5 asks one card per non-none Cycle Impact row" 'Ask one card per non-"none" row' "$SKILL"
+assert_file_not_contains "Step 5 folds no outcomes to fit a card" 're-sequence the cycle' "$SKILL"
 
 begin_test "S-5 knows answers already landed"
 assert_file_contains "mark-ready is reconciliation" 'Triage answers already landed in the story file at answer time' "$SKILL"
