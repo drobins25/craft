@@ -62,6 +62,8 @@ assert_file_contains "all-informational edge covers old-format low decisions" 'n
 assert_file_contains "batch collects cycle-impact rows as BT-2 items" 'Cycle Impact rows that are not `none`' "$BATCH"
 assert_file_contains "batch needs-review count includes cycle-impact rows" 'Cycle Impact rows that are not none)' "$BATCH"
 assert_file_contains "all-informational edge covers cycle impact" 'no Cycle Impact row that is not none' "$BATCH"
+assert_file_contains "needs-review count skips research blockers the run settled" 'blockers other than a research blocker the run settled, design checks' "$BATCH"
+assert_file_contains "all-informational edge skips research blockers the run settled" 'no blocker other than a research blocker the run settled' "$BATCH"
 assert_file_contains "settled list has a home above the batch-approve question" 'above the batch-approve question when that fires' "$BATCH"
 assert_file_contains "batch approve-all prints the settled list first" 'The settled list prints directly above this question' "$BATCH"
 assert_file_not_contains "batch approve-all no longer claims no concerns flagged" 'no concerns flagged. Approve all' "$BATCH"
