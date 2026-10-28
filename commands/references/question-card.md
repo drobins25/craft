@@ -22,12 +22,12 @@ the same sentence as the claim.
 
 Then the options in one plain three-backtick fence, lettered `a.` `b.` inline,
 and `c.` only when a third real outcome does something different; a question
-with more than three outcomes is split into cards. The proposed option's title
-is followed by `(proposed)`. Each option is written as what the user sees
-afterward, in as many short lines as that takes, and may end with one sentence
-on when it is the right pick. A way-out that is a real outcome stays, written
-as what happens; a pure escape goes, since the reply line already takes any
-words.
+with more than three outcomes is split into cards. The proposed option is
+always `a.`, so "Yes" applies it, and its title is followed by `(proposed)`.
+Each option is written as what the user sees afterward, in as many short
+lines as that takes, and may end with one sentence on when it is the right
+pick. A way-out that is a real outcome stays, written as what happens; a pure
+escape goes, since the reply line already takes any words.
 
 Then the close: `My pick is a. <what the user sees>.` then, on its own line,
 `**Question:** Go with a?` then, on its own line, `**Why:** <one sentence on
