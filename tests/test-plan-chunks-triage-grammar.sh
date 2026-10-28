@@ -50,7 +50,7 @@ begin_test "S-5 knows answers already landed"
 assert_file_contains "mark-ready is reconciliation" 'Triage answers already landed in the story file at answer time' "$SKILL"
 assert_file_contains "BT-6 flow row reads as reconcile" 'Reconcile - triage adjustments already landed at answer time' "$SKILL"
 
-# The shortcuts that skip cards test the same items the steps send to a card.
+begin_test "fast paths skip cards only when no step sends an item to one"
 assert_file_contains "single-story fast path lists every card trigger" 'no low- or medium-confidence concern, no design check marked concern or invalid, no Cycle Impact outcome' "$SKILL"
 assert_file_contains "single-story fast path covers old-format low decisions" 'no low-confidence decision in a summary without a Product-stake column' "$SKILL"
 assert_file_contains "BT-1 fast path needs zero worth-noting" 'zero needs-review AND zero worth-noting' "$SKILL"
