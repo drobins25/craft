@@ -27,6 +27,7 @@ assert_contains_literal "a card is for a question that takes judgment" 'for a qu
 begin_test "around-the-card literals present"
 assert_file_exists "question-card.md exists" "$REF"
 assert_contains_literal "settled list heading" 'Settled without asking - say which to reopen' "$REF_TEXT"
+assert_contains_literal "later rounds add only new settled items" 'A later round that settles more calls prints only the new items' "$REF_TEXT"
 assert_contains_literal "read-back opener" 'Ruled (' "$REF_TEXT"
 assert_contains_literal "read-back after the write" 'In the story.' "$REF_TEXT"
 assert_contains_literal "read-back for a no-op answer" 'kept as planned' "$REF_TEXT"

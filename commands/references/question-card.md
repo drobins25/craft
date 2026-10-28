@@ -42,11 +42,13 @@ Before Question 1, one list headed
 `Settled without asking - say which to reopen` names every call made without a question, so the user sees every
 decision before the first one they are asked. Each item leads with the
 behavior in product words, then an indented line of code facts, the only
-place paths appear; every line the same shape. The list prints once, before
-the first card; when the flow asks no card, it prints where the first card
+place paths appear; every line the same shape. The list prints before the
+first card; when the flow asks no card, it prints where the first card
 would have rendered; when no call was made without asking, it is omitted.
-When the user names a settled item, it is asked on a card in the flow's
-normal order.
+A later round that settles more calls prints only the new items, before its
+next card, under the same heading; an item already listed or already asked
+is never repeated. When the user names a settled item, it is asked on a card
+in the flow's normal order.
 
 After each answer, one line reads the ruling back in product words and
 confirms the write: `Ruled (a): <behavior>. In the story.` after the edit has
