@@ -54,7 +54,7 @@ One card per item, the same shape as BT-2: the first words of the question parag
 
 ### The batch settled list
 
-The mention-tier decisions and the high-confidence concerns are never asked. They join the batch settled list, grouped by story. An entry is the story name, then the call in product words, then an indented line of code facts - the same shape as the reference's settled list. The list prints once under `Settled without asking - say which to reopen`, before Question 1, or heading the BT-5 plan presentation when BT-2, BT-3 and BT-4 ask no card. A listed item is accepted by not reopening it; when the user names one, it is asked on a card in the normal order.
+The mention-tier decisions and the high-confidence concerns are never asked. They join the batch settled list, grouped by story. An entry is the story name, then the call in product words, then an indented line of code facts - the same shape as the reference's settled list. The list prints once under `Settled without asking - say which to reopen`, before Question 1, or, when BT-2, BT-3 and BT-4 ask no card, at the top of BT-5: above the batch-approve question when that fires, otherwise above the first story's presentation. A listed item is accepted by not reopening it; when the user names one, it is asked on a card in the normal order.
 
 ### BT-4: Cohesion Issue (per issue)
 
@@ -97,7 +97,7 @@ The user's selection (or free-text via "Other") is stored as adjustment feedback
 ### BT-5: Batch Approval Fast Path (5+ clean stories)
 
 ```yaml
-question: "All [N] plans look clean — no concerns flagged. Approve all at once?"
+question: "All [N] plans look clean - nothing above needs your answer. Approve all at once?"
 header: "Batch approve"
 multiSelect: false
 options:
@@ -108,6 +108,8 @@ options:
 ```
 
 **Trigger condition:** 5+ stories AND BT-2 had zero needs-review items AND BT-3 had zero worth-noting items AND no settled item was reopened AND BT-4 had zero cohesion issues. If any phase had interaction, fall back to individual approval.
+
+The settled list prints directly above this question. A reply that names a listed item reopens it on a card, and approval falls back to one story at a time.
 
 ### BT-7: Next Steps
 

@@ -62,6 +62,9 @@ assert_file_contains "all-informational edge covers old-format low decisions" 'n
 assert_file_contains "batch collects cycle-impact rows as BT-2 items" 'Cycle Impact rows that are not `none`' "$BATCH"
 assert_file_contains "batch needs-review count includes cycle-impact rows" 'Cycle Impact rows that are not none)' "$BATCH"
 assert_file_contains "all-informational edge covers cycle impact" 'no Cycle Impact row that is not none' "$BATCH"
+assert_file_contains "settled list has a home above the batch-approve question" 'above the batch-approve question when that fires' "$BATCH"
+assert_file_contains "batch approve-all prints the settled list first" 'The settled list prints directly above this question' "$BATCH"
+assert_file_not_contains "batch approve-all no longer claims no concerns flagged" 'no concerns flagged. Approve all' "$BATCH"
 
 # --- Batch triage: BT-2/BT-3/BT-4 ask on cards, the settled list holds the rest ---
 BT3_SPAN="$(sed -n '/^### BT-3/,/^### The batch settled list/p' "$BATCH")"
