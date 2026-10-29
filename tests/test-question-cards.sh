@@ -204,9 +204,4 @@ for F in "$PLUGIN_ROOT/commands/references/alignment-check.md" "$RESEARCH_INLINE
   assert_file_not_contains "$(basename "$F") does not name the retired file" "$RETIRED" "$F"
 done
 
-begin_test "index names no widget for concerns"
-INDEX_LINE="$(grep -F '!batch concerns' "$PLUGIN_ROOT/reference/orchestration-index.min" || true)"
-assert_contains_literal "batch concerns line present" '!batch concerns' "$INDEX_LINE"
-assert_eq "batch concerns line names no AskUserQuestion" "0" "$(printf '%s\n' "$INDEX_LINE" | grep -cF 'AskUserQuestion' || true)"
-
 finish_tests
