@@ -159,7 +159,7 @@ assert_eq "script is executable" "yes" "$([ -x "$SU" ] && echo yes || echo no)"
 
 begin_test "the README says what runs, when, and how to turn it off"
 README="$PLUGIN_ROOT/README.md"
-assert_file_contains "names the daily check" "once a day" "$README"
+assert_file_contains "names the daily check" "Once a day" "$README"
 assert_file_contains "names the off switch" "CRAFT_AUTO_UPDATE=0" "$README"
 assert_file_contains "names what is fetched" "claude plugin update craft@craft" "$README"
 

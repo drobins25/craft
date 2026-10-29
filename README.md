@@ -279,7 +279,7 @@ One thing to expect once craft is enabled: Claude starts hinting when a craft fe
 
 ### Updating craft
 
-Craft keeps itself current. Claude Code refreshes only Anthropic's own marketplaces on its own, so craft does it for the craft marketplace: once a day, shortly after a session starts, it runs in the background the same two commands you could run yourself:
+Craft keeps itself current. Once a day, shortly after a session starts, it runs in the background the same two commands you could run yourself:
 
 ```
 claude plugin marketplace update craft
@@ -288,7 +288,13 @@ claude plugin update craft@craft
 
 The new version loads in your next session. The first time this runs you see a one-line notice; after that it is silent unless a new version landed. Nothing about you or your project is sent anywhere: the only network call is a `git fetch` of this repository, and the only files touched are craft's own under `~/.claude/plugins/`.
 
-To turn it off, set `CRAFT_AUTO_UPDATE=0` in your shell, or create an empty file named `no-auto-update` in craft's data directory (`~/.claude/plugins/data/craft-craft/`). Claude Code's own `DISABLE_AUTOUPDATER` and `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` switches turn it off too. With it off, the two commands above are how you update by hand.
+To turn self-update off, use any one of these:
+
+- `CRAFT_AUTO_UPDATE=0` in your environment
+- a marker file at `~/.claude/plugins/data/craft-craft/no-auto-update`, for launches that do not load your shell profile
+- Claude Code's own `DISABLE_AUTOUPDATER` or `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`
+
+With it off, run the two commands above to update by hand.
 
 ### One setting worth knowing about
 
