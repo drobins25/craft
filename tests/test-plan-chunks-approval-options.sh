@@ -151,4 +151,16 @@ assert_contains_literal "implement prompt" 'question: "Ready to implement this s
 assert_contains_literal "story pick prompt" 'question: "Which story do you want to start?"' "$STEP4_BLOCK"
 assert_contains_literal "hand-off skill" 'skill: "craft:craft-story-implement"' "$STEP4_BLOCK"
 
+begin_test "story-implement Step 3 skips its own re-ask for a chosen story"
+STORY_IMPLEMENT="$PLUGIN_ROOT/commands/craft-story-implement.md"
+SI_STEP3_BLOCK="$(sed -n '/^### Step 3: Review Before Starting/,/^### Step 3a/p' "$STORY_IMPLEMENT")"
+assert_contains_literal "step 3 block extracted" 'Start with Chunk 1?' "$SI_STEP3_BLOCK"
+assert_contains_literal "chosen-story paragraph" '**If a story is already chosen, do not re-ask.**' "$SI_STEP3_BLOCK"
+assert_contains_literal "card counts as chosen" 'picked on the /craft card' "$SI_STEP3_BLOCK"
+assert_contains_literal "plan-chunks and cycle-start count as chosen" 'handed here by plan-chunks or cycle-start' "$SI_STEP3_BLOCK"
+assert_contains_literal "args count as chosen" 'named in the arguments' "$SI_STEP3_BLOCK"
+assert_contains_literal "review becomes a statement" 'as a statement with no question under it' "$SI_STEP3_BLOCK"
+assert_contains_literal "goes straight to 3a" 'go straight to Step 3a' "$SI_STEP3_BLOCK"
+assert_contains_literal "paragraph precedes the question" '**If a story is already chosen, do not re-ask.**' "$(echo "$SI_STEP3_BLOCK" | sed -n '/Start with Chunk 1?/q;p')"
+
 finish_tests

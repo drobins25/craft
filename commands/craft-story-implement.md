@@ -181,6 +181,8 @@ Read the story file and determine state:
 
 ### Step 3: Review Before Starting
 
+**If a story is already chosen, do not re-ask.** It is chosen when the story was picked on the /craft card, handed here by plan-chunks or cycle-start, or named in the arguments. Print the review below as a statement with no question under it, and go straight to Step 3a.
+
 > "Ready to implement **[Story Name]**
 >
 > **Chunks:** [N] total
