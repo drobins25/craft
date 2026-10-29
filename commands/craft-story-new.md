@@ -326,65 +326,80 @@ Before defining acceptance criteria or planning chunks, investigate the codebase
 
 ⛔ **DO NOT skip this step.** Read `${CLAUDE_PLUGIN_ROOT}/commands/references/alignment-check.md` and follow the alignment loop.
 
-**Summary:** Spawn an Explore agent to investigate the codebase. Process findings. Surface genuine product questions via AskUserQuestion. If answers expand scope, use SendMessage to the same agent for follow-up investigation. Loop until zero unasked product questions remain. Then record the `## Alignment` receipt in the story and set `alignment: complete` in frontmatter.
+**Summary:** Spawn an Explore agent to investigate the codebase. Process findings. Surface genuine product questions on question cards. If answers expand scope, use SendMessage to the same agent for follow-up investigation. Loop until zero unasked product questions remain. Then record the `## Alignment` receipt in the story and set `alignment: complete` in frontmatter.
 
 After the alignment loop completes, continue to Step 9.
 
-### Step 9: Define Acceptance Criteria
+### Step 9: Full Design, Five Passes, One Question
 
-> "What defines 'done' for this story?"
+The five design sections used to be five user turns. What made them good was
+not the five answers; it was that each section got a whole model generation.
+One generation asked for all five sections splits its attention five ways and
+writes each to the size of its template slot. So the turn boundary stays, and
+it moves from the user's reply to a tool call.
+
+Five sections, one per pass, in this order: Acceptance, Scope, Preserve,
+Hardest constraint, Dependencies. A pass is one Edit to the story file that
+writes that section, followed by printing the section as written. The section
+text exists first in the Edit, never in chat ahead of it, so there is no way
+to draft them all at once and split them after. The Edit ends the generation;
+the next section is drafted fresh, with the ones already in the file in view.
+Never write two sections in one Edit. The user sees each section arrive and
+may reply to any of them; a reply is handled before the next pass. After the
+fifth pass, ask once.
+
+**Pass 1, Acceptance.** Group the criteria by area of the product, one
+behavior per line, Given/when/then. Every value the alignment check, the
+content direction or the visual direction already settled appears as that
+value. A rule from outside the project that the story does not already state
+is checked before it is written, or the line says "unverified".
+
+> ## Acceptance
 >
-> Based on our discussion, I'd suggest:
+> **[Area]**
 > - [ ] Given [context], when [action], then [outcome]
 > - [ ] Given [context], when [action], then [outcome]
+>
+> **[Area]**
 > - [ ] Given [context], when [action], then [outcome]
->
-> Add or adjust any criteria?
 
-### Step 9b: Define Scope Boundaries
+**Pass 2, Scope.** Each line a full sentence about what the user gets, or
+does not. Excluded names the near misses a reader would assume are in.
 
-> "Let's be explicit about scope."
->
-> **Included** (what we're building):
-> - [Feature/change 1]
-> - [Feature/change 2]
->
-> **Excluded** (explicitly NOT doing):
-> - [Thing we won't touch]
-> - [Out of scope item]
->
-> Does this capture the boundaries?
+> ## Scope
+> **Included:**
+> - [What we're building]
+> **Excluded:**
+> - [What we're NOT doing]
 
-### Step 9c: Identify Preserve List
+**Pass 3, Preserve.** Grep the Likely Files and their callers before
+writing. Each line names the thing that must keep working and what in this
+story could break it.
 
-> "What must remain working? These are DO NOT TOUCH items."
->
-> Based on the codebase, I'd suggest preserving:
-> - [Existing feature that must keep working]
-> - [Related functionality that could break]
-> - [Integration point that must stay intact]
->
-> Anything else that must remain untouched?
+> ## Preserve
+> - [Existing feature that must keep working] - [what in this story could break it]
+> - [Related functionality that could break] - [what in this story could break it]
+> - [Integration point that must stay intact] - [what in this story could break it]
 
-### Step 9d: Surface Hardest Constraint (REQUIRED)
+**Pass 4, Hardest constraint.** One specific risk, why it is hard here, and
+what would prove it is handled. Never "none".
 
-> "What's the biggest risk or challenge here?"
->
-> I see: [Identified constraint — technical challenge, dependency, complexity]
->
-> Is that the main concern, or is there something else?
+> ## Hardest Constraint
+> [the specific risk, why it is hard here, and what would prove it is handled]
 
-### Step 9e: Map Dependencies
+**Pass 5, Dependencies.** Name stories, not features.
 
-> "Any dependencies to track?"
->
-> **Blocked by** (must complete first):
-> - [Other story or feature this depends on]
->
-> **Blocks** (waiting on this):
-> - [Stories or features that need this done first]
->
-> If none, that's fine — this story can run independently.
+> ## Dependencies
+> **Blocked by:** [stories that must land first, or none]
+> **Blocks:** [stories waiting on this, or none]
+
+After the fifth pass:
+
+> Anything to change?
+
+A reply edits that section in place with one Edit and is confirmed in one
+sentence, without re-posting the design. Then continue to Step 10, which
+updates the existing file rather than creating it.
 
 ### Step 10: Save & Place
 

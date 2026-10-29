@@ -40,7 +40,6 @@ adhoc→classify|bug:investigate→confidence→edit→validate|tweak:fit-check�
 !run_in_background for test/typecheck/lint/build—must be synchronous
 !override FAILED verdict—FAILED means FAILED
 !present story content from memory—Read file fresh
-!batch concerns—surface each via AskUserQuestion
 !run a craft flow from memory when its reference Read fails—"File does not exist" (a tool fact) means: resolve against the plugin root stated above, retry once
 !hard-wall on a Read that fails twice—disclose in ONE line (file, expected path, plugin version from .claude-plugin/plugin.json; "reinstall may fix; if not it's a craft bug—this message is the report: github.com/drobins25/craft/issues"), then AskUserQuestion: continue best-effort | stop
 +checkpoint before each chunk (create-checkpoint.sh)

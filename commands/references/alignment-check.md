@@ -46,7 +46,7 @@ Read the spark. If the story's work depends on something outside the project who
 
 - **One fact** (one thing, one answer): at most three web searches, then say `Checked: <fact> (<source>).` in one line as you move on - it is not a question. Step 6 records it as `- OUTSIDE FACT: <fact> - <source>`.
 - **Anything bigger** (a claim about a whole class, or a fact still open after three searches): Read `commands/references/research-inline.md` (a sibling of this file - resolve it against the absolute path you Read this file from) with `QUERY` the outside premise, `STORY` the story's absolute path and `DOOR=alignment`. Pass `DEPTH=--quick` for one bounded thing with few angles, no flag for a claim about a class ("every runner", "all providers"). Continue at Step 0 with the research in hand.
-- **One run per door:** if the story's Reference Materials already holds a run line with `alignment door` and the gap is still open, never run again; ask the user in the fork-gate grammar (Step 3) what the story should assume.
+- **One run per door:** if the story's Reference Materials already holds a run line with `alignment door` and the gap is still open, never run again; ask the user on a question card (Step 3) what the story should assume.
 
 ### Step 0: Empty-Codebase Short-Circuit
 
@@ -70,7 +70,7 @@ If the result is empty: **skip Step 1 entirely.** There's no codebase to investi
 
 Read the story's `## Notes` section (populated during cycle-design Phase 2a's brainstorm). Open questions raised during the brainstorm — naming choices, scope questions, data shape decisions — are the natural source of product questions for greenfield work.
 
-After harvesting questions from the Notes section, **skip ahead to Step 3 (Surface Gaps via AskUserQuestion)** to surface them to the user.
+After harvesting questions from the Notes section, **skip ahead to Step 3 (Surface Gaps on Question Cards)** to surface them to the user.
 
 If the codebase has any source files: continue to Step 0.5 as normal.
 
@@ -95,23 +95,12 @@ Before spawning the Explore agent, check whether this story was created from a p
    - Code files: read the cited function/class or line range
    - Research files (`.craft/research/`): the anchor is the quoted `##` heading name (`-> "Convergence Points"`); read that section only
 
-4. **Stale-anchor handling during injection (MANDATORY):** If a cited anchor cannot be resolved (section heading no longer exists, line range out of bounds, Pattern N missing from locked.md), do NOT silently omit. Surface the stale anchor BEFORE spawning the Explore agent via **AskUserQuestion**:
+4. **Stale-anchor handling during injection (MANDATORY):** If a cited anchor cannot be resolved (section heading no longer exists, line range out of bounds, Pattern N missing from locked.md), do NOT silently omit. Before spawning the Explore agent, ask on a question card (Read `question-card.md`, a sibling of this file) whether the story may have been written against an older version of that file. Three outcomes, each written on the card as what happens:
+   - **Skip this citation** - alignment-check proceeds with the resolved citations only; this citation's content never reaches the agent.
+   - **Re-run story creation from planning** - alignment-check exits with the instruction to re-run `/craft:story-new` From planning to refresh the citations; the check runs again afterward.
+   - **Retry with an anchor the user types** - capture the correct section, subheading or range, retry the Read, continue.
 
-   ```
-   question: "Reference Materials cites '[file path] -> [anchor]' but the anchor doesn't resolve in the current file. The story may have been written against an older version. How should we proceed?"
-   header: "Stale Anchor"
-   options:
-     - label: "Skip this citation"
-       description: "Proceed with alignment-check using the resolved citations only. This citation's content won't reach the agent."
-     - label: "Re-extract from current planning"
-       description: "Restart story creation flow (re-run /craft:story-new From planning) to refresh citations - alignment-check will run afterward."
-     - label: "Provide replacement anchor"
-       description: "Type the correct section/subheading/range manually."
-   ```
-
-   "Skip" -> proceed without that excerpt; "Re-extract" -> exit alignment-check with instruction to re-run story-from-planning; "Provide replacement anchor" -> capture user's input, retry the Read, continue.
-
-4a. **Decision records (pointer, not extraction).** For each slug in the story's `decisions:` frontmatter list, add the path `.craft/decisions/approved/<slug>.md` (under the project root) to a DECISION RECORDS list in the agent prompt, followed by this sentence verbatim: "Read the Decision and Consequences of each record above before investigating. What they rule is settled - never surface it as a question. If the story or the codebase contradicts a ruling, or two rulings contradict each other, report it as a CONFLICT naming the record." Then add this sentence verbatim: "Two exceptions resolve without a question: when two records disagree, the newer record's Decision is the truth and the older is cited as superseded; and a record whose frontmatter reads `disposition: crafted` is frozen law - never propose reopening it, since a changed mind against frozen law is a new record." Records are not Reference Materials: they never enter the Planning Context block or its token cap, and step 3's anchor-type list gains no entry for them. A slug that does not resolve to a file in `approved/` is listed anyway with "(not found)" after it - the agent reports it - and this does NOT raise the stale-anchor AskUserQuestion from step 4, which applies to Reference Materials anchors only. The list holds the story's own records and no others: the orchestrator never adds records from the store by tag, by topic, or by judged relevance, and never names records the story does not carry anywhere in the prompt. Then add this sentence verbatim: "Any decision record not listed above is NOT LAW for this story - it is history. Do not read one as a constraint, and do not report one as a CONFLICT."
+4a. **Decision records (pointer, not extraction).** For each slug in the story's `decisions:` frontmatter list, add the path `.craft/decisions/approved/<slug>.md` (under the project root) to a DECISION RECORDS list in the agent prompt, followed by this sentence verbatim: "Read the Decision and Consequences of each record above before investigating. What they rule is settled - never surface it as a question. If the story or the codebase contradicts a ruling, or two rulings contradict each other, report it as a CONFLICT naming the record." Then add this sentence verbatim: "Two exceptions resolve without a question: when two records disagree, the newer record's Decision is the truth and the older is cited as superseded; and a record whose frontmatter reads `disposition: crafted` is frozen law - never propose reopening it, since a changed mind against frozen law is a new record." Records are not Reference Materials: they never enter the Planning Context block or its token cap, and step 3's anchor-type list gains no entry for them. A slug that does not resolve to a file in `approved/` is listed anyway with "(not found)" after it - the agent reports it - and this does NOT raise the stale-anchor question from step 4, which applies to Reference Materials anchors only. The list holds the story's own records and no others: the orchestrator never adds records from the store by tag, by topic, or by judged relevance, and never names records the story does not carry anywhere in the prompt. Then add this sentence verbatim: "Any decision record not listed above is NOT LAW for this story - it is history. Do not read one as a constraint, and do not report one as a CONFLICT."
 
 5. Concatenate resolved excerpts into the Planning Context block.
 
@@ -204,7 +193,7 @@ Agent tool:
 
 ### Step 2: Filter - What Actually Deserves to Interrupt the User
 
-This is the most important step, and the gate's whole quality lives here. AskUserQuestion is for disambiguation between multiple legitimate paths - not for narrating what you found, not for permission, not for caution. Most codebase observations are NOT product questions; they are facts you act on.
+This is the most important step, and the gate's whole quality lives here. A question card is for disambiguation between multiple legitimate paths - not for narrating what you found, not for permission, not for caution. Most codebase observations are NOT product questions; they are facts you act on.
 
 **Surface a finding ONLY if BOTH are true:**
 1. There are multiple legitimate paths and only the user can choose between them (a real fork in intent, not in mechanism).
@@ -212,19 +201,25 @@ This is the most important step, and the gate's whole quality lives here. AskUse
 
 **If either fails, do NOT surface it. Decide it and let the user veto later.** A fact ("there's no CLI to wire into - `index.js` is a library") is not a fork; you just don't wire a CLI that isn't there. An engineering call (test structure, key order) is yours. The bar is agent-judgment-plus-veto, not agent-question-plus-guidance.
 
-**"Only the user can decide" means the CHOICE is theirs - not that you have no opinion on it.** When a finding DOES pass this filter, you still bring your recommendation to it. Restraint decides *whether* to ask; it never means going neutral once you do. Every surfaced fork ends on your lean and marks the recommended option `(Recommended)` in the widget (Step 3) - "here's what I'd do, your call," never a menu with no pointer.
+**"Only the user can decide" means the CHOICE is theirs - not that you have no opinion on it.** When a finding DOES pass this filter, you still bring your recommendation to it. Restraint decides *whether* to ask; it never means going neutral once you do. Every surfaced fork ends on your lean and the card marks it `(proposed)` with `My pick is` (Step 3) - "here's what I'd do, your call," never a menu with no pointer.
 
 **The removal test:** for each candidate, ask "if I delete this question, is the plan actually worse?" If not, it was overhead - cut it. (After the third or fourth question a user stops reading and starts clicking; every needless one spends that budget.)
 
+**A finding already ruled in the story's `## Alignment` section is settled; it is never asked again.** A re-run after a dead session skips what the user already answered.
+
 **Collapse before you surface.** Two findings that share one underlying decision are ONE question. "warn already exists" and "the CLI it names doesn't" are not two forks - they are one: "your premise is already built; what is this story now?" Fold the second into the first's options; never ask it twice.
 
-### Step 3: Surface Gaps via AskUserQuestion
+### Step 3: Surface Gaps on Question Cards
 
-**Before constructing the AskUserQuestion(s)**, Read `agent-finding-handoff.md` (in this same directory - resolve it against the absolute path you just Read this file from) and apply the Self-Contained Test to each finding the Explore agent surfaced. The user does NOT have the Explore agent's codebase-research context. A finding that names a file path, function, locked-decision number, or pattern identifier without semantic context will force the user to re-investigate what the finding means before answering. Expand identifiers per the Translation Table in that file, then construct the question(s) with expanded content.
+**Before writing the question cards**, Read `agent-finding-handoff.md` (in this same directory - resolve it against the absolute path you just Read this file from) and apply the Self-Contained Test to each finding the Explore agent surfaced. The user does NOT have the Explore agent's codebase-research context. A finding that names a file path, function, locked-decision number, or pattern identifier without semantic context will force the user to re-investigate what the finding means before answering. Expand identifiers per the Translation Table in that file, then write the cards with expanded content.
 
-**Then Read `commands/references/auq-grammar.md`** (resolve it against the absolute path you Read this file from - it is a sibling of this file) and mirror the worked gate that matches your finding. That file holds two: a **fork** (a real decision between live alternatives - brief, short airy prose ending on a bold lean, recommended option first with `(Recommended)`, honest one-line verdicts) and a **dead end** (the story's premise is already built or void - a few sentences of fact, then only the story-fate question). Match on substance: weighing alternatives is a fork; reporting a fact that decides itself is a dead end. Mirror the shape, never the content.
+**Then Read `question-card.md`** (a sibling of this file, resolved the same way) and ask each surviving finding on a card. Its examples show a fork (weighing live alternatives) and a dead end (the story's premise is already built; the options are what the story becomes).
 
-**One finding per AskUserQuestion, sequenced.** Present a finding, ask its one question, and record the answer before surfacing the next finding - an answer often changes what the next question should be (that reassessment is Step 4). Never stack multiple decisions into one widget.
+**Settled list.** Before Question 1, print the findings Step 2 decided without asking under the heading `Settled without asking - say which to reopen`, as the reference describes. If none, omit it.
+
+**One finding per card, sequenced.** Ask one card and write its answer before the next card renders - an answer often changes what the next question should be (that reassessment is Step 4). Never stack multiple decisions into one card.
+
+**Answer-time write.** After each answered card, append that ruling's receipt line (type, the finding in one line, the ruling) to the story's `## Alignment` section under this run's `_Checked: <date>_` block, apply any `## Scope` or `## Decisions` edit the ruling implies, then print the read-back. The run's first write creates the section or block; later writes and Step 6 append to the same block, so one run makes one block. The ruling survives a session that dies mid-check, and `alignment: complete` is still set only at Step 6.
 
 ### Step 4: Reassess After Answers
 
@@ -259,7 +254,7 @@ Agent tool:
 
 (A same-agent SendMessage would preserve the investigation context and is preferred whenever a visible agent ID is genuinely in hand - background spawns surface one - but a synchronous spawn exposes no address. Never guess at an address; a send to the description name fails.)
 
-Process the new findings (Step 2) and surface any new product questions (Step 3).
+Process the new findings (Step 2) and ask any new product questions on cards (Step 3). Findings decided without asking print before the next card under the same `Settled without asking - say which to reopen` heading; a card already asked is never among them.
 
 **If scope grew significantly** (story went from touching 3 files to 8+, or now spans two distinct concerns):
 
@@ -270,7 +265,7 @@ Process the new findings (Step 2) and surface any new product questions (Step 3)
 >
 > "Split or keep as one?"
 
-Use **AskUserQuestion** with split/keep options. If splitting, create the new story file and adjust the current story's scope.
+Ask it on a question card, with split and keep as the outcomes. If splitting, create the new story file and adjust the current story's scope.
 
 ### Step 5: Confirm Alignment
 
@@ -285,9 +280,9 @@ The loop exits when:
 
 After the loop completes:
 
-1. Add a `## Alignment` section to the story - the receipt that the check ran:
+1. Add the `## Alignment` section to the story if the run has not yet created it (Step 3 writes rulings as they are answered) - the receipt that the check ran:
    - `_Checked: YYYY-MM-DD_`
-   - One line per finding: type, what it was, how the user resolved it
+   - One line per finding: type, what it was, how the user resolved it (rulings already written at answer time are not written twice)
    - If the investigation found nothing: `No findings - investigation returned clean.`
    - A fact settled in the research step: `- OUTSIDE FACT: <fact> - <source>`
    - On a re-run, append a new `_Checked: <date>_` block under the existing `## Alignment` section instead of adding a second section
@@ -310,9 +305,9 @@ The plan-chunks orchestrator should flag these during triage:
 >
 > "Want me to run the alignment check interactively first, or let the planning agents use their best judgment?"
 
-Use **AskUserQuestion** with options:
-- "Run alignment check first" - orchestrator runs the alignment loop per story before launching agents
-- "Proceed with best judgment" - agents plan without alignment check, but flag assumptions in their output for the user to review during triage
+Ask it on a question card (Read `question-card.md`, a sibling of this file) with two outcomes:
+- Run the alignment check first - the orchestrator runs the alignment loop per story before launching agents
+- Proceed with best judgment - agents plan without alignment check, but flag assumptions in their output for the user to review during triage
 
 The outside-world check runs only inside the interactive loop; "Proceed with best judgment" skips it with the rest, and the planner's research request is the backstop.
 

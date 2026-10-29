@@ -642,7 +642,7 @@ assert_contains_literal "the record step is its own numbered entry (4a), not fol
 # --- Unresolvable slug: noted in the block, not raised as a stale-anchor question ---
 begin_test "an unresolvable slug is listed as (not found), not raised as a stale-anchor question"
 assert_contains_literal "an unresolvable slug is listed with (not found)" 'listed anyway with "(not found)"' "$RECORD_STEP_TEXT"
-assert_contains_literal "it explicitly does not raise the stale-anchor AskUserQuestion" 'does NOT raise the stale-anchor AskUserQuestion' "$RECORD_STEP_TEXT"
+assert_contains_literal "it explicitly does not raise the stale-anchor question" 'does NOT raise the stale-anchor question from step 4' "$RECORD_STEP_TEXT"
 
 # --- Approved records lead the keep-order; the four existing tiers survive in order ---
 begin_test "the keep-order holds the four Reference Materials tiers in order; records are not in it"

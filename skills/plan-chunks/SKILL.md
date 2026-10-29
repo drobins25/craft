@@ -153,7 +153,7 @@ Read the story file's `alignment` frontmatter field.
 
 Read `${CLAUDE_PLUGIN_ROOT}/commands/references/alignment-check.md` and follow the alignment loop:
 1. Spawn an Explore agent to investigate the codebase
-2. Surface genuine product questions via AskUserQuestion
+2. Surface genuine product questions on question cards
 3. If answers expand scope, use SendMessage to the same agent for follow-up
 4. Loop until zero unasked product questions remain
 5. Record the `## Alignment` receipt in the story and set `alignment: complete` in the frontmatter
@@ -293,10 +293,10 @@ Include in the prompt:
 **Step 0 - PLAN FORK check:**
 
 If the agent's output is a `## PLAN FORK` report instead of a concerns summary, the agent hit a two-plans question only the user can answer. Do NOT validate or triage yet:
-1. Read `${CLAUDE_PLUGIN_ROOT}/commands/references/auq-grammar.md` and mirror the fork gate it models - the exemplar carries the whole grammar (question field, option shapes, header chip); mirror it rather than reconstructing it. Then surface ONE **AskUserQuestion** for the fork.
+1. Read `${CLAUDE_PLUGIN_ROOT}/commands/references/question-card.md` and ask the fork as one question card.
 2. **Return the answer to the planning agent.** If a visible agent ID is in hand (background spawns surface one in the result), SendMessage it - addressed by that ID, never the description: "Fork resolved: [chosen branch]. Continue planning." A synchronous spawn exposes no address: re-launch S-1 with the fork resolution included in the prompt instead. Never guess at an address.
 3. When the agent returns its concerns summary, proceed with Step 1 below as normal.
-R1. If the output is a `## RESEARCH REQUEST` instead (a load-bearing outside fact three searches did not settle): when the story already carries a `planner door` run line, ask the user in the fork-gate grammar what the plan should assume and run nothing more (in batch triage this ask is a BT-2 item, never asked here).
+R1. If the output is a `## RESEARCH REQUEST` instead (a load-bearing outside fact three searches did not settle): when the story already carries a `planner door` run line, ask the user on a question card what the plan should assume and run nothing more (in batch triage this ask is a BT-2 item, never asked here).
 R2. Otherwise Read `${CLAUDE_PLUGIN_ROOT}/commands/references/research-inline.md` with `QUERY` = the request's Question, `STORY`, `DOOR=planner`.
 R3. Read `${CLAUDE_PLUGIN_ROOT}/commands/references/alignment-check.md` and run it from Step 0, skipping the outside-world step; its Step 6 appends a new `_Checked:` block to the story's `## Alignment` section and sets `alignment: complete` as written (already `complete` whenever the check ran before).
 R4. Re-launch S-1 fresh with the request's answer named in the prompt (never a SendMessage to a guessed address), then proceed with Step 1.
@@ -341,32 +341,24 @@ Read the story file path from the `Story file:` field in the Overview. Run ALL c
 > 2. [failure text]
 > ..."
 
-Use **AskUserQuestion**:
-```
-question: "How should we handle these plan issues?"
-header: "Plan validation"
-options:
-  - label: "Retry planning"
-    description: "Re-launch the planning agent for this story"
-  - label: "Fix manually"
-    description: "I'll review and fix the plan issues in the story file"
-  - label: "Proceed anyway"
-    description: "Accept the plan as-is and move to triage"
-```
+Ask on a question card (Read `${CLAUDE_PLUGIN_ROOT}/commands/references/question-card.md`) how to handle these plan issues. Three outcomes, each written on the card as what happens:
+- **Re-plan with the failure list** - the planning agent runs again for this story.
+- **Fix the story file by hand** - planning ends and the user edits the plan issues in the story file.
+- **Go on to triage with the gaps named** - the plan is kept as it is and the gaps show in triage.
 
-**If "Retry planning":** Re-invoke the plan-chunks-agent (return to S-1). Include in the retry prompt: "Previous plan attempt had structural issues: [failure list]. Ensure the plan includes a ## The Pitch section (sell + conditions table using the exact headers `| Condition | Secured by |`, every row tagged verified / system-owned / unverifiable), a ## Investigation narrative, refined ## Acceptance criteria (5+ specific items), chunks_total in 2-7 range, and every chunk has Goal, Files, Contracts (every line receipted), and Test cases. Every chunk's Done When must assert the project builds and all tests pass at that checkpoint. Rename and removal work must update ALL call sites - including test files, mocks, and fixtures - within the same chunk; if that cannot fit the chunk limits, flag the story for splitting instead of planning chunks that leave the tree broken between boundaries. The plan must also include a ## Acceptance Pre-Flight table - one row per acceptance vehicle, no UNREACHABLE verdicts (see references/acceptance-walkthrough.md). Risk Tags descriptions must name the implementation mechanism - bare threshold values with no mechanism wording are flagged by check #8."
+**If re-plan:** Re-invoke the plan-chunks-agent (return to S-1). Include in the retry prompt: "Previous plan attempt had structural issues: [failure list]. Ensure the plan includes a ## The Pitch section (sell + conditions table using the exact headers `| Condition | Secured by |`, every row tagged verified / system-owned / unverifiable), a ## Investigation narrative, refined ## Acceptance criteria (5+ specific items), chunks_total in 2-7 range, and every chunk has Goal, Files, Contracts (every line receipted), and Test cases. Every chunk's Done When must assert the project builds and all tests pass at that checkpoint. Rename and removal work must update ALL call sites - including test files, mocks, and fixtures - within the same chunk; if that cannot fit the chunk limits, flag the story for splitting instead of planning chunks that leave the tree broken between boundaries. The plan must also include a ## Acceptance Pre-Flight table - one row per acceptance vehicle, no UNREACHABLE verdicts (see references/acceptance-walkthrough.md). Risk Tags descriptions must name the implementation mechanism - bare threshold values with no mechanism wording are flagged by check #8."
 
-**If "Fix manually":** Acknowledge and end - the user will edit the story file directly and re-invoke planning when ready.
+**If the user fixes it by hand:** Acknowledge and end - the user will edit the story file directly and re-invoke planning when ready.
 
-**If "Proceed anyway":** Continue to S-3 with the plan as-is. Note the validation gaps in the triage presentation so the user is aware.
+**If going on to triage:** Continue to S-3 with the plan as-is. Note the validation gaps in the triage presentation so the user is aware.
 
 ### S-3: Interactive Triage
 
 The agent has written the story file and returned flagged concerns, decisions, and validation results. Your job is to triage the concerns summary with the user — surface what needs human judgment.
 
-**Before constructing any triage AskUserQuestion (Steps 1-5), Read `${CLAUDE_PLUGIN_ROOT}/commands/references/auq-grammar.md` and mirror the worked gate that matches the question** - a decision weighing alternatives is a fork; a fact that decides itself is a dead end. The exemplar carries the whole grammar (question field, option shapes, header chip); mirror it rather than reconstructing it from a summary. The grammar governs how options read; it never changes which outcomes an option set offers.
+**Before asking any triage question (Steps 1-5), Read `${CLAUDE_PLUGIN_ROOT}/commands/references/question-card.md` once** - it covers every step below. The reference owns the card: the steps below choose which items reach a card, never how a card reads.
 
-**Answer-time write:** after each answered triage question (Steps 1-5), apply that answer's edit to the story file immediately - per the write rules in `${CLAUDE_PLUGIN_ROOT}/skills/plan-chunks/references/batch-triage.md` ("Story File Writing") - then print one truthful receipt line before the next question renders. A real edit names what changed ("Updated Chunk 3: inline confirmation replaces modal"); a no-op answer prints "kept as planned" and makes no edit. Answers must survive a session that dies mid-triage.
+**Answer-time write:** after each answered triage question (Steps 1-5), apply that answer's edit to the story file immediately - per the write rules in `${CLAUDE_PLUGIN_ROOT}/skills/plan-chunks/references/batch-triage.md` ("Story File Writing") - then print the read-back the reference gives, before the next question renders. A real edit names what changed; a no-op answer reads "kept as planned" and makes no edit. Answers must survive a session that dies mid-triage.
 
 **Step 1 — Critical Blockers:**
 
@@ -374,30 +366,21 @@ If the concerns summary's Critical Blockers section has entries, surface them im
 
 > "[Story Name] has a blocker: [blocker description]. [Agent's recommendation]."
 
-Use **AskUserQuestion** per blocker, mirroring the exemplar's fork gate. If the blocker means the story can't be planned, stop and report why. (A blocker with no live alternatives is a dead end - mirror the dead-end gate and ask the story-fate question.)
+Ask one card per blocker. If the blocker means the story can't be planned, stop and report why. (A blocker with no live alternatives is a dead end: ask the story-fate question on a card whose options are what the story becomes.)
 
 **Step 2 - Flagged Concerns:**
 
-Review the Flagged Concerns table. Surface by confidence level - **each concern gets its own individual AskUserQuestion** (the anti-collapse principle applies here too):
+Review the Flagged Concerns table. Surface by confidence level - **each concern gets its own individual question card** (the anti-collapse principle applies here too):
 
-- **Low confidence:** Individual AskUserQuestion with agent's recommendation + alternative
-- **Medium confidence:** Individual AskUserQuestion with "(Recommended)" label + alternative + "Accept as-is"
-- **High confidence:** Informational only - include in plan presentation as "Risks Acknowledged," don't surface during triage
+- **Low confidence:** Individual card with the agent's pick `(proposed)` + alternative
+- **Medium confidence:** Individual card with the agent's pick `(proposed)` + alternative + the outcome keep the plan as the agent wrote it
+- **High confidence:** Informational only - goes on the settled list, don't ask during triage
 
 **Step 3 — Design Decision Validation:**
 
 Review the Design Decision Validation table from the concerns summary. If any entries are `concern` or `invalid`:
 
-Use **AskUserQuestion**:
-
-```
-question: "[The design decision, what the codebase showed, and the ask - self-contained, e.g. 'The story locked X, but planning found Y - adjust to the agent's fix, or keep X?']"
-options:
-  - label: "Adjust: [agent's proposed fix] (Recommended)"
-    description: "[Why original doesn't work + how this solves it]"
-  - label: "Keep original anyway"
-    description: "[The honest cost of keeping it, in a phrase]"
-```
+Ask one card: what the story locked, what the codebase showed, and two outcomes - adjust to the agent's proposed fix `(proposed)`, or keep the original and the honest cost of keeping it.
 
 If all decisions validated as `valid` → proceed with no interaction.
 
@@ -407,20 +390,8 @@ If all decisions validated as `valid` → proceed with no interaction.
 
 Review the Decisions Made table from the concerns summary. Route by the **Product-stake** column (the agent already applied the low-confidence bump):
 
-- **ask** → individual AskUserQuestion per decision, regardless of the agent's confidence. The question text must be self-contained: what was decided, what it trades off for the user, the agent's reasoning.
-
-Use **AskUserQuestion**:
-
-```
-question: "[The decision and its user-facing consequence — self-contained]"
-options:
-  - label: "[Agent's decision] (agent recommends)"
-    description: "[Agent's reasoning]"
-  - label: "[Alternative]"
-    description: "[Different approach]"
-```
-
-- **mention** → no question. Collect into the "Decisions you'd want to know" block of the plan presentation (S-4) — the "cool, that's nice" tier.
+- **ask** → individual card per decision, regardless of the agent's confidence. The card shows what was decided, what it trades off for the user and the agent's reasoning; the agent's decision is `(proposed)`, beside the alternative.
+- **mention** → no question. Goes on the settled list - the "cool, that's nice" tier.
 - **silent** → table only. No surfacing.
 
 (Old-format summaries without a Product-stake column: fall back to confidence routing — low asks, medium/high proceed.)
@@ -429,24 +400,11 @@ options:
 
 Check the Cycle Impact section from the concerns summary. If any item is non-"none":
 
-Use **AskUserQuestion**:
+Ask one card per non-"none" row, in the order the summary lists them, two outcomes each, the agent's pick `(proposed)` and listed first. Story size: split this story (2-3 stories, briefly listed), or the story stays one story and planning proceeds. New dependencies: reorder the cycle (this needs X done first), or keep the order. Scope creep and new story needed: the extra work becomes its own story, or it stays out of this one; when both rows name the same work, they are one card. A row marked none asks nothing.
 
-```
-question: "[The cycle impact and its consequence - self-contained, e.g. 'Planning found this story is really three: A, B, C - split it, or continue as one?']"
-options:
-  - label: "Split this story"
-    description: "Actually 2-3 stories: [brief list]"
-  - label: "Reorder stories"
-    description: "This needs [X] done first"
-  - label: "Add new story"
-    description: "[New work] should be its own story"
-  - label: "Continue as-is"
-    description: "I understand, proceed anyway"
-```
+**Settled list:** the items that reach no card - mention-tier rows of Decisions Made and high-confidence Flagged Concerns - are printed under the heading `Settled without asking - say which to reopen`, in the reference's shape, before Question 1. When no card is asked (the fast path), it heads the S-4 presentation instead. Silent-tier rows stay in the story's tables only. A named item is asked on a card in the normal order.
 
-(Mark the option matching the agent's recommendation "(Recommended)" and list it first; give each shown option an honest one-line verdict. Show only the options the impact actually argues for.)
-
-**Fast path:** If no low-confidence items exist across all five steps → report "No risks or concerns flagged — plan looks clean." and skip straight to plan presentation. Don't create artificial interaction.
+**Fast path:** If no item reaches a card across all five steps (no blocker, no `ask` row, no low-confidence decision in a summary without a Product-stake column, no low- or medium-confidence concern, no design check marked concern or invalid, no Cycle Impact outcome) → report "No risks or concerns flagged - plan looks clean." and skip straight to plan presentation, headed by the settled list. Don't create artificial interaction.
 
 ### S-4: Present Plan for Approval
 
@@ -459,11 +417,8 @@ options:
 
 **Total:** [N] chunks, [M] files
 
-**Decisions you'd want to know:**
-[Mention-tier decisions from the Decisions Made table — what the agent did for the user beyond spec]
-
-**Risks Acknowledged:**
-[High-confidence concerns from triage]
+**Settled without asking - say which to reopen:**
+[The S-3 settled list, printed here only when no card was asked; omitted when it printed before Question 1]
 
 **File Impact:**
 [From concerns summary's File Impact table]
@@ -637,23 +592,15 @@ Parse dependencies from each planning story to determine which can plan in paral
    2. Compare against every OTHER story in the batch's `modify`/`create` files.
    3. If ANY file appears in both stories' modify/create lists - that's an overlap. Flag it:
 
-   Use **AskUserQuestion** per overlap:
-   ```
-   question: "[Story X] and [Story Y] both plan to modify `[file]`. [X] declares no blockers. Which depends on which?"
-   header: "Overlap"
-   options:
-     - label: "[X] blocked by [Y]"
-       description: "Plan [X] after [Y]"
-     - label: "[Y] blocked by [X]"
-       description: "Plan [Y] after [X]"
-     - label: "Truly independent"
-       description: "I've verified these changes don't conflict"
-   ```
+   Ask one question card per overlap (Read `${CLAUDE_PLUGIN_ROOT}/commands/references/question-card.md`). The question paragraph names both stories and the shared file, and says [X] declares no blockers. The pick names which story should plan first and why. Three outcomes, each written on the card as what happens:
+   - **[X] blocked by [Y]** - plan [X] after [Y].
+   - **[Y] blocked by [X]** - plan [Y] after [X].
+   - **Truly independent** - the user has verified these changes do not conflict.
 
-   - **If user picks a direction:** Update the story's `**Blocked by:**` line in the story file. Continue to step 4 with the updated dependency.
+   - **If the user picks a direction:** Update the story's `**Blocked by:**` line in the story file. Continue to step 4 with the updated dependency.
    - **If "Truly independent":** Update `**Blocked by:**` to `None - verified independent (overlap with [other story] reviewed on [date])`. This prevents re-asking on future batch runs.
 
-   If a `Blocked by: None` story has zero file overlaps with all other stories in the batch: update to `Blocked by: None - verified (no file overlap with batch stories)`. No AskUserQuestion needed.
+   If a `Blocked by: None` story has zero file overlaps with all other stories in the batch: update to `Blocked by: None - verified (no file overlap with batch stories)`. No question is asked for it.
 
 4. Build the dependency graph:
    - **Ignore** blockers that are `(complete)` or not in the current planning set — completed/external dependencies don't constrain planning order
@@ -849,20 +796,20 @@ Pass the lightweight metadata and output file registry to the batch triage flow.
 
 ## Batch Triage
 
-> **Full flow details:** Read `${CLAUDE_PLUGIN_ROOT}/skills/plan-chunks/references/batch-triage.md` for AskUserQuestion templates, concern tier definitions, cohesion heuristics, and edge cases.
+> **Full flow details:** Read `${CLAUDE_PLUGIN_ROOT}/skills/plan-chunks/references/batch-triage.md` for question templates, concern tier definitions, cohesion heuristics, and edge cases.
 
 The batch triage flow (BT-1 through BT-7) reviews all plans with the user after parallel agents complete. The core principle:
 
-**Every concern gets its own AskUserQuestion.** Never summarize concerns as a text list with a single "All good?" approval. This is the most important behavioral guardrail in the entire skill - it exists because batching concerns leads to silent soft-approval by omission. If there are 5 concerns across 3 stories, that means 5 separate AskUserQuestion calls.
+**Every concern that is asked gets its own card.** Never fold concerns into one text list with a single "All good?" approval. This is the most important behavioral guardrail in the entire skill - it exists because batching concerns leads to silent soft-approval by omission. If 5 concerns across 3 stories need a question, that means 5 separate cards.
 
 ### Flow Summary
 
 | Phase | What | Key Behavior |
 |-------|------|-------------|
-| **BT-1** | Overview | Count concerns by tier. Fast path if zero needs-review AND zero worth-noting. |
-| **BT-2** | Needs Review (ask-tier product-stake, or low confidence) | Individual AskUserQuestion per item, grouped by story. |
-| **BT-3** | Worth Noting (mention-tier product-stake, or medium confidence) | Presented visibly per story; questions only where the user reacts. |
-| **BT-4** | Cohesion/Coordination | Surface file overlaps, component duplication, decision conflicts. AskUserQuestion per issue. |
+| **BT-1** | Overview | Count concerns by tier; the settled list (mention-tier decisions, high-confidence concerns) prints before Question 1. Fast path if zero needs-review AND zero worth-noting. |
+| **BT-2** | Needs Review (ask-tier product-stake, low confidence, or a cycle-impact row) | One card per item, grouped by story. |
+| **BT-3** | Worth Noting (medium confidence) | One card per item, grouped by story, with keeping the plan as written as an outcome. |
+| **BT-4** | Cohesion/Coordination | Surface file overlaps, component duplication, decision conflicts. One card per issue. |
 | **BT-5** | Per-Story Approval | Read story file fresh. Present ONE story at a time. Never hold two plans in context. Each gets Approve/Adjust/Reject. |
 | **BT-6** | Finalize | Reconcile - triage adjustments already landed at answer time; verify consistency, update status to ready. Queue adjusted stories for re-planning. |
 | **BT-7** | Summary | Report counts, offer implementation or re-planning. |

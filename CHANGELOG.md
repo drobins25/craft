@@ -2,6 +2,14 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.12.0 - 2026-10-25
+
+- Changed the questions that need real thought. Craft now asks them as a card in the conversation: the question, the options with the reasoning for each, and its recommendation. You answer by typing a letter, or "yes" to take the recommendation, instead of squinting at a picker that hides the reasoning.
+- Kept the picker for questions with fixed answers, where a click is all it takes.
+- Improved how answers are kept: each answer is saved as you give it, so nothing is lost if a session stops partway through a set of questions.
+- Fixed batch planning skipping decisions the planner had flagged for you. When planning several stories at once, every call the planner marked as yours to make is now asked, and every call it made on your behalf is listed, whatever its confidence.
+- Changed the last stretch of creating a story. After the codebase check, the five design sections (acceptance, scope, what to preserve, the hardest constraint, dependencies) arrive one at a time, each written into the story as it is drafted, and craft asks you once at the end instead of after every section.
+
 ## 2.11.1 - 2026-10-22
 
 - Fixed the end-of-story check for planning notes left in code comments (like "Chunk 3") failing your story over old comments it never wrote. It now looks only at the lines your story added.
