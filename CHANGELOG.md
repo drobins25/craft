@@ -2,6 +2,10 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.12.1 - 2026-10-28
+
+- Added self-update. Craft now checks for its own new version once a day, shortly after a session starts, and installs it in the background, so you stop running the update by hand. The new version loads in your next session. Set `CRAFT_AUTO_UPDATE=0` to turn it off.
+
 ## 2.12.0 - 2026-10-25
 
 - Changed the questions that need real thought. Craft now asks them as a card in the conversation: the question, the options with the reasoning for each, and its recommendation. You answer by typing a letter, or "yes" to take the recommendation, instead of squinting at a picker that hides the reasoning.
