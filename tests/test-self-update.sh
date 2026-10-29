@@ -1,8 +1,8 @@
 #!/bin/bash
 # test-self-update.sh - craft's SessionStart self-update hook.
 # A fake `claude` on PATH records every call and answers from a script, so no
-# network and no real plugin cache are touched. Guards, throttle, the two
-# commands in order, the notice, the log cap, and the hooks.json entry.
+# network and no real plugin cache are touched. Guards, throttle, the update
+# command, the notice, the log cap, and the hooks.json entry.
 # Usage: bash tests/test-self-update.sh
 
 source "$(dirname "${BASH_SOURCE[0]}")/test_helper.sh"
@@ -28,14 +28,11 @@ su_env() {
   CALLS="$BIN/calls"
   : > "$CALLS"
   # The fake claude: appends its arguments to CALLS, then prints what the
-  # UPDATE_SAYS / MARKET_RC files tell it to.
+  # UPDATE_SAYS file tells it to.
   cat > "$BIN/claude" <<EOF
 #!/bin/bash
 printf '%s\n' "\$*" >> "$CALLS"
 case "\$*" in
-  "plugin marketplace update craft")
-    rc=\$(cat "$BIN/market_rc" 2>/dev/null || echo 0)
-    echo "Successfully updated marketplace: craft"; exit "\$rc" ;;
   "plugin update craft@craft")
     cat "$BIN/update_says" 2>/dev/null || echo "craft is already at the latest version (2.12.1)."; exit 0 ;;
 esac
@@ -93,22 +90,21 @@ assert_eq "no call" "" "$(calls)"
 
 # --- first run ----------------------------------------------------------------
 
-begin_test "first run discloses once, then runs the two commands in order"
+begin_test "first run discloses once, then runs the update command"
 su_env
 OUT=$(run_entry)
 assert_contains_literal "one JSON line with the disclosure" '{"systemMessage": "craft checks for its own update once a day' "$OUT"
 assert_eq "exactly one line of output" "1" "$(printf '%s\n' "$OUT" | grep -c .)"
-assert_eq "marketplace update then plugin update" "plugin marketplace update craft
-plugin update craft@craft" "$(calls)"
+assert_eq "exactly one call: plugin update" "plugin update craft@craft" "$(calls)"
 assert_file_exists "stamp written" "$DATA/self-update.stamp"
 assert_file_exists "disclosed marker written" "$DATA/self-update.disclosed"
 assert_file_not_exists "no notice when already at the latest" "$DATA/self-update.notice"
-assert_contains_literal "log has both results" "plugin update rc=0: craft is already at the latest version (2.12.1)." "$(cat "$DATA/self-update.log")"
+assert_contains_literal "log has the result" "plugin update rc=0: craft is already at the latest version (2.12.1)." "$(cat "$DATA/self-update.log")"
 
 begin_test "a second run inside the interval makes no call and says nothing"
 OUT=$(run_entry)
 assert_eq "no output" "" "$OUT"
-assert_eq "still only the first two calls" "2" "$(calls | wc -l | tr -d ' ')"
+assert_eq "still only the first call" "1" "$(calls | wc -l | tr -d ' ')"
 
 # --- an update lands ----------------------------------------------------------
 
@@ -125,14 +121,6 @@ assert_contains_literal "next session shows the notice" '{"systemMessage": "craf
 assert_file_not_exists "notice consumed" "$DATA/self-update.notice"
 OUT=$(run_entry CRAFT_SELF_UPDATE_INTERVAL=0)
 assert_eq "and not again" "" "$OUT"
-
-begin_test "a failed marketplace refresh stops before the plugin update"
-su_env
-: > "$DATA/self-update.disclosed"
-echo 1 > "$BIN/market_rc"
-OUT=$(run_entry)
-assert_eq "only the marketplace call" "plugin marketplace update craft" "$(calls)"
-assert_contains_literal "logged with its exit code" "marketplace update rc=1" "$(cat "$DATA/self-update.log")"
 
 begin_test "the log never grows past 50 lines"
 su_env

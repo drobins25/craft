@@ -3,9 +3,9 @@
 #
 # Claude Code refreshes only Anthropic's own marketplaces on its own, so craft
 # does it for the craft marketplace: once a day, in the background, through the
-# two commands a user would otherwise run by hand:
-#   claude plugin marketplace update craft
+# command a user would otherwise run by hand:
 #   claude plugin update craft@craft
+# which refreshes the craft marketplace clone itself before comparing versions.
 # The new version loads in the user's next session.
 #
 # Two modes.
@@ -13,8 +13,8 @@
 #              systemMessage for the user (a first-run disclosure, or a notice
 #              that an update landed), spawns the worker detached when a check
 #              is due, exits 0.
-#   --worker   Runs the two commands, logs, and leaves a one-line notice for
-#              the next session start when the files changed.
+#   --worker   Runs the command, logs, and leaves a one-line notice for the
+#              next session start when the files changed.
 #
 # Silent exits, in order: self-update is off (CRAFT_AUTO_UPDATE=0 or a
 # no-auto-update file in the data dir, or Claude Code's own DISABLE_AUTOUPDATER,
@@ -33,7 +33,7 @@
 #   no-auto-update         create this file to turn self-update off
 #
 # Stdout is parsed as JSON by Claude Code, so nothing here prints anything
-# except the one systemMessage line. A nested run (the claude plugin commands
+# except the one systemMessage line. A nested run (the claude plugin command
 # can fire SessionStart hooks in a child) exits at the first guard.
 set -uo pipefail
 
@@ -41,7 +41,6 @@ MODE="${1:-}"
 DATA="${CLAUDE_PLUGIN_DATA:-}"
 ROOT="${CLAUDE_PLUGIN_ROOT:-}"
 INTERVAL="${CRAFT_SELF_UPDATE_INTERVAL:-86400}"
-MARKETPLACE="craft"
 PLUGIN_ID="craft@craft"
 
 flag_on() {
@@ -90,9 +89,6 @@ say() {
 
 worker() {
   export CRAFT_SELF_UPDATE_RUNNING=1
-  out=$(claude plugin marketplace update "$MARKETPLACE" 2>&1); rc=$?
-  log "marketplace update rc=$rc: $(printf '%s' "$out" | tail -n 1)"
-  [ "$rc" -eq 0 ] || return 0
   out=$(claude plugin update "$PLUGIN_ID" 2>&1); rc=$?
   log "plugin update rc=$rc: $(printf '%s' "$out" | tail -n 1)"
   [ "$rc" -eq 0 ] || return 0

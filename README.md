@@ -279,10 +279,9 @@ One thing to expect once craft is enabled: Claude starts hinting when a craft fe
 
 ### Updating craft
 
-Craft keeps itself current. Once a day, shortly after a session starts, it runs in the background the same two commands you could run yourself:
+Craft keeps itself current. Once a day, shortly after a session starts, it runs in the background the same command you could run yourself:
 
 ```
-claude plugin marketplace update craft
 claude plugin update craft@craft
 ```
 
@@ -294,7 +293,7 @@ To turn self-update off, use any one of these:
 - a marker file at `~/.claude/plugins/data/craft-craft/no-auto-update`, for launches that do not load your shell profile
 - Claude Code's own `DISABLE_AUTOUPDATER` or `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`
 
-With it off, run the two commands above to update by hand.
+With it off, run the command above to update by hand.
 
 ### One setting worth knowing about
 
