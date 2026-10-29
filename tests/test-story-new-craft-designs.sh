@@ -318,4 +318,27 @@ assert_eq "no later-story promise" "0" "$(grep -c "for a later story" "$REPO/com
 begin_test "the changelog history line is untouched"
 assert_eq "history line kept" "1" "$(grep -cF -- '- Changed story creation: the source question now also offers "From mockup" when converged mockup records exist' "$REPO/CHANGELOG.md" || true)"
 
+# Full Design, Step 9: five sections, each its own Edit to the story file, one
+# question after the fifth. A tweak once folded the five steps into a single
+# one-pass draft with one-line slots and every test stayed green; the first
+# live story through it came out thin. These pins make that fold a red test.
+begin_test "full design is five passes and one question"
+STORY_NEW="$REPO/commands/craft-story-new.md"
+STEP9="$(sed -n '/^### Step 9: Full Design, Five Passes, One Question/,/^### Step 10/p' "$STORY_NEW")"
+assert_contains_literal "step 9 heading" "### Step 9: Full Design, Five Passes, One Question" "$STEP9"
+for P in "Pass 1, Acceptance" "Pass 2, Scope" "Pass 3, Preserve" "Pass 4, Hardest constraint" "Pass 5, Dependencies"; do
+  assert_eq "$P present once" "1" "$(printf '%s\n' "$STEP9" | grep -cF -- "**$P.**" || true)"
+done
+for H in "## Acceptance" "## Scope" "## Preserve" "## Hardest Constraint" "## Dependencies"; do
+  assert_eq "$H section template present" "1" "$(printf '%s\n' "$STEP9" | grep -cF -- "> $H" || true)"
+done
+assert_contains_literal "one Edit per section" "A pass is one Edit to the story file" "$STEP9"
+assert_contains_literal "never two sections in one Edit" "Never write two sections in one Edit" "$STEP9"
+assert_contains_literal "section text exists first in the Edit" "exists first in the Edit, never in chat ahead of it" "$STEP9"
+assert_eq "one closing question" "1" "$(printf '%s\n' "$STEP9" | grep -cF -- "> Anything to change?" || true)"
+assert_eq "no one-pass draft" "0" "$(printf '%s\n' "$STEP9" | grep -cF -- "Draft all five sections" || true)"
+assert_eq "no widget in step 9" "0" "$(printf '%s\n' "$STEP9" | grep -cF -- "AskUserQuestion" || true)"
+assert_eq "hardest constraint never none" "1" "$(printf '%s\n' "$STEP9" | grep -cF -- 'Never "none"' || true)"
+assert_eq "no em dash in step 9" "0" "$(printf '%s\n' "$STEP9" | grep -c -- '—' || true)"
+
 finish_tests

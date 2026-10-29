@@ -330,38 +330,76 @@ Before defining acceptance criteria or planning chunks, investigate the codebase
 
 After the alignment loop completes, continue to Step 9.
 
-### Step 9: Full Design, One Pass
+### Step 9: Full Design, Five Passes, One Question
 
-Draft all five sections from the discussion and the alignment findings, show
-them together, and ask once. A concern the agents or the codebase raised that
-Step 8 has not already put to the user becomes a line in its section of the
-draft. The Hardest constraint names a specific risk, never "none".
+The five design sections used to be five user turns. What made them good was
+not the five answers; it was that each section got a whole model generation.
+One generation asked for all five sections splits its attention five ways and
+writes each to the size of its template slot. So the turn boundary stays, and
+it moves from the user's reply to a tool call.
 
-> "Here is the full design."
+Five sections, one per pass, in this order: Acceptance, Scope, Preserve,
+Hardest constraint, Dependencies. A pass is one Edit to the story file that
+writes that section, followed by printing the section as written. The section
+text exists first in the Edit, never in chat ahead of it, so there is no way
+to draft them all at once and split them after. The Edit ends the generation;
+the next section is drafted fresh, with the ones already in the file in view.
+Never write two sections in one Edit. The user sees each section arrive and
+may reply to any of them; a reply is handled before the next pass. After the
+fifth pass, ask once.
+
+**Pass 1, Acceptance.** Group the criteria by area of the product, one
+behavior per line, Given/when/then. Every value the alignment check, the
+content direction or the visual direction already settled appears as that
+value. A rule from outside the project that the story does not already state
+is checked before it is written, or the line says "unverified".
+
+> ## Acceptance
 >
-> **Acceptance** (what defines done)
+> **[Area]**
 > - [ ] Given [context], when [action], then [outcome]
 > - [ ] Given [context], when [action], then [outcome]
 >
-> **Scope**
-> Included: [what we are building]
-> Excluded: [what we are explicitly not doing]
->
-> **Preserve** (must keep working)
-> - [existing feature, related functionality, integration point]
->
-> **Hardest constraint**
-> [the biggest risk or challenge, and why]
->
-> **Dependencies**
-> Blocked by: [stories or features that must land first, or none]
-> Blocks: [stories or features waiting on this, or none]
->
+> **[Area]**
+> - [ ] Given [context], when [action], then [outcome]
+
+**Pass 2, Scope.** Each line a full sentence about what the user gets, or
+does not. Excluded names the near misses a reader would assume are in.
+
+> ## Scope
+> **Included:**
+> - [What we're building]
+> **Excluded:**
+> - [What we're NOT doing]
+
+**Pass 3, Preserve.** Grep the Likely Files and their callers before
+writing. Each line names the thing that must keep working and what in this
+story could break it.
+
+> ## Preserve
+> - [Existing feature that must keep working] - [what in this story could break it]
+> - [Related functionality that could break] - [what in this story could break it]
+> - [Integration point that must stay intact] - [what in this story could break it]
+
+**Pass 4, Hardest constraint.** One specific risk, why it is hard here, and
+what would prove it is handled. Never "none".
+
+> ## Hardest Constraint
+> [the specific risk, why it is hard here, and what would prove it is handled]
+
+**Pass 5, Dependencies.** Name stories, not features.
+
+> ## Dependencies
+> **Blocked by:** [stories that must land first, or none]
+> **Blocks:** [stories waiting on this, or none]
+
+After the fifth pass:
+
 > Anything to change?
 
-The reply edits the draft in place: a changed line is rewritten and a new
-concern becomes a line in its section. Confirm the edits in one sentence
-without re-posting the draft, then continue to Step 10.
+A reply edits that section in place with one Edit and is confirmed in one
+sentence, without re-posting the design. Then continue to Step 10, which
+updates the existing file rather than creating it.
 
 ### Step 10: Save & Place
 

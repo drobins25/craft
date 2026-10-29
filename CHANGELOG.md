@@ -8,6 +8,7 @@ Notable, user-facing changes per version. Internal changes (tests, refactors, co
 - Kept the picker for questions with fixed answers, where a click is all it takes.
 - Improved how answers are kept: each answer is saved as you give it, so nothing is lost if a session stops partway through a set of questions.
 - Fixed batch planning skipping decisions the planner had flagged for you. When planning several stories at once, every call the planner marked as yours to make is now asked, and every call it made on your behalf is listed, whatever its confidence.
+- Changed the last stretch of creating a story. After the codebase check, the five design sections (acceptance, scope, what to preserve, the hardest constraint, dependencies) arrive one at a time, each written into the story as it is drafted, and craft asks you once at the end instead of after every section.
 
 ## 2.11.1 - 2026-10-22
 
