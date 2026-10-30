@@ -2,6 +2,13 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.12.1 - 2026-10-28
+
+- Fixed planning flagging a UI story as incomplete for having no binding table. The table is optional, so a story that skipped the visual riff now goes straight to triage instead of a false failure card.
+- Added self-update. Craft now checks for its own new version once a day, shortly after a session starts, and installs it in the background, so you stop running the update by hand. The new version loads in your next session. Set `CRAFT_AUTO_UPDATE=0` to turn it off.
+- Fixed the last stretch of creating a story. The five design sections are now shown to you together once all of them are written, with the one question under them, instead of trickling through the terminal one at a time with the question stuck under the last one.
+- Fixed starting a story asking you twice. Once you pick a story to start, from the craft menu, at the end of planning, or by naming it, implementation now begins without a second "Start with Chunk 1?" question.
+
 ## 2.12.0 - 2026-10-25
 
 - Changed the questions that need real thought. Craft now asks them as a card in the conversation: the question, the options with the reasoning for each, and its recommendation. You answer by typing a letter, or "yes" to take the recommendation, instead of squinting at a picker that hides the reasoning.

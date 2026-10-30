@@ -279,19 +279,21 @@ One thing to expect once craft is enabled: Claude starts hinting when a craft fe
 
 ### Updating craft
 
-Craft updates ship frequently, and Claude Code does not auto-update third-party plugins - your install stays on its version until you tell it to move. To pick up the latest:
+Craft keeps itself current. Once a day, shortly after a session starts, it runs in the background the same command you could run yourself:
 
 ```
-claude plugin marketplace update craft
+claude plugin update craft@craft
 ```
 
-Or turn on auto-update once and never think about it again:
+The new version loads in your next session. The first time this runs you see a one-line notice; after that it is silent unless a new version landed. Nothing about you or your project is sent anywhere: the only network call is a `git fetch` of this repository, and the only files touched are craft's own under `~/.claude/plugins/`.
 
-1. Run `/plugin`.
-2. Go to **Marketplaces** > **craft**.
-3. Select **Enable auto-update**.
+To turn self-update off, use any one of these:
 
-From then on, Claude Code checks for new versions shortly after each session starts and prompts `/reload-plugins` when one lands.
+- `CRAFT_AUTO_UPDATE=0` in your environment
+- a marker file at `~/.claude/plugins/data/craft-craft/no-auto-update`, for launches that do not load your shell profile
+- Claude Code's own `DISABLE_AUTOUPDATER` or `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`
+
+With it off, run the command above to update by hand.
 
 ### One setting worth knowing about
 

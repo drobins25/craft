@@ -332,21 +332,20 @@ After the alignment loop completes, continue to Step 9.
 
 ### Step 9: Full Design, Five Passes, One Question
 
-The five design sections used to be five user turns. What made them good was
-not the five answers; it was that each section got a whole model generation.
-One generation asked for all five sections splits its attention five ways and
-writes each to the size of its template slot. So the turn boundary stays, and
-it moves from the user's reply to a tool call.
+Each design section gets a whole model generation, and the turn boundary is
+a tool call rather than a user reply. One generation asked for all five
+sections splits its attention five ways and writes each to the size of its
+template slot.
 
 Five sections, one per pass, in this order: Acceptance, Scope, Preserve,
 Hardest constraint, Dependencies. A pass is one Edit to the story file that
-writes that section, followed by printing the section as written. The section
-text exists first in the Edit, never in chat ahead of it, so there is no way
-to draft them all at once and split them after. The Edit ends the generation;
+writes that section, with nothing printed to chat. The section text
+exists first in the Edit, never in chat ahead of it, so there is no way to
+draft them all at once and split them after. The Edit ends the generation;
 the next section is drafted fresh, with the ones already in the file in view.
-Never write two sections in one Edit. The user sees each section arrive and
-may reply to any of them; a reply is handled before the next pass. After the
-fifth pass, ask once.
+Never write two sections in one Edit. After the fifth pass,
+read the five sections back from the story file and print them in one
+message exactly as written, then ask once.
 
 **Pass 1, Acceptance.** Group the criteria by area of the product, one
 behavior per line, Given/when/then. Every value the alignment check, the
@@ -393,7 +392,8 @@ what would prove it is handled. Never "none".
 > **Blocked by:** [stories that must land first, or none]
 > **Blocks:** [stories waiting on this, or none]
 
-After the fifth pass:
+After the fifth pass, one message: the five sections read back from the story
+file and printed as written, then:
 
 > Anything to change?
 
