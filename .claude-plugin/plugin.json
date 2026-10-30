@@ -1,7 +1,7 @@
 {
   "name": "craft",
   "displayName": "craft",
-  "version": "2.12.1",
+  "version": "2.12.2",
   "description": "Craft is a Claude Code plugin that asks you the product questions and works out the technical ones. Features get planned, built, and tested, with your codebase read-only until you approve the work. Point at a live page to change it. The calls you make - decisions, design tokens, the tweaks you loved - carry into every build after.",
   "author": {
     "name": "Darin Drobinski",
