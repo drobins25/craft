@@ -35,7 +35,14 @@ Cycle-design mode files (default-mode.md, roadmap-mode.md, detailing-mode.md) se
 
 If the marker is present in your invocation context:
 
-1. Read `${CRAFT_PROJECT_ROOT}/.craft/cycles/${ACTIVE_CYCLE}/cycle.yaml` to get the `source_concept` value (list of planning doc paths).
+1. Read the `cycle.yaml` of the cycle being designed to get the `source_concept` value (list of planning doc paths). That cycle is `PLANNING_CYCLE`, which cycle-design records for the cycle it is writing stories into; it can differ from the active cycle. Use the active cycle only when no planning cycle is recorded:
+
+   ```bash
+   TARGET_CYCLE=$(grep "^PLANNING_CYCLE=" "${CRAFT_PROJECT_ROOT}/.craft/.global-state" | cut -d= -f2 | tr -d '"')
+   [ -n "$TARGET_CYCLE" ] || TARGET_CYCLE=$(grep "^ACTIVE_CYCLE=" "${CRAFT_PROJECT_ROOT}/.craft/.global-state" | cut -d= -f2 | tr -d '"')
+   ```
+
+   Then read `${CRAFT_PROJECT_ROOT}/.craft/cycles/${TARGET_CYCLE}/cycle.yaml`.
 2. **If cycle.yaml has exactly one source_concept path:** auto-resolve. Skip the picker. Set that path as the selected concept. Proceed directly to Phase 2.
 3. **If cycle.yaml has multiple source_concept paths:** ask the user which specific concept THIS story is from, using the cycle's `source_concept` list as the option set (not the full planning corpus). Skip directly to Phase 3a after answer.
 
@@ -415,11 +422,13 @@ For any GAP-FILL QUESTIONS NEEDED the agent flagged but Phase 4 doesn't have a g
 Read `${CRAFT_PROJECT_ROOT}/.craft/.global-state` via Bash (absolute path, NEVER relative):
 
 ```bash
-ACTIVE_CYCLE=$(grep "^ACTIVE_CYCLE=" "${CRAFT_PROJECT_ROOT}/.craft/.global-state" | cut -d= -f2)
+PLANNING_CYCLE=$(grep "^PLANNING_CYCLE=" "${CRAFT_PROJECT_ROOT}/.craft/.global-state" | cut -d= -f2 | tr -d '"')
+ACTIVE_CYCLE=$(grep "^ACTIVE_CYCLE=" "${CRAFT_PROJECT_ROOT}/.craft/.global-state" | cut -d= -f2 | tr -d '"')
 ```
 
-- **If `ACTIVE_CYCLE` set:** place file in `${CRAFT_PROJECT_ROOT}/.craft/cycles/$ACTIVE_CYCLE/stories/`. Story number = highest existing numeric filename prefix in that stories/ directory + 1 (never file count + 1 - a gap from an archived story makes count+1 collide with an existing number). File path: `[N]-[slug].md`. Write `cycle:` and `story_number:` frontmatter.
-- **If `ACTIVE_CYCLE` empty:** place file in `${CRAFT_PROJECT_ROOT}/.craft/backlog/`. File path: `[slug].md`. **OMIT `cycle:` and `story_number:` from frontmatter entirely** (do NOT write them as empty strings - existing freeform flow omits them).
+- **If the cycle-design marker is present and `PLANNING_CYCLE` set:** place file in `${CRAFT_PROJECT_ROOT}/.craft/cycles/$PLANNING_CYCLE/stories/` - the cycle being designed, which can differ from the active cycle. Number it and write `cycle:` and `story_number:` frontmatter the same way as the active-cycle case below.
+- **Otherwise, if `ACTIVE_CYCLE` set:** place file in `${CRAFT_PROJECT_ROOT}/.craft/cycles/$ACTIVE_CYCLE/stories/`. Story number = highest existing numeric filename prefix in that stories/ directory + 1 (never file count + 1 - a gap from an archived story makes count+1 collide with an existing number). File path: `[N]-[slug].md`. Write `cycle:` and `story_number:` frontmatter.
+- **Otherwise (`ACTIVE_CYCLE` empty):** place file in `${CRAFT_PROJECT_ROOT}/.craft/backlog/`. File path: `[slug].md`. **OMIT `cycle:` and `story_number:` from frontmatter entirely** (do NOT write them as empty strings - existing freeform flow omits them).
 
 ### Frontmatter construction
 

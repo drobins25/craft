@@ -265,7 +265,7 @@ assert_eq "two mentions" "2" "$(grep -c 'Step 2.7 (Story-Source Routing)' "$DM" 
 
 begin_test "the design moment runs before the freeform-cycle skip"
 DESIGN_LINE=$(grep -n '^\*\*Design-extraction moment\.\*\*' "$DM" | head -1 | cut -d: -f1)
-YAML_LINE=$(grep -n 'ACTIVE_CYCLE=\$(grep' "$DM" | head -1 | cut -d: -f1)
+YAML_LINE=$(grep -n 'PLANNING_CYCLE=\$(grep' "$DM" | head -1 | cut -d: -f1)
 FREEFORM_LINE=$(grep -n 'this cycle is freeform' "$DM" | head -1 | cut -d: -f1)
 assert_eq "design moment exists" "1" "$([ -n "$DESIGN_LINE" ] && echo 1 || echo 0)"
 assert_eq "before the cycle.yaml read" "1" "$([ -n "$DESIGN_LINE" ] && [ -n "$YAML_LINE" ] && [ "$DESIGN_LINE" -lt "$YAML_LINE" ] && echo 1 || echo 0)"

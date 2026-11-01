@@ -2,6 +2,10 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.15.1 - 2026-11-01
+
+- Fixed designing a new cycle from a planning doc while another cycle is running. Craft now reads the planning doc of the cycle you are designing, not the one being built, so each new story starts from that doc's content and is saved into the new cycle.
+
 ## 2.15.0 - 2026-11-01
 
 - Added picking an issue up again. Craft finds the cycle the issue already has instead of starting a second one, reads the issue again, and keeps a dated copy of only what changed. Earlier copies are never touched, and each story points at every copy of the discussion, not only the newest. The first line says whether the stage moved, for example "Stage changed: plan to build, per Go from Darin on Nov 2."
