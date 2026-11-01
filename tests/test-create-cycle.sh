@@ -284,6 +284,23 @@ assert_file_contains "empty date is ''" "go_date: ''" "$Y"
 cleanup_test_dir
 echo ""
 
+begin_test "Issue alone records source_issue only"
+TEST_DIR=$(create_minimal_craft)
+run_create auth "Authentication" "Login flow" "$TEST_DIR" "" "DRO-21" "" "" "" >/dev/null
+Y="$TEST_DIR/.craft/cycles/1-auth/cycle.yaml"
+assert_eq "exits 0" "0" "$TC_EXIT"
+EXPECTED_BLOCK="source_concept: []
+source_issue: 'DRO-21'
+
+"
+ACTUAL_BLOCK=$(grep -A2 '^source_concept:' "$Y"; echo x)
+assert_eq "only source_issue follows source_concept" "${EXPECTED_BLOCK}x" "$ACTUAL_BLOCK"
+assert_eq "no stage key" "0" "$(grep -c '^authorized_stage:' "$Y")"
+assert_eq "no author key" "0" "$(grep -c '^go_author:' "$Y")"
+assert_eq "no date key" "0" "$(grep -c '^go_date:' "$Y")"
+cleanup_test_dir
+echo ""
+
 begin_test "Lifecycle seds leave the tracker keys alone"
 TEST_DIR=$(create_minimal_craft)
 run_create auth "Authentication" "Login flow" "$TEST_DIR" "" "DRO-21" "build" "Darin" "$TRACKER_TS" >/dev/null
@@ -314,7 +331,8 @@ reject_tracker "Build without go_date rejected" "DRO-21" "build and open the PR"
 reject_tracker "Unknown stage rejected" "DRO-21" "ship" "Darin" "$TRACKER_TS"
 reject_tracker "Stage without issue rejected" "" "plan" "" ""
 reject_tracker "Author without issue rejected" "" "" "Darin" ""
-reject_tracker "Issue without stage rejected" "DRO-21" "" "" ""
+reject_tracker "Author without stage rejected, even with an issue" "DRO-21" "" "Darin" ""
+reject_tracker "Date without stage rejected, even with an issue" "DRO-21" "" "" "$TRACKER_TS"
 reject_tracker "Newline in issue rejected" "DRO-21
 x" "plan" "" ""
 reject_tracker "Newline in author rejected" "DRO-21" "plan" "Da

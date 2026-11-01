@@ -46,8 +46,8 @@ FIX
 resolve "$WORK/c1.md" DRO-21
 assert_eq "exits 0" "0" "$CODE"
 assert_eq "go=none" "none" "$(field go)"
-assert_eq "stage=plan" "plan" "$(field stage)"
-assert_eq "no-Go stage line" "No Go found on DRO-21, so this run plans only." "$(field stage_line)"
+assert_eq "stage is empty, so no limit is recorded" "" "$(field stage)"
+assert_eq "no-Go stage line" "No Go on DRO-21, so craft works as usual: you decide when to build." "$(field stage_line)"
 assert_eq "six lines" "6" "$(printf '%s\n' "$OUT" | wc -l | tr -d ' ')"
 assert_eq "empty go_comment" "" "$(field go_comment)"
 
@@ -138,7 +138,7 @@ cat > "$WORK/c6.md" <<'FIX'
 FIX
 resolve "$WORK/c6.md" DRO-21
 assert_eq "go=none" "none" "$(field go)"
-assert_eq "stage=plan" "plan" "$(field stage)"
+assert_eq "stage is empty" "" "$(field stage)"
 
 begin_test "Go not on first line ignored"
 cat > "$WORK/c7.md" <<'FIX'

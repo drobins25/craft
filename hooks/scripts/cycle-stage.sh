@@ -9,8 +9,10 @@
 #   say=<one line to show the user when implement=no, else empty>
 #
 # A cycle with no source_issue is not tracker-sourced and may be implemented.
-# Build stages may be implemented. Plan, hold and any missing or unknown stage
-# stop, because a stage that cannot be read must never widen what is allowed.
+# So may a cycle with a source_issue and no authorized_stage key at all: the
+# issue had no Go, so nothing limits it. Build stages may be implemented. Plan,
+# hold and any present but empty or unknown stage stop, because a stage that
+# cannot be read must never widen what is allowed.
 # Read-only. A cycle dir without cycle.yaml prints one line on stderr, exit 1.
 
 set -e
@@ -37,7 +39,8 @@ AUTHOR=$(read_key go_author)
 IMPLEMENT=yes
 SAY=""
 
-if [ -n "$KEY" ]; then
+# A recorded stage key, even an empty one, is a limit; only its absence is not.
+if [ -n "$KEY" ] && grep -q "^authorized_stage:" "$YAML"; then
   case "$STAGE" in
     build|"build and open the PR") ;;
     plan)

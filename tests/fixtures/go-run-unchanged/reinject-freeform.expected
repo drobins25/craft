@@ -1,0 +1,5 @@
+--- CRAFT CONTEXT (post-compaction recovery) ---
+No active cycle. Backlog: 0 stories.
+--- END CRAFT CONTEXT ---
+
+IMPORTANT: Use transition scripts for state changes (complete-chunk.sh, complete-story.sh, start-story.sh). Never edit .state files directly.

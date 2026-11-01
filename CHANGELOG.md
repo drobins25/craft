@@ -2,6 +2,12 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.14.0 - 2026-11-01
+
+- Added a Go that answers Craft's prompts. When the issue's newest Go says to answer them yourself, craft shows a short brief, then answers its own routine questions up to the stage the Go allows. It stops and asks you only for real product decisions.
+- Added stopping at the Go's limit. A Go that allows planning only, or says to hold, still stops before implementation, and a build Go lets it continue.
+- Kept an issue with no Go working as before. Craft asks you every question and you decide when to build.
+
 ## 2.13.0 - 2026-11-01
 
 - Added starting a cycle from a tracker issue. Give craft an issue key or link and it reads the issue and its whole discussion, keeps a verbatim copy with the cycle, and plans from what was decided there. The first line it prints tells you how far you may go.

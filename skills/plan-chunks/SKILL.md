@@ -40,6 +40,8 @@ The orchestrator may pass enriched args with labeled fields. Parse these to skip
 
 **Fallback:** Args may be just a file path with no fields. All phases must work without enriched args.
 
+**Under a Go run** (only when `${CLAUDE_PLUGIN_ROOT}/commands/references/go-run.md` is in force for this conversation; otherwise nothing in this skill changes): at Phase 0, run `python3 "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/go-brief.py" <cycle-dir>`. On `prompts=answer`, every prompt and card in this skill follows go-run.md's `## Known prompts` and `## Planning`, and the S-6 and BT-7 hand-offs go to its `## At the stage ceiling` instead of story-implement, so a run never goes past the stage the Go allows. Any other verdict ends the Go run as go-run.md says, and this skill then asks everything as written.
+
 ---
 
 ## Your Posture: Opinionated Partner

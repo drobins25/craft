@@ -1,0 +1,5 @@
+## Story Selection Guards
+
+- No ready stories + all complete: invoke `craft:craft-cycle-complete`. EXIT.
+- No ready stories + some in planning: "Cycle paused — [N] stories need planning." EXIT.
+- Ready story has `chunks_total: 0`: "Story [name] needs plan-chunks first." EXIT.

@@ -1,0 +1,26 @@
+**Safety gate (MANDATORY before `create-cycle.sh` runs):**
+
+Use **AskUserQuestion** to confirm the inferred values before any file write:
+
+```
+question: "I'm about to create cycle '[name]' with goal '[goal]' sourced from [source_concept paths, or 'no planning docs'], and tracker issue <KEY> at stage <stage> (<N> comments copied). Confirm?"
+header: "Confirm cycle"
+options:
+  - label: "Confirm and proceed"
+    description: "Run create-cycle.sh with these values"
+  - label: "Change the source"
+    description: "Different planning doc(s), or remove source"
+  - label: "Change the name or goal"
+    description: "Adjust before creating"
+  - label: "Actually this is freeform"
+    description: "No source_concept, normal flow"
+```
+
+- **Confirm and proceed:** invoke the script with the values shown.
+- **Change the source:** ask the user which planning doc(s) (or none, or a different tracker issue), then re-present the gate.
+- **Change the name or goal:** ask the user for revised values, then re-present the gate.
+- **Actually this is freeform:** clear `source_concept` (and the tracker source, deleting its staging folder), then re-present the gate.
+
+The tracker clause (`and tracker issue <KEY> at stage <stage> (<N> comments copied)`) appears only when tracker-intake.md ran; leave it out otherwise.
+
+The safety gate runs every time, on every path - it cannot be skipped. The user always sees `source_concept` in the question text before it gets written to cycle.yaml.

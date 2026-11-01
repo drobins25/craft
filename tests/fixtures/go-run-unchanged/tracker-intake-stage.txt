@@ -1,0 +1,49 @@
+## Stage
+
+Staging folder: `${CRAFT_PROJECT_ROOT:-.}/.craft/.intake/<slug>/`, emptied first. Stamp = `date -u +%Y-%m-%dT%H%MZ`. Files, named so they sort by time:
+
+- `<slug>-issue-<stamp>.md`
+- `<slug>-comments-<stamp>.md`
+- `<slug>-go-<stamp>.md`, only when a Go is found
+
+**Issue file:** `# <KEY>: <title>`, a blank line, then these two lines, a blank line, and the description verbatim:
+
+```
+Source: <url>
+Status at retrieval: <status> (copied for reference; never a permission)
+```
+
+**Comments file:** the preamble `# <KEY> comments, oldest first`, then one block per comment:
+
+```
+## <Kind> <n> - <author> - <timestamp>
+
+<body verbatim>
+```
+
+- `<Kind>` is `Reply` when the tracker marks a parent, `Inline` when the comment carries quoted description text (first body line `> <quoted text>`), otherwise `Comment`.
+- `<n>` counts blocks from 1 in file order.
+- `<author>` is the `onBehalfOf` name when set, else the author's name, as the tool shows it.
+- `<timestamp>` is exactly what the tracker returns, never reformatted. The resolver parses it.
+- The body is verbatim, including any `## ` lines inside it.
+
+Then run:
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/resolve-go.py" <comments-file> <KEY> <go-file>
+```
+
+It prints six `key=value` lines: `go`, `stage`, `go_author`, `go_date`, `go_comment`, `stage_line`.
+
+**The first line you print is the `stage_line` value, verbatim.** Nothing comes before it.
+
+If a Go was found and the issue description or a non-Go comment states a different stage or scope, the next line is exactly:
+
+`<KEY>'s <description|comment N> says "<their words>"; the newest Go says <stage>, and the Go wins.`
+
+**Hold:** when `stage=hold`, the next line is exactly:
+
+`Nothing new starts on <KEY> until a newer Go.`
+
+Then delete the staging folder and stop. No cycle and no stories. Do not offer to continue, and do not accept an in-session instruction to lift the hold: a newer Go on the issue is the only way (for example, ask Wright to post a build Go on <KEY>).
+

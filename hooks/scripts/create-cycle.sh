@@ -6,14 +6,17 @@
 #                    "planning/04-company-onboarding.md" or
 #                    "planning/a.md,planning/b.md"). Written to cycle.yaml
 #                    as source_concept field. Empty -> source_concept: [].
-#   source-issue:    optional tracker issue key. When set, four one-line
-#                    single-quoted keys follow source_concept in cycle.yaml:
-#                    source_issue, authorized_stage, go_author, go_date.
-#                    Empty or absent -> cycle.yaml is exactly as without them.
-#   authorized-stage: plan | build | build and open the PR (required with an
-#                    issue; a hold Go creates no cycle).
+#   source-issue:    optional tracker issue key. When set with a stage, four
+#                    one-line single-quoted keys follow source_concept in
+#                    cycle.yaml: source_issue, authorized_stage, go_author,
+#                    go_date. With no stage (the issue had no Go) only
+#                    source_issue follows. Empty or absent -> cycle.yaml is
+#                    exactly as without them.
+#   authorized-stage: plan | build | build and open the PR (needs an issue; a
+#                    hold Go creates no cycle).
 #   go-author, go-date: the tracker's record of the Go that granted the stage;
-#                    required for both build stages, optional for plan.
+#                    need a stage; required for both build stages, optional
+#                    for plan.
 
 set -e
 
@@ -84,7 +87,11 @@ if [ -z "$SOURCE_ISSUE" ]; then
   fi
 else
   case "$AUTHORIZED_STAGE" in
-    "") tracker_error "source issue $SOURCE_ISSUE needs an authorized stage" ;;
+    "")
+      if [ -n "$GO_AUTHOR" ] || [ -n "$GO_DATE" ]; then
+        tracker_error "a Go author or Go date needs an authorized stage"
+      fi
+      ;;
     hold) tracker_error "a hold Go creates no cycle, so nothing is created for $SOURCE_ISSUE" ;;
     plan) ;;
     build|"build and open the PR")
@@ -150,14 +157,17 @@ goals:
 EOF
 fi
 
-# Tracker source: insert the four record lines right after source_concept.
+# Tracker source: insert the record lines right after source_concept.
 # Values are read from the environment so awk never expands backslashes.
 if [ -n "$SOURCE_ISSUE" ]; then
   yaml_quote() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/''/g")"; }
-  TRACKER_BLOCK="source_issue: $(yaml_quote "$SOURCE_ISSUE")
+  TRACKER_BLOCK="source_issue: $(yaml_quote "$SOURCE_ISSUE")"
+  if [ -n "$AUTHORIZED_STAGE" ]; then
+    TRACKER_BLOCK="$TRACKER_BLOCK
 authorized_stage: $(yaml_quote "$AUTHORIZED_STAGE")
 go_author: $(yaml_quote "$GO_AUTHOR")
 go_date: $(yaml_quote "$GO_DATE")"
+  fi
   TRACKER_BLOCK="$TRACKER_BLOCK" awk '
     { print }
     !done && /^source_concept:/ { print ENVIRON["TRACKER_BLOCK"]; done = 1 }

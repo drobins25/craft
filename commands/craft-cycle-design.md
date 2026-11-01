@@ -223,6 +223,8 @@ The tracker clause (`and tracker issue <KEY> at stage <stage> (<N> comments copi
 
 The safety gate runs every time, on every path - it cannot be skipped. The user always sees `source_concept` in the question text before it gets written to cycle.yaml.
 
+**Under a Go run** (only when `${CLAUDE_PLUGIN_ROOT}/commands/references/go-run.md` is in force for this conversation; otherwise the text above applies unchanged): the gate still runs. Print its question text as one line, so what gets written is always on screen, answer `Confirm and proceed`, print `Answered 'Confirm cycle' with 'Confirm and proceed' (recommended).`, then run the script. This is the only case where the gate is answered for the user.
+
 **After confirmation, create the cycle directory and set the planning state:**
 
 ```bash

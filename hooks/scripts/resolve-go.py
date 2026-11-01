@@ -24,7 +24,7 @@ parsed cannot be ranked, so it counts as the newest.
 
 Output: exactly six lines, in order
   go=<found|none|unreadable>
-  stage=<stage, or plan>
+  stage=<stage; plan when the newest Go is unreadable; empty when there is no Go>
   go_author=<header author, or empty>
   go_date=<header timestamp verbatim, or empty>
   go_comment=<block number, or empty>
@@ -121,15 +121,15 @@ def newest_candidate(blocks):
 
 def resolve(text, key):
     """(result lines as a dict, go body lines or None)."""
-    none = {'go': 'none', 'stage': 'plan', 'go_author': '', 'go_date': '',
+    none = {'go': 'none', 'stage': '', 'go_author': '', 'go_date': '',
             'go_comment': '',
-            'stage_line': 'No Go found on %s, so this run plans only.' % key}
+            'stage_line': 'No Go on %s, so craft works as usual: you decide when to build.' % key}
     winner = newest_candidate(parse_blocks(text))
     if winner is None:
         return none, None
     parsed = read_go(winner)
     if parsed is None:
-        result = dict(none, go='unreadable', go_comment=winner['number'],
+        result = dict(none, go='unreadable', stage='plan', go_comment=winner['number'],
                       stage_line="The newest Go on %s (comment %s) doesn't follow the Go format, "
                                  "so this run plans only." % (key, winner['number']))
         return result, None

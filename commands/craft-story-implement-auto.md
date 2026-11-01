@@ -62,6 +62,8 @@ The launch is the last attended moment before craft runs unwatched — the user 
 
 This is the ONLY gate prompt an autonomous run makes. Mid-run, the reconcile beat's autonomous guard no-ops as always — signals born during the run wait for the next attended moment.
 
+**Under a Go run** (this conversation is following `${CLAUDE_PLUGIN_ROOT}/commands/references/go-run.md`): the launch is not attended, because cycle-start handed here without anyone typing this command. Take the offer's no-answer branch without asking: record nothing, launch, and name the undecided toolchains in the Final Report with the same line the timeout branch uses.
+
 ## Failure Handling Override
 
 Replace the interactive failure behavior from `craft:story-implement`:
@@ -81,6 +83,8 @@ On unresolvable failure, the cycle stops. No skipping to the next story — subs
 - No ready stories + all complete: invoke `craft:craft-cycle-complete`. EXIT.
 - No ready stories + some in planning: "Cycle paused — [N] stories need planning." EXIT.
 - Ready story has `chunks_total: 0`: "Story [name] needs plan-chunks first." EXIT.
+
+**Under a Go run** (see `${CLAUDE_PLUGIN_ROOT}/commands/references/go-run.md`): "all complete" does not invoke `craft:craft-cycle-complete`, because wrapping up a cycle is past the stage the Go granted. Print the Final Report, then go-run.md's stage end line for the stage, then EXIT.
 
 ## Final Report
 

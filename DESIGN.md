@@ -296,7 +296,8 @@ All hooks defined in `hooks/hooks.json`. Scripts in `hooks/scripts/`.
 | `create-cycle.sh` | Scaffold a new cycle directory |
 | `create-story.sh` | Create story file from template |
 | `resolve-go.py` | Read a copied tracker issue's comments, find the newest Go, print the stage it grants (plan, build, build and open the PR, or hold) and the first line to show |
-| `cycle-stage.sh` | Read-only: say whether a cycle may be implemented from its recorded stage; plan, hold and any unreadable stage stop |
+| `go-brief.py` | Read a copied Go, or a tracker cycle's newest copy, into the pickup brief and whether Craft answers its own prompts |
+| `cycle-stage.sh` | Read-only: say whether a cycle may be implemented from its recorded stage; a cycle with no issue or no recorded stage may, build stages may, plan, hold and any empty or unknown stage stop |
 | `delete-story.sh` | Remove a story file |
 | `move-story.sh` | Move story between backlog and cycle |
 | `start-cycle.sh` | Set active cycle in .global-state |
@@ -439,7 +440,7 @@ RUN_MODE=""
 Key fields:
 - `CRAFT_WRITE_ENABLED` - gates writes outside `.craft/`. Set to `"true"` by active stories, the `adhoc` skill, and the `approve` skill. Empty string means closed.
 - `CURRENT_WORKFLOW_SESSION` - active workflow session path (set when a workflow session is running).
-- `RUN_MODE` - `autonomous` when an unattended run is active (set by `story-implement-auto`), empty otherwise. Normal cruise runs leave it empty; cruise is craft's single default behavior (chains chunks and stories, stops only at decision points or on failure), not a stored mode.
+- `RUN_MODE` - `autonomous` when an unattended run is active (set by `story-implement-auto`), empty otherwise. Normal cruise runs leave it empty; cruise is craft's single default behavior (chains chunks and stories, stops only at decision points or on failure), not a stored mode. A Go run is decided from the copied Go, never from `RUN_MODE`; `RUN_MODE` becomes `autonomous` only once a build-stage Go run hands off to `story-implement-auto`.
 - `CYCLE_STATUS` - current state of the active cycle.
 
 ### cycle.yaml Schema
@@ -461,7 +462,7 @@ goals:
 
 **`source_concept`** - YAML flow list of planning doc paths (relative to project root) this cycle is sourced from. Empty list `[]` means the cycle is freeform (no planning source). When populated, cycle-design routes story-creation moments to the From planning protocol (`commands/references/story-from-planning.md`) so each planning-extracted story's spark draws from the planning content. Stories added during the add-a-separate-story moment within a planning-sourced cycle remain freeform and get no `source_concept` of their own. Captured at cycle creation via `create-cycle.sh`'s 5th positional arg, gated behind the Step 1 verbatim-quote rule + AskUserQuestion safety gate.
 
-**`source_issue`, `authorized_stage`, `go_author`, `go_date`** - Present only on tracker-sourced cycles, as four one-line single-quoted keys directly after `source_concept`. A cycle created without an issue has none of them. Written by `create-cycle.sh`'s 6th to 9th positional args (issue key, stage, Go author, Go date). `authorized_stage` is `plan`, `build` or `build and open the PR`; a hold Go creates no cycle. Both build stages require `go_author` and `go_date`: no Go record, no build. `go_author` and `go_date` are the tracker's record of the Go that granted the stage and are never rewritten by lifecycle scripts. The issue's status never grants or limits work; only the newest Go does. `cycle-stage.sh` reads `authorized_stage` before implementation starts and stops anything short of a build stage.
+**`source_issue`, `authorized_stage`, `go_author`, `go_date`** - Present only on tracker-sourced cycles, as one-line single-quoted keys directly after `source_concept`. A cycle created without an issue has none of them, and a cycle for an issue that had no Go has only `source_issue`. Written by `create-cycle.sh`'s 6th to 9th positional args (issue key, stage, Go author, Go date); the stage and what follows it are left out when the issue had no Go. `authorized_stage` is `plan`, `build` or `build and open the PR`; a hold Go creates no cycle. Both build stages require `go_author` and `go_date`. `go_author` and `go_date` are the tracker's record of the Go that granted the stage and are never rewritten by lifecycle scripts. The issue's status never grants or limits work; only the newest Go does. `cycle-stage.sh` reads them before implementation starts: no `source_issue` or no `authorized_stage` key means implement (an issue with no Go works as before), build stages implement, and `plan`, `hold`, or an empty or unknown stage stop.
 
 **`context/`** - Created by tracker intake (`commands/references/tracker-intake.md`) when a cycle starts from an issue key or URL. Holds the issue and every comment copied verbatim, the Go comment when one exists, and a README naming the source. Stories written into the cycle cite these files by absolute path so planning starts from what was decided.
 

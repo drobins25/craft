@@ -99,14 +99,30 @@ run_stage
 assert_eq "say" "DRO-21 is on hold, per its newest Go, so I'm not starting anything new." "$(stage_out say)"
 cleanup_test_dir; echo ""
 
-begin_test "missing stage"
+begin_test "issue with no stage key = yes, no limit"
 make_raw_cycle "source_issue: 'DRO-21'"
 run_stage
-assert_eq "implement" "no" "$(stage_out implement)"
-assert_eq "say" "This cycle names DRO-21 but records no stage I know, so I stop before implementing." "$(stage_out say)"
+assert_eq "exits 0" "0" "$EXIT_CODE"
+assert_eq "implement" "yes" "$(stage_out implement)"
+assert_eq "stage empty" "" "$(stage_out stage)"
+assert_eq "source_issue" "DRO-21" "$(stage_out source_issue)"
+assert_eq "say empty" "" "$(stage_out say)"
 cleanup_test_dir; echo ""
 
-begin_test "empty stage"
+begin_test "issue-only cycle made by create-cycle = yes"
+make_cycle "DRO-21"
+run_stage
+assert_eq "implement" "yes" "$(stage_out implement)"
+assert_eq "say empty" "" "$(stage_out say)"
+cleanup_test_dir; echo ""
+
+begin_test "recorded plan stage still stops, whoever wrote it"
+make_raw_cycle "source_issue: 'DRO-21'" "authorized_stage: 'plan'" "go_author: ''" "go_date: ''"
+run_stage
+assert_eq "implement" "no" "$(stage_out implement)"
+cleanup_test_dir; echo ""
+
+begin_test "empty stage value is a stage that cannot be read"
 make_raw_cycle "source_issue: 'DRO-21'" "authorized_stage: ''"
 run_stage
 assert_eq "implement" "no" "$(stage_out implement)"

@@ -96,6 +96,24 @@ if [ -f "${PROJECT_ROOT}.craft/.learnings.yaml" ]; then
   fi
 fi
 
+# A cycle whose copied Go says Craft answers its own prompts: name the rule file
+# so the run can find it again. Compaction drops it from context, and a later
+# manual session on the same cycle must not adopt it, hence the conditional wording.
+GO_CYCLE="${PLANNING_CYCLE:-$ACTIVE_CYCLE}"
+if [ -n "$GO_CYCLE" ]; then
+  GO_CYCLE_DIR="${PROJECT_ROOT}.craft/cycles/$GO_CYCLE"
+  GO_VERDICT=$(python3 "$SCRIPT_DIR/go-brief.py" "$GO_CYCLE_DIR" 2>/dev/null | sed -n 's/^prompts=//p' || true)
+  if [ "$GO_VERDICT" = "answer" ]; then
+    GO_STAGE_OUT=$(bash "$SCRIPT_DIR/cycle-stage.sh" "$GO_CYCLE_DIR" 2>/dev/null || true)
+    GO_STAGE=$(printf '%s\n' "$GO_STAGE_OUT" | sed -n 's/^stage=//p')
+    GO_KEY=$(printf '%s\n' "$GO_STAGE_OUT" | sed -n 's/^source_issue=//p')
+    if [ -n "$GO_KEY" ] && [ -n "$GO_STAGE" ]; then
+      GO_RUN_MD="$(cd "$SCRIPT_DIR/../.." && pwd)/commands/references/go-run.md"
+      echo "Go on $GO_KEY: its run rules say Craft answers its own prompts up to stage $GO_STAGE. If this conversation was running that Go, re-read $GO_RUN_MD before the next prompt."
+    fi
+  fi
+fi
+
 echo "--- END CRAFT CONTEXT ---"
 echo ""
 echo "IMPORTANT: Use transition scripts for state changes (complete-chunk.sh, complete-story.sh, start-story.sh). Never edit .state files directly."
