@@ -77,7 +77,7 @@ def parse_blocks(text: str) -> List[Block]:
 
 def read_key(yaml_text: str, key: str) -> str:
     """A flat top-level key written as a one-line scalar, quotes removed."""
-    match = re.search(r'^%s:[ \t]*(.*?)[ \t]*$' % re.escape(key), yaml_text, re.MULTILINE)
+    match = re.search(r'^%s:[ \t]*(.*?)[ \t\r]*$' % re.escape(key), yaml_text, re.MULTILINE)
     if not match:
         return ''
     value = match.group(1)

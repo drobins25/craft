@@ -194,17 +194,25 @@ def record(cycle_dir, delta_path):
                 else 'Stage unchanged: plan, because %s has no readable Go.' % key
 
         if changed:
+            copy_path = None
             if found:
                 name = '%s-go-%s.md' % (slug(key), stamp)
+                copy_path = os.path.join(context, name)
                 with open(os.path.join(scratch, 'go.md'), encoding='utf-8', newline='') as handle:
                     body = handle.read()
-                if not write_atomic(os.path.join(context, name), body, mode=0o644, exclusive=True):
+                left_over = os.path.exists(copy_path)
+                if left_over and read_text(copy_path) != body:
+                    raise RecordError('%s already exists and was left as it was' % name)
+            # The record goes first: a failed write then leaves nothing behind,
+            # and a copy that fails after it is read as "no Go" until a retry.
+            write_atomic(yaml_path, new_yaml(yaml_text, new),
+                         mode=os.stat(yaml_path).st_mode & 0o777)
+            if found and not left_over:
+                if not write_atomic(copy_path, body, mode=0o644, exclusive=True):
                     raise RecordError('%s already exists and was left as it was' % name)
                 add_readme_row(context, '| %s | Newest Go: comment %s, %s, %s | %s | resolve-go.py |' % (
                     name, result['go_comment'], new[1], new[2],
                     datetime.datetime.now(datetime.timezone.utc).strftime(NOW_FORMAT)))
-            write_atomic(yaml_path, new_yaml(yaml_text, new),
-                         mode=os.stat(yaml_path).st_mode & 0o777)
     finally:
         if scratch:
             shutil.rmtree(scratch, ignore_errors=True)

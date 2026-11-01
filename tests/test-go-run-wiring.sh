@@ -129,9 +129,18 @@ assert_contains_literal "blocks: critical blocker" "it is a Critical Blocker" "$
 assert_contains_literal "blocks: no defensible a" "no option is one Craft would defend as \`a.\`" "$FORKS"
 assert_contains_literal "blocks: past scope or stage" "an option goes past the Go's \`Scope:\` or stage" "$FORKS"
 assert_contains_literal "blocks: shared write or destructive" "acting on \`a.\` would itself be a shared write or a destructive step" "$FORKS"
-assert_contains_literal "every other fork can wait" "Every other fork can wait." "$FORKS"
+assert_contains_literal "every other fork can wait" "Every other fork can wait: post it, print the can-wait line, apply \`a.\`, and do not ask the card in the session." "$FORKS"
+assert_contains_literal "can wait is the default" "The default is that it can wait." "$FORKS"
 assert_contains_literal "can-wait closing line" '**If nobody answers:** I go with a and keep working. An answer here is read at the next story start or pickup.' "$FORKS"
 assert_contains_literal "blocking closing line" '**If nobody answers:** I stay stopped until you answer, here or in the session.' "$FORKS"
+echo ""
+
+begin_test "story citations survive planning"
+BATCH="$PLUGIN_ROOT/skills/plan-chunks/references/batch-triage.md"
+PLANSKILL="$PLUGIN_ROOT/skills/plan-chunks/SKILL.md"
+assert_literal "intake keeps the group for the story's life" "$INTAKE" "The group is part of the story for its whole life."
+assert_literal "batch-triage never touches Reference Materials" "$BATCH" '**Never touch `## Reference Materials`.**'
+assert_literal "plan-chunks answer-time write keeps Reference Materials" "$PLANSKILL" 'Never touch `## Reference Materials` in that write'
 echo ""
 
 begin_test "questions to the issue: gate and shape"
@@ -145,6 +154,8 @@ assert_contains_literal "blocking session line" "This one is a product fork, so 
 assert_contains_literal "session answer comment" "Answered in the session (<topic>): <letter>. <option title>." "$FORKS"
 assert_contains_literal "unconfirmed post falls back" "I couldn't post this on <KEY>, so I'm asking here." "$FORKS"
 assert_contains_literal "no Go heading in the body" "No line in the body starts with \`## Go\`" "$FORKS"
+assert_contains_literal "fork line is visible text, word for word, before the card" "Each case prints its line as visible text (a plain message to the user, never only in your reasoning), copied word for word, in the same turn and immediately before the prompt or card is rendered." "$STOPS"
+assert_contains_literal "posting lines replace the fork line" 'the lines under `### What the session says` replace this one.' "$STOPS"
 assert_contains_literal "shared-write bullet carries the exception" "A question posted under ## Product forks is the one exception, because the Go's Questions line already says yes to it." "$STOPS"
 assert_not_contains "old 'posts nothing' text gone" "Nothing is posted anywhere" "$FORKS"
 echo ""

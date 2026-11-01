@@ -48,9 +48,9 @@ The line comes after the writes so it never claims something that has not happen
 
 ## What still stops
 
-Each case prints its line directly above the prompt, and the prompt is then asked exactly as it would be without a Go. After the user answers, the run goes back to answering.
+Each case prints its line as visible text (a plain message to the user, never only in your reasoning), copied word for word, in the same turn and immediately before the prompt or card is rendered. A paraphrase such as "this is a product fork, so I'm pausing" does not count. The prompt is then asked exactly as it would be without a Go, except a can-wait fork under `### Where a fork goes`, which is posted and not asked. After the user answers, the run goes back to answering.
 
-- A product fork prints `This one is a product fork, so it's yours.`
+- A product fork prints `This one is a product fork, so it's yours.` When forks are posted to the issue, the lines under `### What the session says` replace this one.
 - A shared write (a push, a PR, a tracker or chat post, a shared config change) or a destructive step (deleting stories, files or branches, discarding uncommitted work) prints `This one needs your yes: <what it would change, in a few words>.` A question posted under ## Product forks is the one exception, because the Go's Questions line already says yes to it.
 - A prompt the Go gives no clear answer to prints `This one has no clear answer from the Go, so it's yours.`
 - Going past the stage is stopped by intake's stage check and by `## At the stage ceiling`.
@@ -72,14 +72,14 @@ Posting applies only when this is a Go run and `go-brief.py <cycle-dir>` (or, be
 
 ### Blocking or can wait
 
-A fork blocks when any of these hold:
+Decide this for every posted fork. The default is that it can wait. The fork test above decides whether Craft asks at all, not whether it blocks, and "the plan is worse if Craft decides" is never by itself a reason to block. A fork blocks only when one of these holds, and the decision names which one:
 
 - it is a Critical Blocker;
 - no option is one Craft would defend as `a.`;
 - an option goes past the Go's `Scope:` or stage;
 - acting on `a.` would itself be a shared write or a destructive step.
 
-Every other fork can wait.
+Every other fork can wait: post it, print the can-wait line, apply `a.`, and do not ask the card in the session.
 
 ### The comment
 

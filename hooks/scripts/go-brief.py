@@ -11,7 +11,7 @@ about a cycle is "none".
 Output: exactly five lines, in order
   prompts=<answer|bring|none>
   scope_line=<the Go's first "Scope: " line, or empty>
-  rules_line=<the run rules header, reworded, or empty>
+  rules_line=<the Go's "Run rules: " line as written, "Run rules: none in this Go" when absent, or empty>
   questions_line=<Questions go to: the issue|here, or empty>
   answer_line=<the autonomy line when prompts=answer, else empty>
 
@@ -28,11 +28,14 @@ import os
 import re
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from tracker_comments import read_key, slug  # noqa: E402
+
 PHRASES = re.compile(
     r'Workflow prompts: (answer them yourself|bring them to me)\.')
 SCOPE = re.compile(r'^Scope: \S.*$', re.MULTILINE)
 RULES = re.compile(r'^Run rules: .*$', re.MULTILINE)
-RULES_UPDATED = re.compile(r'^Run rules: last updated (.+) \(from your (.+)\)$')
 HEADING = '## Go - '
 BUILD_STAGES = ('plan', 'build', 'build and open the PR')
 QUESTIONS_HERE = 'Questions go to: here'
@@ -63,11 +66,7 @@ def rules_line(text):
     match = RULES.search(text)
     if not match:
         return NO_RULES_LINE
-    line = match.group(0).rstrip()
-    updated = RULES_UPDATED.match(line)
-    if updated:
-        return 'Run rules: %s, last updated %s' % (updated.group(2), updated.group(1))
-    return line
+    return match.group(0).rstrip()
 
 
 def questions_line(text):
@@ -107,18 +106,6 @@ def parse_go(text):
     return brief
 
 
-def read_key(yaml_text, key):
-    """A flat top-level key written as a one-line single-quoted scalar."""
-    match = re.search(r'^%s:[ \t]*(.*?)[ \t]*$' % re.escape(key), yaml_text, re.MULTILINE)
-    if not match:
-        return ''
-    value = match.group(1)
-    quoted = re.match(r"^'(.*)'$", value)
-    if quoted:
-        value = quoted.group(1)
-    return value.replace("''", "'")
-
-
 def newest_go_file(cycle_dir):
     """Path of the newest copied Go for the cycle's tracker issue, or None."""
     yaml_text = read_text(os.path.join(cycle_dir, 'cycle.yaml'))
@@ -126,9 +113,8 @@ def newest_go_file(cycle_dir):
     if (not issue or not read_key(yaml_text, 'go_author')
             or read_key(yaml_text, 'authorized_stage') not in BUILD_STAGES):
         return None
-    slug = re.sub(r'[^a-z0-9]+', '-', issue.lower())
     pattern = os.path.join(glob.escape(os.path.join(cycle_dir, 'context')),
-                           glob.escape(slug) + '-go-*.md')
+                           glob.escape(slug(issue)) + '-go-*.md')
     matches = sorted(glob.glob(pattern))
     return matches[-1] if matches else None
 

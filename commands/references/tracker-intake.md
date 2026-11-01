@@ -86,7 +86,7 @@ It prints five `key=value` lines: `prompts`, `scope_line`, `rules_line`, `questi
 ```
 Stage: <stage>, per Go from <author> on <date>.
 Scope: <scope line from the Go>
-Run rules: <reference name and date, or none>
+Run rules: last updated <date> (from your <reference name>), or none
 Questions go to: here
 I'll answer Craft's own prompts and stop only for product forks.
 ```
@@ -155,6 +155,7 @@ Add a `## Reference Materials` section between `## Content Direction` and `## Ac
 - Paths are absolute, with `${CRAFT_PROJECT_ROOT}` resolved. When several stamped files exist, cite the newest issue and Go file (the stamp sorts by time) and every comments file holding a comment this story draws on: a refresh's comments file holds only what was new, so older decisions stay in earlier files.
 - Anchors follow the planning-file rules in `story-from-planning.md` (heading anchors, no line numbers).
 - Cite the Go file so the planner sees the stage and run rules. Never cite status as permission.
+- The group is part of the story for its whole life. Planning, alignment, triage and BT-6 edit sections in place and never remove, reorder or shorten `## Reference Materials` or this group. If a story file is rewritten as a whole, carry the section over word for word. Other writers (research-inline, annotate) append below it.
 
 ## Stages in Craft
 

@@ -273,6 +273,8 @@ If a cohesion issue has no clean resolution (e.g., two stories genuinely need to
    updated: [YYYY-MM-DD]
    ```
 
+**Never touch `## Reference Materials`.** Edit the sections listed above in place. If the file is written whole, copy `## Reference Materials` over verbatim, including any `**Tracker context (copied from <KEY>):**` group.
+
 ### Status Script
 
 After writing each story file:

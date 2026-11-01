@@ -360,7 +360,7 @@ The agent has written the story file and returned flagged concerns, decisions, a
 
 **Before asking any triage question (Steps 1-5), Read `${CLAUDE_PLUGIN_ROOT}/commands/references/question-card.md` once** - it covers every step below. The reference owns the card: the steps below choose which items reach a card, never how a card reads.
 
-**Answer-time write:** after each answered triage question (Steps 1-5), apply that answer's edit to the story file immediately - per the write rules in `${CLAUDE_PLUGIN_ROOT}/skills/plan-chunks/references/batch-triage.md` ("Story File Writing") - then print the read-back the reference gives, before the next question renders. A real edit names what changed; a no-op answer reads "kept as planned" and makes no edit. Answers must survive a session that dies mid-triage.
+**Answer-time write:** after each answered triage question (Steps 1-5), apply that answer's edit to the story file immediately - per the write rules in `${CLAUDE_PLUGIN_ROOT}/skills/plan-chunks/references/batch-triage.md` ("Story File Writing") - then print the read-back the reference gives, before the next question renders. A real edit names what changed; a no-op answer reads "kept as planned" and makes no edit. Answers must survive a session that dies mid-triage. Never touch `## Reference Materials` in that write: edit in place, and if the file is written whole, copy it over verbatim, including any `**Tracker context (copied from <KEY>):**` group.
 
 **Step 1 — Critical Blockers:**
 
