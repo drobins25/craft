@@ -65,6 +65,14 @@ if [ -f "$PROBE" ] && ! grep -q '\.tick(' "$PROBE" && ! grep -q 'virtual-time' "
 else
   fail "the probe drives tick or uses virtual time" "probe: $PROBE"
 fi
+# Chrome's helper processes must not outlive the probe and keep writing into the
+# profile dir the caller deletes: own process group, group kill, wait for exit.
+if grep -q "detached: true" "$PROBE" && grep -q "process.kill(-chrome.pid, 'SIGKILL')" "$PROBE" \
+  && grep -q "chrome.once('exit'" "$PROBE"; then
+  pass "the probe runs Chrome in its own process group, kills the group, and waits for exit"
+else
+  fail "the probe does not reap Chrome's whole process group" "probe: $PROBE"
+fi
 # A cold CI runner can take more than 10s to start Chrome; the probe waits 30s for its port.
 if grep -q 'const PORT_WAIT_POLLS = 300;' "$PROBE" && grep -q 'i < PORT_WAIT_POLLS' "$PROBE"; then
   pass "the probe waits 30s for Chrome's debugging port"
