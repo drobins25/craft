@@ -2,6 +2,23 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.15.0 - 2026-11-01
+
+- Added picking an issue up again. Craft finds the cycle the issue already has instead of starting a second one, reads the issue again, and keeps a dated copy of only what changed. Earlier copies are never touched, and each story points at every copy of the discussion, not only the newest. The first line says whether the stage moved, for example "Stage changed: plan to build, per Go from Darin on Nov 2."
+- Added a check of the newest Go at the start of every story. A hold posted while a run is going stops the next story, and a newer build Go lifts a plan stop. If the issue can't be reached, craft says so and goes on the stage it has on record.
+- Added questions on the issue. When the Go says questions go there, a real product decision is posted as a comment with named options and a recommendation. Craft keeps going on its recommendation if the decision can wait, and stops if it can't. On the next pickup, craft lists which questions now have answers.
+
+## 2.14.0 - 2026-11-01
+
+- Added a Go that answers Craft's prompts. When the issue's newest Go says to answer them yourself, craft shows a short brief, then answers its own routine questions up to the stage the Go allows. It stops and asks you only for real product decisions.
+- Added stopping at the Go's limit. A Go that allows planning only, or says to hold, still stops before implementation, and a build Go lets it continue.
+- Kept an issue with no Go working as before. Craft asks you every question and you decide when to build.
+
+## 2.13.0 - 2026-11-01
+
+- Added starting a cycle from a tracker issue. Give craft an issue key or link and it reads the issue and its whole discussion, keeps a verbatim copy with the cycle, and plans from what was decided there. The first line it prints tells you how far you may go.
+- Added stopping before implementation when the issue's latest Go only allows planning, or says to hold. A build Go lets implementation start, and the issue's status never grants permission on its own.
+
 ## 2.12.1 - 2026-10-28
 
 - Fixed planning flagging a UI story as incomplete for having no binding table. The table is optional, so a story that skipped the visual riff now goes straight to triage instead of a false failure card.

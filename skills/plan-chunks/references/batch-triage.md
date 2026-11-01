@@ -44,6 +44,8 @@ informational_count = settled-list items (mention-tier rows, plus high-confidenc
 
 **Answer-time write (same rule as S-3):** after each answered BT-2/BT-3/BT-4 card, apply that answer's edit to the affected story file immediately (per "Story File Writing" below) and print the read-back the reference gives before the next card renders; a no-op answer reads "kept as planned". A reopened settled item is written the same way. A BT-4 cohesion answer writes BOTH stories' coordination notes at answer time - the second-side note is a one-line append to the other story's chunk, not a plan load, so the never-hold-two-plans rule is not violated. Per-answer writes touch one story file at a time. Answers must survive a session that dies mid-triage.
 
+**Under a Go run** (only when `${CLAUDE_PLUGIN_ROOT}/commands/references/go-run.md` is in force for this conversation; otherwise the cards below apply unchanged): items that are not product forks are applied and logged as go-run.md's `## Planning` says, with no card. Critical Blockers and any item that passes the fork test are asked as below, so a decision only the user can make is never made for them.
+
 ### BT-2: Needs Review (per item)
 
 One card per item. The first words of the question paragraph name the story, then the concern and the ask, self-contained: what the agent found, what it trades off, which way to go. The agent's recommendation is the proposed option; the other option is the honest alternative from the concern description (a yes/no decision's alternative is the opposite).
@@ -270,6 +272,8 @@ If a cohesion issue has no clean resolution (e.g., two stories genuinely need to
    chunks_total: [N]    # from agent's plan
    updated: [YYYY-MM-DD]
    ```
+
+**Never touch `## Reference Materials`.** Edit the sections listed above in place. If the file is written whole, copy `## Reference Materials` over verbatim, including any `**Tracker context (copied from <KEY>):**` group.
 
 ### Status Script
 

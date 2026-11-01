@@ -1,10 +1,22 @@
 #!/bin/bash
 # Create-cycle: Create a new cycle directory and files
 # Usage: create-cycle.sh <cycle-name> [cycle-title] [cycle-target] [project-root] [source-concepts]
+#                        [source-issue] [authorized-stage] [go-author] [go-date]
 #   source-concepts: optional comma-separated planning doc paths (e.g.,
 #                    "planning/04-company-onboarding.md" or
 #                    "planning/a.md,planning/b.md"). Written to cycle.yaml
 #                    as source_concept field. Empty -> source_concept: [].
+#   source-issue:    optional tracker issue key. When set with a stage, four
+#                    one-line single-quoted keys follow source_concept in
+#                    cycle.yaml: source_issue, authorized_stage, go_author,
+#                    go_date. With no stage (the issue had no Go) only
+#                    source_issue follows. Empty or absent -> cycle.yaml is
+#                    exactly as without them.
+#   authorized-stage: plan | build | build and open the PR (needs an issue; a
+#                    hold Go creates no cycle).
+#   go-author, go-date: the tracker's record of the Go that granted the stage;
+#                    need a stage; required for both build stages, optional
+#                    for plan.
 
 set -e
 
@@ -19,6 +31,10 @@ CYCLE_TITLE="${2:-$CYCLE_NAME}"
 CYCLE_TARGET="${3:-TBD}"
 PROJECT_ROOT="${4:-.}"
 SOURCE_CONCEPTS="${5:-}"
+SOURCE_ISSUE="${6:-}"
+AUTHORIZED_STAGE="${7:-}"
+GO_AUTHOR="${8:-}"
+GO_DATE="${9:-}"
 
 # Normalize PROJECT_ROOT
 PROJECT_ROOT="${PROJECT_ROOT%/}"
@@ -28,7 +44,7 @@ fi
 
 if [ -z "$CYCLE_NAME" ]; then
   echo "Error: Cycle name required"
-  echo "Usage: create-cycle.sh <cycle-name> [cycle-title] [cycle-target] [project-root] [source-concepts]"
+  echo "Usage: create-cycle.sh <cycle-name> [cycle-title] [cycle-target] [project-root] [source-concepts] [source-issue] [authorized-stage] [go-author] [go-date]"
   exit 1
 fi
 
@@ -53,6 +69,38 @@ if [ -n "$SOURCE_CONCEPTS" ]; then
   fi
 else
   SOURCE_CONCEPT_YAML="[]"
+fi
+
+# Validate the tracker source before anything is created: a rejected call must
+# leave no directory behind, because cycle numbers come from counting them.
+tracker_error() { echo "Error: $1"; exit 1; }
+
+for value in "$SOURCE_ISSUE" "$AUTHORIZED_STAGE" "$GO_AUTHOR" "$GO_DATE"; do
+  case "$value" in
+    *$'\n'*|*$'\r'*) tracker_error "tracker source values must be single-line" ;;
+  esac
+done
+
+if [ -z "$SOURCE_ISSUE" ]; then
+  if [ -n "$AUTHORIZED_STAGE" ] || [ -n "$GO_AUTHOR" ] || [ -n "$GO_DATE" ]; then
+    tracker_error "a stage, Go author or Go date needs a source issue"
+  fi
+else
+  case "$AUTHORIZED_STAGE" in
+    "")
+      if [ -n "$GO_AUTHOR" ] || [ -n "$GO_DATE" ]; then
+        tracker_error "a Go author or Go date needs an authorized stage"
+      fi
+      ;;
+    hold) tracker_error "a hold Go creates no cycle, so nothing is created for $SOURCE_ISSUE" ;;
+    plan) ;;
+    build|"build and open the PR")
+      if [ -z "$GO_AUTHOR" ] || [ -z "$GO_DATE" ]; then
+        tracker_error "stage '$AUTHORIZED_STAGE' needs the Go's author and date; no Go record, no build"
+      fi
+      ;;
+    *) tracker_error "unknown stage '$AUTHORIZED_STAGE' (use plan, build or build and open the PR)" ;;
+  esac
 fi
 
 # Ensure .craft exists
@@ -107,6 +155,24 @@ source_concept: $SOURCE_CONCEPT_YAML
 goals:
   - TBD
 EOF
+fi
+
+# Tracker source: insert the record lines right after source_concept.
+# Values are read from the environment so awk never expands backslashes.
+if [ -n "$SOURCE_ISSUE" ]; then
+  yaml_quote() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/''/g")"; }
+  TRACKER_BLOCK="source_issue: $(yaml_quote "$SOURCE_ISSUE")"
+  if [ -n "$AUTHORIZED_STAGE" ]; then
+    TRACKER_BLOCK="$TRACKER_BLOCK
+authorized_stage: $(yaml_quote "$AUTHORIZED_STAGE")
+go_author: $(yaml_quote "$GO_AUTHOR")
+go_date: $(yaml_quote "$GO_DATE")"
+  fi
+  TRACKER_BLOCK="$TRACKER_BLOCK" awk '
+    { print }
+    !done && /^source_concept:/ { print ENVIRON["TRACKER_BLOCK"]; done = 1 }
+  ' "$cycle_dir/cycle.yaml" > "$cycle_dir/cycle.yaml.tmp"
+  mv "$cycle_dir/cycle.yaml.tmp" "$cycle_dir/cycle.yaml"
 fi
 
 # Create .state from template

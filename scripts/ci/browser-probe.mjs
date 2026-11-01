@@ -31,11 +31,34 @@ const result = {};
 let chrome = null;
 let ws = null;
 
+// Chrome runs in its own process group so one signal reaches its helpers
+// (zygote, renderers, crashpad) too. Killing only the main process leaves
+// them writing into the profile dir while the caller deletes it.
+const CHROME_EXIT_WAIT_MS = 5000;
+const stopChrome = async () => {
+  if (!chrome || !chrome.pid) return;
+  const gone = chrome.exitCode !== null || chrome.signalCode !== null
+    ? Promise.resolve()
+    : new Promise(resolve => chrome.once('exit', resolve));
+  try { process.kill(-chrome.pid, 'SIGKILL'); } catch (e) {
+    try { chrome.kill('SIGKILL'); } catch (e2) { /* already gone */ }
+  }
+  await Promise.race([gone, sleep(CHROME_EXIT_WAIT_MS)]);
+};
+
+// finish never returns to its caller: it prints the verdict and exits, so
+// `await finish()` ends the script even while Chrome is still being reaped.
+let finishing = null;
 const finish = () => {
-  try { if (ws) ws.close(); } catch (e) { /* already closed */ }
-  try { if (chrome) chrome.kill('SIGKILL'); } catch (e) { /* already gone */ }
-  console.log(JSON.stringify(result));
-  process.exit(0);
+  if (!finishing) {
+    finishing = (async () => {
+      try { if (ws) ws.close(); } catch (e) { /* already closed */ }
+      await stopChrome();
+      console.log(JSON.stringify(result));
+      process.exit(0);
+    })();
+  }
+  return new Promise(() => {});
 };
 setTimeout(() => { result.error = result.error || 'probe exceeded ' + HARD_CAP_MS + 'ms'; finish(); }, HARD_CAP_MS).unref();
 
@@ -44,7 +67,7 @@ chrome = spawn(chromeBin, [
   '--headless=new', '--disable-gpu', '--no-sandbox', '--no-first-run',
   '--remote-debugging-port=0', '--user-data-dir=' + profileDir,
   '--window-size=' + WIDTH + ',' + HEIGHT, 'about:blank'
-], { stdio: 'ignore' });
+], { stdio: 'ignore', detached: true });
 chrome.on('error', e => { result.error = 'chrome did not start: ' + e.message; finish(); });
 
 const portFile = join(profileDir, 'DevToolsActivePort');
@@ -55,7 +78,7 @@ for (let i = 0; i < PORT_WAIT_POLLS && !port; i++) {
   if (existsSync(portFile)) port = readFileSync(portFile, 'utf8').split('\n')[0].trim() || null;
   if (!port) await sleep(100);
 }
-if (!port) { result.error = 'chrome never opened its debugging port'; finish(); }
+if (!port) { result.error = 'chrome never opened its debugging port'; await finish(); }
 
 let target = null;
 for (let i = 0; i < 50 && !target; i++) {
@@ -65,11 +88,11 @@ for (let i = 0; i < 50 && !target; i++) {
   } catch (e) { /* not listening yet */ }
   if (!target) await sleep(100);
 }
-if (!target) { result.error = 'no page target in chrome'; finish(); }
+if (!target) { result.error = 'no page target in chrome'; await finish(); }
 
 ws = new WebSocket(target.webSocketDebuggerUrl);
 await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject; })
-  .catch(() => { result.error = 'could not attach to the page'; finish(); });
+  .catch(async () => { result.error = 'could not attach to the page'; await finish(); });
 let nextId = 0;
 const pending = new Map();
 ws.onmessage = m => {
@@ -112,7 +135,7 @@ try {
   if (await waitFor(`!!(window.GraphInstance && window.GraphInstance.sim && window.GraphInstance.sim.nodes && window.GraphInstance.sim.nodes.length)`, 15000) < 0) {
     result.graphNodeCount = await evaluate(`((window.CRAFT_GRAPH || {}).nodes || []).length`);
     result.error = 'GraphInstance.sim.nodes not reachable';
-    finish();
+    await finish();
   }
   await evaluate(`(() => {
     const gi = window.GraphInstance, own = gi.tick;
@@ -183,4 +206,4 @@ try {
 } catch (e) {
   result.error = String(e && e.message || e);
 }
-finish();
+await finish();

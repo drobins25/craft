@@ -1,0 +1,31 @@
+This updates:
+- Global: `ACTIVE_CYCLE` set, `PLANNING_CYCLE` cleared
+- Cycle: `CYCLE_STATUS = active`
+- cycle.yaml: `status: active`
+
+**Confirm activation:**
+
+> "**Cycle activated: [Name]**
+>
+> 🚀 **Cruise mode ON** — I'll run autonomously
+> ├── Implement all [N] stories ([M] chunks)
+> ├── State snapshot before each chunk, manifest-staged commit at story completion
+> ├── Validate after each chunk
+> └── Only stop if something breaks
+>
+> You'll see progress in the status line. Ready?"
+
+Use **AskUserQuestion**:
+```
+question: "Ready to start?"
+header: "Go"
+options:
+  - label: "Go — review first story"
+    description: "Review before implementing"
+  - label: "Let me pick which story"
+    description: "Choose a different starting story"
+```
+
+**If user provides custom text:** Ask a clarifying AskUserQuestion to understand their intent.
+
+### Step 4: Start First Story (Optional)

@@ -231,5 +231,112 @@ fi
 cleanup_test_dir
 echo ""
 
+# --- Tracker source (args 6-9) ---
+
+TRACKER_TS="2026-10-31T23:40:12.000Z"
+FIXTURE="$SCRIPT_DIR/fixtures/cycle-yaml-freeform.expected"
+
+# run_create <args...> sets TC_EXIT, TC_OUT against a fresh TEST_DIR
+run_create() {
+  set +e
+  TC_OUT=$(CLAUDE_PLUGIN_ROOT="$PLUGIN_ROOT" bash "$CREATE_CYCLE_SCRIPT" "$@" 2>&1)
+  TC_EXIT=$?
+  set -e
+}
+
+begin_test "No tracker args = byte-identical cycle.yaml"
+TEST_DIR=$(create_minimal_craft)
+sed "s/{{DATE}}/$(date +%Y-%m-%d)/g" "$FIXTURE" > "$TEST_DIR/expected.yaml"
+run_create auth "Authentication" "Login flow" "$TEST_DIR" >/dev/null
+cmp -s "$TEST_DIR/expected.yaml" "$TEST_DIR/.craft/cycles/1-auth/cycle.yaml" && R=same || R=differs
+assert_eq "5 args matches fixture" "same" "$R"
+rm -rf "$TEST_DIR/.craft/cycles/1-auth"
+run_create auth "Authentication" "Login flow" "$TEST_DIR" "" "" "" "" "" >/dev/null
+cmp -s "$TEST_DIR/expected.yaml" "$TEST_DIR/.craft/cycles/1-auth/cycle.yaml" && R=same || R=differs
+assert_eq "9 args with empty 6th matches fixture" "same" "$R"
+cleanup_test_dir
+echo ""
+
+begin_test "Tracker args write four quoted lines after source_concept"
+TEST_DIR=$(create_minimal_craft)
+run_create auth "Authentication" "Login flow" "$TEST_DIR" "" "DRO-21" "build and open the PR" "Darin O'Neil" "$TRACKER_TS" >/dev/null
+Y="$TEST_DIR/.craft/cycles/1-auth/cycle.yaml"
+assert_eq "exits 0" "0" "$TC_EXIT"
+EXPECTED_BLOCK="source_concept: []
+source_issue: 'DRO-21'
+authorized_stage: 'build and open the PR'
+go_author: 'Darin O''Neil'
+go_date: '$TRACKER_TS'
+"
+ACTUAL_BLOCK=$(grep -A4 '^source_concept:' "$Y"; echo x)
+assert_eq "lines in order right after source_concept" "${EXPECTED_BLOCK}x" "$ACTUAL_BLOCK"
+assert_eq "goals still present" "1" "$(grep -c '^goals:' "$Y")"
+cleanup_test_dir
+echo ""
+
+begin_test "Plan stage may carry empty author and date"
+TEST_DIR=$(create_minimal_craft)
+run_create auth "Authentication" "Login flow" "$TEST_DIR" "" "DRO-21" "plan" "" "" >/dev/null
+Y="$TEST_DIR/.craft/cycles/1-auth/cycle.yaml"
+assert_eq "exits 0" "0" "$TC_EXIT"
+assert_file_contains "empty author is ''" "go_author: ''" "$Y"
+assert_file_contains "empty date is ''" "go_date: ''" "$Y"
+cleanup_test_dir
+echo ""
+
+begin_test "Issue alone records source_issue only"
+TEST_DIR=$(create_minimal_craft)
+run_create auth "Authentication" "Login flow" "$TEST_DIR" "" "DRO-21" "" "" "" >/dev/null
+Y="$TEST_DIR/.craft/cycles/1-auth/cycle.yaml"
+assert_eq "exits 0" "0" "$TC_EXIT"
+EXPECTED_BLOCK="source_concept: []
+source_issue: 'DRO-21'
+
+"
+ACTUAL_BLOCK=$(grep -A2 '^source_concept:' "$Y"; echo x)
+assert_eq "only source_issue follows source_concept" "${EXPECTED_BLOCK}x" "$ACTUAL_BLOCK"
+assert_eq "no stage key" "0" "$(grep -c '^authorized_stage:' "$Y")"
+assert_eq "no author key" "0" "$(grep -c '^go_author:' "$Y")"
+assert_eq "no date key" "0" "$(grep -c '^go_date:' "$Y")"
+cleanup_test_dir
+echo ""
+
+begin_test "Lifecycle seds leave the tracker keys alone"
+TEST_DIR=$(create_minimal_craft)
+run_create auth "Authentication" "Login flow" "$TEST_DIR" "" "DRO-21" "build" "Darin" "$TRACKER_TS" >/dev/null
+Y="$TEST_DIR/.craft/cycles/1-auth/cycle.yaml"
+BEFORE=$(grep -E '^(source_issue|authorized_stage|go_author|go_date):' "$Y")
+sed -i.bak "s/^status:.*/status: active/" "$Y" && rm -f "$Y.bak"
+sed -i.bak "s/^updated:.*/updated: 2030-01-01/" "$Y" && rm -f "$Y.bak"
+AFTER=$(grep -E '^(source_issue|authorized_stage|go_author|go_date):' "$Y")
+assert_eq "four lines unchanged" "$BEFORE" "$AFTER"
+cleanup_test_dir
+echo ""
+
+reject_tracker() {
+  local label="$1" issue="$2" stage="$3" author="$4" date="$5"
+  begin_test "$label"
+  TEST_DIR=$(create_minimal_craft)
+  run_create auth "Authentication" "Login flow" "$TEST_DIR" "" "$issue" "$stage" "$author" "$date" >/dev/null
+  assert_eq "exits 1" "1" "$TC_EXIT"
+  assert_contains "prints an Error line" "Error:" "$TC_OUT"
+  assert_eq "no cycle dir created" "0" "$(ls -d "$TEST_DIR"/.craft/cycles/*/ 2>/dev/null | wc -l | tr -d ' ')"
+  cleanup_test_dir
+  echo ""
+}
+
+reject_tracker "Hold rejected, no dir" "DRO-21" "hold" "Darin" "$TRACKER_TS"
+reject_tracker "Build without a Go record rejected" "DRO-21" "build" "" ""
+reject_tracker "Build without go_date rejected" "DRO-21" "build and open the PR" "Darin" ""
+reject_tracker "Unknown stage rejected" "DRO-21" "ship" "Darin" "$TRACKER_TS"
+reject_tracker "Stage without issue rejected" "" "plan" "" ""
+reject_tracker "Author without issue rejected" "" "" "Darin" ""
+reject_tracker "Author without stage rejected, even with an issue" "DRO-21" "" "Darin" ""
+reject_tracker "Date without stage rejected, even with an issue" "DRO-21" "" "" "$TRACKER_TS"
+reject_tracker "Newline in issue rejected" "DRO-21
+x" "plan" "" ""
+reject_tracker "Newline in author rejected" "DRO-21" "plan" "Da
+rin" ""
+
 # --- Summary ---
 finish_tests

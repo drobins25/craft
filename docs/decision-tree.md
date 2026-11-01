@@ -237,6 +237,11 @@ flowchart TD
     MODE_DISPATCH -->|"Args = existing PLANNING cycle"| DETAILING["Read references/cycle-design/<br/>detailing-mode.md<br/>(Resume + flesh out unfinished cycle)"]
     MODE_DISPATCH -->|"Args = ready/active/complete cycle"| ERR["Error: cycle not in planning.<br/>Use /craft:cycle-start instead"]
     MODE_DISPATCH -->|"No args (new cycle)"| NAME["Step 1: Name & Goal"]
+    MODE_DISPATCH -->|"Args = issue key or URL"| INTAKE["Read references/tracker-intake.md<br/>(stage line first; hold stops)"]
+    INTAKE -->|"Newest Go: answer them yourself"| GORUN["Read references/go-run.md<br/>(brief; Craft answers its own prompts up to the stage)"]
+    INTAKE -->|"Issue already has a cycle"| REFRESH["Read references/tracker-refresh.md<br/>(stage line first; copy what changed)"]
+    INTAKE --> NAME
+    GORUN --> NAME
 
     NAME --> PLAN_SCAN["Scan conversation for planning doc refs<br/>verify each exists in .craft/planning/<br/>prepare source_concept, or empty"]
     PLAN_SCAN --> GATE{"Safety gate — MANDATORY, runs every path,<br/>cannot be skipped<br/>AskUserQuestion: confirm name + goal +<br/>source_concept BEFORE any file write"}

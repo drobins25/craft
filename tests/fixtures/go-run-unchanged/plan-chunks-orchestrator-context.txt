@@ -1,0 +1,15 @@
+## Orchestrator Context
+
+The orchestrator may pass enriched args with labeled fields. Parse these to skip rediscovery:
+
+- `STORY:` story name — use to locate story file if path ambiguous
+- `CYCLE:` cycle directory name — skip cycle detection
+- `CYCLE_GOAL:` goal from cycle.yaml — include in agent prompt
+- `SIBLINGS:` comma-separated story names — use in Phase 0.1b instead of scanning
+- `APPROACH:` implementation approach from discussion — seed agent
+- `DECISIONS:` key decisions from discussion — seed agent
+- `KEY_FILES:` important files from discussion — seed agent
+- `DEPTH:` planning depth (creative/smart/spark) — adjusts triage thoroughness
+- `MODE:` `batch` triggers multi-story parallel planning
+
+**Fallback:** Args may be just a file path with no fields. All phases must work without enriched args.

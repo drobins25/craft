@@ -1,0 +1,8 @@
+### Step 3: Activate
+
+**Run the transition script:**
+```bash
+${CLAUDE_PLUGIN_ROOT}/hooks/scripts/start-cycle.sh .craft/cycles/[cycle-name]
+```
+
+**If a story is already chosen, do not re-ask.** A story is already chosen when you arrive here from one of three places: (a) the user clicked "Mark ready and start implementing now" or "Yes, implement now" in single-story plan-chunks - that story; (b) the user clicked "Start implementing" at the end of batch planning - batch's first ready story, the lowest-numbered ready one; (c) story-implement called cycle-start to activate the cycle for a story it named. Confirm activation in one line without "Ready?", skip "Ready to start?", "Ready to implement this story?" and "Which story do you want to start?", and never fall back to the lowest-numbered default for a story you were handed. For (a) and (b), go straight to Step 4's story-implement hand-off for that story. For (c), return to story-implement, which is already waiting and runs the original story itself - do not invoke it again from here.

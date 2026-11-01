@@ -116,7 +116,18 @@ fi
 
 # --- Build the page from the tracked fixture corpus, never in the repo ------
 TMP="$(mktemp -d)"
-cleanup() { rm -rf "$TMP"; }
+# A browser helper still flushing into the profile dir can make one rm -rf
+# lose the race and leave the directory behind, so retry briefly.
+cleanup() {
+  local attempt=0
+  while [ "$attempt" -lt 5 ]; do
+    rm -rf "$TMP" 2>/dev/null
+    [ -e "$TMP" ] || return 0
+    attempt=$((attempt + 1))
+    sleep 0.5
+  done
+  rm -rf "$TMP"
+}
 trap cleanup EXIT
 
 echo "building fixture page in $TMP"
