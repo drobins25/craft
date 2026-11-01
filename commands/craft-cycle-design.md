@@ -1,6 +1,6 @@
 ---
 name: cycle-design
-description: "Design a cycle — create new cycles with planned stories, detail existing planning cycles, or quick-sketch a roadmap. Detects planning docs in .craft/planning/ and sources the cycle from them when relevant."
+description: "Design a cycle — create new cycles with planned stories, detail existing planning cycles, or quick-sketch a roadmap. Detects planning docs in .craft/planning/ and sources the cycle from them when relevant. Given a tracker issue key or URL (\"pick up DRO-21\"), starts the cycle from that issue, its comments and its newest Go."
 ---
 
 # Cycle Design
@@ -16,6 +16,10 @@ Create a new cycle or detail an existing one — this IS the planning phase. Sto
 **If args are provided AND `.craft/cycles/[arg]/cycle.yaml` exists but status is NOT `planning`** (i.e., cycle is `ready`, `active`, or `complete`):
 
 → Show error: "Cycle `[arg]` is not in planning status. Use `/craft:cycle-start [arg]` to activate it, or run `/craft:cycle-design` without args to create a new cycle." Stop. Do NOT continue to Philosophy or Step 1.
+
+**If args are a bare uppercase issue key (`^[A-Z][A-Z0-9]*-[0-9]+$`) or an issue URL, or the triggering request names an issue to pick up or work on:**
+
+→ Read `${CLAUDE_PLUGIN_ROOT}/commands/references/tracker-intake.md` and run it before Step 1.
 
 **Otherwise (no args, or args don't match an existing cycle directory):** Continue to Philosophy and the standard flow below.
 
@@ -197,7 +201,7 @@ This ensures nothing gets lost in translation.
 Use **AskUserQuestion** to confirm the inferred values before any file write:
 
 ```
-question: "I'm about to create cycle '[name]' with goal '[goal]' sourced from [source_concept paths, or 'no planning docs']. Confirm?"
+question: "I'm about to create cycle '[name]' with goal '[goal]' sourced from [source_concept paths, or 'no planning docs'], and tracker issue <KEY> at stage <stage> (<N> comments copied). Confirm?"
 header: "Confirm cycle"
 options:
   - label: "Confirm and proceed"
@@ -211,9 +215,11 @@ options:
 ```
 
 - **Confirm and proceed:** invoke the script with the values shown.
-- **Change the source:** ask the user which planning doc(s) (or none), then re-present the gate.
+- **Change the source:** ask the user which planning doc(s) (or none, or a different tracker issue), then re-present the gate.
 - **Change the name or goal:** ask the user for revised values, then re-present the gate.
-- **Actually this is freeform:** clear `source_concept`, then re-present the gate.
+- **Actually this is freeform:** clear `source_concept` (and the tracker source, deleting its staging folder), then re-present the gate.
+
+The tracker clause (`and tracker issue <KEY> at stage <stage> (<N> comments copied)`) appears only when tracker-intake.md ran; leave it out otherwise.
 
 The safety gate runs every time, on every path - it cannot be skipped. The user always sees `source_concept` in the question text before it gets written to cycle.yaml.
 
@@ -222,7 +228,8 @@ The safety gate runs every time, on every path - it cannot be skipped. The user 
 ```bash
 # Create cycle directory with proper auto-numbering, cycle.yaml, and .state
 # 5th arg is comma-separated planning doc paths (empty string for no source)
-cycle_dir=$(${CLAUDE_PLUGIN_ROOT}/hooks/scripts/create-cycle.sh "[cycle-slug]" "[Cycle Title]" "[Goal]" "." "[source-concept-paths]")
+# 6th-9th args are the tracker source, stage, Go author and Go date (all empty for a freeform cycle)
+cycle_dir=$(${CLAUDE_PLUGIN_ROOT}/hooks/scripts/create-cycle.sh "[cycle-slug]" "[Cycle Title]" "[Goal]" "." "[source-concept-paths]" "[source-issue]" "[authorized-stage]" "[go-author]" "[go-date]")
 
 # Set planning state
 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/update-global-state.sh PLANNING_CYCLE "$(basename $cycle_dir)"
@@ -231,6 +238,7 @@ ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/update-global-state.sh PLANNING_CYCLE "$(bas
 - **`cycle-slug`** = kebab-case slug (e.g., `auth-flow`). The script auto-numbers it (creates `11-auth-flow/` if cycles 1-10 exist).
 - **`Cycle Title`** = human-readable name (e.g., `"Auth Flow"`). Always provide this.
 - **`source-concept-paths`** = comma-separated planning doc paths, or empty string. The script writes the value to `cycle.yaml`'s `source_concept` field (empty becomes `[]`).
+- **`source-issue`, `authorized-stage`, `go-author`, `go-date`** = the tracker-intake.md values (the resolver's `stage`, `go_author` and `go_date`), all four empty for a freeform cycle. After the script returns on a tracker cycle, finish with tracker-intake.md `## After the cycle exists`.
 - The script creates `cycle.yaml` and `.state` immediately — no orphaned directories if the session interrupts later.
 - Store the returned `cycle_dir` path — use it for all story file writes in Step 3e.
 

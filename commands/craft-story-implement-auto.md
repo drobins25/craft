@@ -74,7 +74,7 @@ Replace the interactive failure behavior from `craft:story-implement`:
 
 ## Cycle Stop
 
-On unresolvable failure, the cycle stops. No skipping to the next story — subsequent stories likely depend on the blocked one.
+On unresolvable failure, the cycle stops. No skipping to the next story — subsequent stories likely depend on the blocked one. A Stage check stop from `craft:story-implement` ends the run, because every story in the cycle shares the cycle's stage, and the final report's `Cycle status:` shows `stopped - <say line>`.
 
 ## Story Selection Guards
 

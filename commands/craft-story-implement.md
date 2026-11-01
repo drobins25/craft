@@ -106,6 +106,11 @@ If user selects "Pick a story from the active cycle": → invoke `craft:craft-st
 
 If user selects "Cancel": → end, do not proceed
 
+**Stage check:**
+- For a story in a cycle, run `bash "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/cycle-stage.sh" "${CRAFT_PROJECT_ROOT:-.}/.craft/cycles/[cycle-name]"`. Backlog stories skip this check.
+- If it prints `implement=no`: print the `say=` value as your own first line and end. No AskUserQuestion, no `start-story.sh`, no state change, and no in-session override: the only way to lift the stop is a newer Go on the issue.
+- If it prints `implement=yes`: continue silently.
+
 **Status check:**
 
 | Status | Action |

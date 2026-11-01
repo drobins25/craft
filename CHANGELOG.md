@@ -2,6 +2,11 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.13.0 - 2026-11-01
+
+- Added starting a cycle from a tracker issue. Give craft an issue key or link and it reads the issue and its whole discussion, keeps a verbatim copy with the cycle, and plans from what was decided there. The first line it prints tells you how far you may go.
+- Added stopping before implementation when the issue's latest Go only allows planning, or says to hold. A build Go lets implementation start, and the issue's status never grants permission on its own.
+
 ## 2.12.1 - 2026-10-28
 
 - Fixed planning flagging a UI story as incomplete for having no binding table. The table is optional, so a story that skipped the visual riff now goes straight to triage instead of a false failure card.

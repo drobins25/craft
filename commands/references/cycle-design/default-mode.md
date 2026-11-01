@@ -309,6 +309,8 @@ current_chunk: 0
 
 The `decisions:` line holds only the approved decision records the user named for this story in the conversation, each as its full dated slug (the record's file name without `.md`): never add a record by tag, by topic, or by judged relevance, and never scan the store for candidates - any record the user did not name is NOT LAW for this story - it is history; write `[]` when the user named none.
 
+**Tracker-sourced cycle:** read `.craft/cycles/[cycle-name]/cycle.yaml` - the cycle this story is written into, which is not necessarily the active cycle. If it has a non-empty `source_issue`, add a `## Reference Materials` section between `## Content Direction` and `## Acceptance`, built as `${CLAUDE_PLUGIN_ROOT}/commands/references/tracker-intake.md` `## Story citations` describes. The frontmatter keys and the writers' rule above stay as they are.
+
 **Note:** Stories are saved with `status: planning`. They become `status: ready` after `plan-chunks` is run.
 
 ### Step 4: Repeat for All Stories
