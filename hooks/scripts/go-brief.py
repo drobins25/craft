@@ -12,7 +12,7 @@ Output: exactly five lines, in order
   prompts=<answer|bring|none>
   scope_line=<the Go's first "Scope: " line, or empty>
   rules_line=<the run rules header, reworded, or empty>
-  questions_line=<Questions go to: here, or empty>
+  questions_line=<Questions go to: the issue|here, or empty>
   answer_line=<the autonomy line when prompts=answer, else empty>
 
 The prompts verdict is the last "Workflow prompts: answer them yourself." or
@@ -35,7 +35,9 @@ RULES = re.compile(r'^Run rules: .*$', re.MULTILINE)
 RULES_UPDATED = re.compile(r'^Run rules: last updated (.+) \(from your (.+)\)$')
 HEADING = '## Go - '
 BUILD_STAGES = ('plan', 'build', 'build and open the PR')
-QUESTIONS_LINE = 'Questions go to: here'
+QUESTIONS_HERE = 'Questions go to: here'
+QUESTIONS_ISSUE = 'Questions go to: the issue'
+QUESTIONS_PERMISSION = 'Questions and decisions: comments on this issue'
 ANSWER_LINE = "I'll answer Craft's own prompts and stop only for product forks."
 NO_RULES_LINE = 'Run rules: none in this Go'
 KEYS = ('prompts', 'scope_line', 'rules_line', 'questions_line', 'answer_line')
@@ -68,6 +70,21 @@ def rules_line(text):
     return line
 
 
+def questions_line(text):
+    """The issue only when a whole line of the Go grants it, else here.
+
+    Posting to the tracker is a shared write, so the permission is the Go's own
+    Questions line and nothing looser.
+    """
+    for line in text.split('\n'):
+        line = line.rstrip()
+        if line.endswith('.'):
+            line = line[:-1]
+        if line == QUESTIONS_PERMISSION:
+            return QUESTIONS_ISSUE
+    return QUESTIONS_HERE
+
+
 def parse_go(text):
     """The brief for one copied Go; the "none" brief when there is nothing to read."""
     text = text.replace('\r', '')
@@ -84,7 +101,7 @@ def parse_go(text):
         if found else 'none',
         scope_line=scope.group(0).rstrip() if scope else '',
         rules_line=rules_line(text),
-        questions_line=QUESTIONS_LINE)
+        questions_line=questions_line(text))
     if brief['prompts'] == 'answer':
         brief['answer_line'] = ANSWER_LINE
     return brief

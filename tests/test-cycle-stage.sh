@@ -83,7 +83,7 @@ begin_test "plan without author"
 make_cycle "DRO-21" "plan" "" ""
 run_stage
 assert_eq "implement" "no" "$(stage_out implement)"
-assert_eq "say" "Stage for DRO-21 is plan because no Go was read from it when this cycle was made, so I stop before implementing. Building needs a Go on DRO-21 that says build." "$(stage_out say)"
+assert_eq "say" "Stage for DRO-21 is plan because no readable Go is on record for it, so I stop before implementing. Building needs a Go on DRO-21 that says build." "$(stage_out say)"
 cleanup_test_dir; echo ""
 
 begin_test "hold with author"

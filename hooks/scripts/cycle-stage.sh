@@ -48,7 +48,7 @@ if [ -n "$KEY" ] && grep -q "^authorized_stage:" "$YAML"; then
       if [ -n "$AUTHOR" ]; then
         SAY="Stage for $KEY is plan, per the Go from $AUTHOR, so I stop before implementing. Building needs a newer Go on $KEY that says build."
       else
-        SAY="Stage for $KEY is plan because no Go was read from it when this cycle was made, so I stop before implementing. Building needs a Go on $KEY that says build."
+        SAY="Stage for $KEY is plan because no readable Go is on record for it, so I stop before implementing. Building needs a Go on $KEY that says build."
       fi
       ;;
     hold)

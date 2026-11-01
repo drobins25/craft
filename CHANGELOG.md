@@ -2,6 +2,13 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.15.0 - 2026-11-01
+
+- Added picking an issue up again. Craft finds the cycle the issue already has instead of starting a second one, reads the issue again, and keeps a dated copy of only what changed. Earlier copies are never touched. The first line says whether the stage moved, for example "Stage changed: plan to build, per Go from Darin on Nov 2."
+- Added a check of the newest Go at the start of every story. A hold posted while a run is going stops the next story, and a newer build Go lifts a plan stop. If the issue can't be reached, craft says so and goes on the stage it has on record.
+- Added questions on the issue. When the Go says questions go there, a real product decision is posted as a comment with named options and a recommendation. Craft keeps going on its recommendation if the decision can wait, and stops if it can't. On the next pickup, craft lists which questions now have answers.
+- Fixed a story's citations missing older decisions after a refresh. They now point at every copy of the discussion, not only the newest.
+
 ## 2.14.0 - 2026-11-01
 
 - Added a Go that answers Craft's prompts. When the issue's newest Go says to answer them yourself, craft shows a short brief, then answers its own routine questions up to the stage the Go allows. It stops and asks you only for real product decisions.

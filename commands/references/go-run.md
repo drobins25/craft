@@ -51,7 +51,7 @@ The line comes after the writes so it never claims something that has not happen
 Each case prints its line directly above the prompt, and the prompt is then asked exactly as it would be without a Go. After the user answers, the run goes back to answering.
 
 - A product fork prints `This one is a product fork, so it's yours.`
-- A shared write (a push, a PR, a tracker or chat post, a shared config change) or a destructive step (deleting stories, files or branches, discarding uncommitted work) prints `This one needs your yes: <what it would change, in a few words>.`
+- A shared write (a push, a PR, a tracker or chat post, a shared config change) or a destructive step (deleting stories, files or branches, discarding uncommitted work) prints `This one needs your yes: <what it would change, in a few words>.` A question posted under ## Product forks is the one exception, because the Go's Questions line already says yes to it.
 - A prompt the Go gives no clear answer to prints `This one has no clear answer from the Go, so it's yours.`
 - Going past the stage is stopped by intake's stage check and by `## At the stage ceiling`.
 
@@ -66,7 +66,37 @@ A product fork is a choice only the user can make, where the plan is worse if Cr
 - (c) any Critical Blocker, including the research type in batch triage;
 - (d) any other card or question that passes the same two-part test: only the user can choose, and the plan is worse if Craft decides. That always includes picking among creative directions (a creative-spark, a design-vibe or a mockup pick).
 
-Forks are asked here, in this session, on their normal card, with the line from `## What still stops` above them. Nothing is posted anywhere. Intake's brief says `Questions go to: here` for the same reason: it must never promise a destination the run does not use.
+### Where a fork goes
+
+Posting applies only when this is a Go run and `go-brief.py <cycle-dir>` (or, before the cycle exists, the staged go file) prints `questions_line=Questions go to: the issue`. Otherwise forks are asked here, in this session, on their normal card, with the line from `## What still stops` above them, and nothing is posted. Posting to the tracker is a shared write, and the Go's own Questions line is the only permission for it.
+
+### Blocking or can wait
+
+A fork blocks when any of these hold:
+
+- it is a Critical Blocker;
+- no option is one Craft would defend as `a.`;
+- an option goes past the Go's `Scope:` or stage;
+- acting on `a.` would itself be a shared write or a destructive step.
+
+Every other fork can wait.
+
+### The comment
+
+Post a new top-level comment through whatever tracker tool the host has: never an edit, never a reply. Its body, in order:
+
+1. `## Question from Claude - <topic>`, where the topic is at most 60 characters, has no newline, and is unique among the `## Question from Claude` headings already on the issue.
+2. The card from `${CLAUDE_PLUGIN_ROOT}/commands/references/question-card.md`'s `## The card, in order`, from the question line through `**Why:**`, with at most three options and `a.` marked `(proposed)`. The `**Question N of M:**` header is replaced by the heading above.
+3. For a fork that can wait: `**If nobody answers:** I go with a and keep working. An answer here is read at the next story start or pickup.` For a blocking fork: `**If nobody answers:** I stay stopped until you answer, here or in the session.`
+4. `Answer in a new comment: a letter, "yes" for a, or your own words.`
+
+No line in the body starts with `## Go`, and there are no file paths: the issue is read by people who never open the repo.
+
+### What the session says
+
+- **Can wait:** once the post's own result confirms it, print `Posted a product fork on <KEY>: <topic>. Going with a. <option title> until you answer there.`, then apply `a.` through the prompt's existing answer-time write. An answer that arrives later is input for work not yet done.
+- **Blocking:** print `This one is a product fork, so it's yours. It's posted on <KEY> too, and I'm stopped until you answer.`, then ask the card here as usual. After an answer here, post one new top-level comment `Answered in the session (<topic>): <letter>. <option title>.` and continue.
+- **A post that is not confirmed:** print `I couldn't post this on <KEY>, so I'm asking here.` and ask here as usual. No retry.
 
 ## Known prompts
 

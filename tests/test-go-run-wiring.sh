@@ -122,4 +122,31 @@ NAMED="$(grep -o 'craft:[a-z-]*' "$GORUN" | sort -u | grep -vx -e craft:craft-cy
 assert_eq "only cycle-start, implement-auto, cycle-complete (never invoked) and the cycle-design command are named" "" "$NAMED"
 echo ""
 
+begin_test "questions to the issue: rule text pinned"
+FORKS=$(sed -n '/^## Product forks/,/^## Known prompts/p' "$GORUN")
+STOPS=$(sed -n '/^## What still stops/,/^## Product forks/p' "$GORUN")
+assert_contains_literal "blocks: critical blocker" "it is a Critical Blocker" "$FORKS"
+assert_contains_literal "blocks: no defensible a" "no option is one Craft would defend as \`a.\`" "$FORKS"
+assert_contains_literal "blocks: past scope or stage" "an option goes past the Go's \`Scope:\` or stage" "$FORKS"
+assert_contains_literal "blocks: shared write or destructive" "acting on \`a.\` would itself be a shared write or a destructive step" "$FORKS"
+assert_contains_literal "every other fork can wait" "Every other fork can wait." "$FORKS"
+assert_contains_literal "can-wait closing line" '**If nobody answers:** I go with a and keep working. An answer here is read at the next story start or pickup.' "$FORKS"
+assert_contains_literal "blocking closing line" '**If nobody answers:** I stay stopped until you answer, here or in the session.' "$FORKS"
+echo ""
+
+begin_test "questions to the issue: gate and shape"
+assert_contains_literal "posting gated on the Questions line" 'questions_line=Questions go to: the issue' "$FORKS"
+assert_contains_literal "heading form" '## Question from Claude - <topic>' "$FORKS"
+assert_contains_literal "three-option cap" "at most three options" "$FORKS"
+assert_contains_literal "never a reply" "never an edit, never a reply" "$FORKS"
+assert_contains_literal "answer instruction" 'Answer in a new comment: a letter, "yes" for a, or your own words.' "$FORKS"
+assert_contains_literal "can-wait session line" "Posted a product fork on <KEY>: <topic>. Going with a. <option title> until you answer there." "$FORKS"
+assert_contains_literal "blocking session line" "This one is a product fork, so it's yours. It's posted on <KEY> too, and I'm stopped until you answer." "$FORKS"
+assert_contains_literal "session answer comment" "Answered in the session (<topic>): <letter>. <option title>." "$FORKS"
+assert_contains_literal "unconfirmed post falls back" "I couldn't post this on <KEY>, so I'm asking here." "$FORKS"
+assert_contains_literal "no Go heading in the body" "No line in the body starts with \`## Go\`" "$FORKS"
+assert_contains_literal "shared-write bullet carries the exception" "A question posted under ## Product forks is the one exception, because the Go's Questions line already says yes to it." "$STOPS"
+assert_not_contains "old 'posts nothing' text gone" "Nothing is posted anywhere" "$FORKS"
+echo ""
+
 finish_tests

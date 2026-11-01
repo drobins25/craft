@@ -12,6 +12,8 @@ This runs when args are a bare uppercase key (`^[A-Z][A-Z0-9]*-[0-9]+$`, such as
 
 Set `KEY` to the issue key and `slug` to the key lowercased, with each run of characters outside `a-z0-9` replaced by one `-`.
 
+Once the key is known, run `python3 "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/find-issue-cycle.py" <KEY> "${CRAFT_PROJECT_ROOT:-.}"`. It prints `cycle_dir`, `status` and `matches`. On a non-empty `cycle_dir`, the issue already has a cycle: Read `${CLAUDE_PLUGIN_ROOT}/commands/references/tracker-refresh.md` and run it instead of the rest of this file: no gate, no new cycle.
+
 ## Read
 
 Use whatever tracker tools the host has. Fetch the issue (title, URL, status, description) and every comment. Follow pagination until the tool reports no more pages. Ask for creation order when the tool offers it, because some trackers default to update order. Then write oldest first by creation time.
@@ -89,7 +91,7 @@ Questions go to: here
 I'll answer Craft's own prompts and stop only for product forks.
 ```
 
-  The first line is the stage line already printed, so only the last four are new.
+  The first line is the stage line already printed, so only the last four are new. The fourth reads `Questions go to: the issue` instead when the Go's own Questions line says comments on this issue.
 - On `bring` or `none`, print nothing, so the output is the stage line alone and Craft asks every prompt as usual.
 - If the script exits non-zero, print exactly `I couldn't read the run rules in <KEY>'s newest Go, so I'll bring Craft's prompts to you.` and no Go run starts.
 
@@ -150,7 +152,7 @@ Add a `## Reference Materials` section between `## Content Direction` and `## Ac
 - <abs cycle_dir>/context/<slug>-go-<stamp>.md (only when a Go file exists)
 ```
 
-- Paths are absolute, with `${CRAFT_PROJECT_ROOT}` resolved. When several stamped files exist, cite the newest of each kind (the stamp sorts by time).
+- Paths are absolute, with `${CRAFT_PROJECT_ROOT}` resolved. When several stamped files exist, cite the newest issue and Go file (the stamp sorts by time) and every comments file holding a comment this story draws on: a refresh's comments file holds only what was new, so older decisions stay in earlier files.
 - Anchors follow the planning-file rules in `story-from-planning.md` (heading anchors, no line numbers).
 - Cite the Go file so the planner sees the stage and run rules. Never cite status as permission.
 
