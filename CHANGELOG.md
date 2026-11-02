@@ -5,6 +5,7 @@ Notable, user-facing changes per version. Internal changes (tests, refactors, co
 ## 2.15.1 - 2026-11-01
 
 - Fixed designing a new cycle from a planning doc while another cycle is running. Craft now reads the planning doc of the cycle you are designing, not the one being built, so each new story starts from that doc's content and is saved into the new cycle.
+- Fixed craft staying in unattended mode after an autonomous run ends. Once the run finishes or stops, craft goes back to asking you its questions, and a new session clears a leftover unattended mode from a run that was cut off.
 
 ## 2.15.0 - 2026-11-01
 

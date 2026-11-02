@@ -31,13 +31,7 @@ The skill contains the full implementation loop — agent invocation, validation
 
 ## Startup Sanity Check
 
-First, mark autonomous mode so compaction recovery knows how to resume:
-
-```bash
-${CLAUDE_PLUGIN_ROOT}/hooks/scripts/update-global-state.sh RUN_MODE "autonomous"
-```
-
-Then read `.global-state` and handle stale state from a crashed previous run:
+First, read `.global-state` and handle stale state from a crashed previous run:
 
 | Condition | Action |
 |-----------|--------|
@@ -47,6 +41,12 @@ Then read `.global-state` and handle stale state from a crashed previous run:
 | `CURRENT_STORY` set, story is `active`, chunks incomplete | Resume from current chunk. Trust story frontmatter (`chunks_complete + 1`) as ground truth. |
 | `CRAFT_WRITE_ENABLED` set but no `CURRENT_STORY` | Orphaned flag — clear it. Proceed to story selection. |
 | Clean state | Normal start. Proceed to story selection. |
+
+Then, once the table leaves a run to start, mark autonomous mode so compaction recovery knows how to resume:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/hooks/scripts/update-global-state.sh RUN_MODE "autonomous"
+```
 
 ## Gate Pre-Flight (BEFORE the run takes off)
 
@@ -99,4 +99,10 @@ Stories completed total: [complete] of [total]
 Completion commits skipped (no manifest): [story names, or "none"]
 Cycle status: [complete | paused | stopped — blocked on [story], chunk [N]: [reason]]
 Total tokens: [sum]
+```
+
+**Run end.** Every exit from this command - the EXITs in Startup Sanity Check, Failure Handling Override, Cycle Stop and Story Selection Guards, and the end after this report - finishes by turning autonomous mode off, so the next attended work asks its questions again. When the exit invokes `craft:craft-cycle-complete`, run this after it returns, because cycle-complete reads autonomous mode to know nobody is watching:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/hooks/scripts/update-global-state.sh RUN_MODE ""
 ```

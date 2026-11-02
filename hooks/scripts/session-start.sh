@@ -58,6 +58,13 @@ if [ -f "${PROJECT_ROOT}.craft/.global-state" ]; then
   if [ "$GATE" = "true" ] && [ -z "$CS" ] && [ -z "$WF_NOW" ]; then
     "$SCRIPT_DIR/update-global-state.sh" CRAFT_WRITE_ENABLED "" "${PROJECT_ROOT%/}"
   fi
+  # Autonomous mode left by an unattended run that ended or was killed: clear it
+  # when no story holds it. A live run keeps CURRENT_STORY set for each story,
+  # and compaction recovery reads RUN_MODE only while a story is set.
+  RM=$(grep "^RUN_MODE=" "${PROJECT_ROOT}.craft/.global-state" 2>/dev/null | sed 's/RUN_MODE="\(.*\)"/\1/')
+  if [ -n "$RM" ] && [ -z "$CS" ]; then
+    "$SCRIPT_DIR/update-global-state.sh" RUN_MODE "" "${PROJECT_ROOT%/}"
+  fi
 fi
 
 # Persist project root for this session
