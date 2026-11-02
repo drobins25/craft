@@ -46,7 +46,10 @@ Then, once the table leaves a run to start, mark autonomous mode so compaction r
 
 ```bash
 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/update-global-state.sh RUN_MODE "autonomous"
+${CLAUDE_PLUGIN_ROOT}/hooks/scripts/update-global-state.sh LAST_ACTIVITY NOW
 ```
+
+The activity stamp tells a session started in another terminal that this run is live, so it leaves autonomous mode alone.
 
 ## Gate Pre-Flight (BEFORE the run takes off)
 

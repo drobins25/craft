@@ -73,6 +73,46 @@ assert_eq "run mode preserved with story in progress" "autonomous" "$(read_state
 cleanup_test_dir
 echo ""
 
+begin_test "autonomous mode survives a live run's gap between stories (recent activity)"
+TEST_DIR=$(create_minimal_craft)
+NOW_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+cat > "$TEST_DIR/.craft/.global-state" << EOF
+ACTIVE_CYCLE="1-test"
+CURRENT_STORY=""
+PLANNING_CYCLE=""
+RUN_MODE="autonomous"
+LAST_ACTIVITY="$NOW_TS"
+CRAFT_WRITE_ENABLED=""
+CURRENT_WORKFLOW_SESSION=""
+EOF
+RC=$(run_session "$TEST_DIR")
+assert_eq "exits 0" "0" "$RC"
+assert_eq "run mode preserved with recent activity" "autonomous" "$(read_state_key RUN_MODE "$TEST_DIR")"
+cleanup_test_dir
+echo ""
+
+begin_test "autonomous mode with no story and old activity is cleared"
+TEST_DIR=$(create_minimal_craft)
+cat > "$TEST_DIR/.craft/.global-state" << 'EOF'
+ACTIVE_CYCLE=""
+CURRENT_STORY=""
+PLANNING_CYCLE=""
+RUN_MODE="autonomous"
+LAST_ACTIVITY="2020-01-01T00:00:00Z"
+CRAFT_WRITE_ENABLED=""
+CURRENT_WORKFLOW_SESSION=""
+EOF
+RC=$(run_session "$TEST_DIR")
+assert_eq "exits 0" "0" "$RC"
+assert_eq "run mode cleared after two idle hours" "" "$(read_state_key RUN_MODE "$TEST_DIR")"
+cleanup_test_dir
+echo ""
+
+begin_test "implement-auto stamps activity where it sets autonomous mode"
+MODE_BLOCK=$(grep -n -A3 -B3 'update-global-state.sh RUN_MODE "autonomous"' "$AUTO" || true)
+assert_contains_literal "refreshes LAST_ACTIVITY beside the mode" 'update-global-state.sh LAST_ACTIVITY NOW' "$MODE_BLOCK"
+echo ""
+
 begin_test "a state file with no RUN_MODE key never gains one"
 TEST_DIR=$(create_minimal_craft)
 cat > "$TEST_DIR/.craft/.global-state" << 'EOF'
