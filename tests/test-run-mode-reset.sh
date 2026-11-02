@@ -143,7 +143,20 @@ RUN_END=$(sed -n '/^## Final Report/,$p' "$AUTO")
 assert_not_eq "Final Report section found" "" "$RUN_END"
 assert_contains_literal "clears RUN_MODE" 'update-global-state.sh RUN_MODE ""' "$RUN_END"
 assert_contains_literal "covers every exit" 'Every exit from this command' "$RUN_END"
-assert_contains_literal "runs after cycle-complete returns" 'after it returns' "$RUN_END"
+assert_contains_literal "names cycle-complete's own clear" 'cycle-complete turns autonomous mode off itself' "$RUN_END"
+echo ""
+
+begin_test "cycle-complete turns autonomous mode off after the last step that reads it"
+CC="$PLUGIN_ROOT/commands/craft-cycle-complete.md"
+READ_LINE=$(grep -nF 'If `RUN_MODE == autonomous`' "$CC" | head -1 | cut -d: -f1 || true)
+CLEAR_LINE=$(grep -nF 'update-global-state.sh RUN_MODE ""' "$CC" | head -1 | cut -d: -f1 || true)
+STEP5_LINE=$(grep -n '^### Step 5' "$CC" | head -1 | cut -d: -f1 || true)
+if [ -n "$READ_LINE" ] && [ -n "$CLEAR_LINE" ] && [ -n "$STEP5_LINE" ] && [ "$READ_LINE" -lt "$CLEAR_LINE" ] && [ "$STEP5_LINE" -lt "$CLEAR_LINE" ]; then
+  echo "  PASS: the clear sits in Step 5, after Step 3c reads the mode"; PASS=$((PASS + 1))
+else
+  echo "  FAIL: the clear sits in Step 5, after Step 3c reads the mode"
+  echo "    read: '${READ_LINE}', step 5: '${STEP5_LINE}', clear: '${CLEAR_LINE}'"; FAIL=$((FAIL + 1))
+fi
 echo ""
 
 finish_tests

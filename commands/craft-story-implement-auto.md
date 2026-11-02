@@ -104,7 +104,7 @@ Cycle status: [complete | paused | stopped — blocked on [story], chunk [N]: [r
 Total tokens: [sum]
 ```
 
-**Run end.** Every exit from this command - the EXITs in Startup Sanity Check, Failure Handling Override, Cycle Stop and Story Selection Guards, and the end after this report - finishes by turning autonomous mode off, so the next attended work asks its questions again. When the exit invokes `craft:craft-cycle-complete`, run this after it returns, because cycle-complete reads autonomous mode to know nobody is watching:
+**Run end.** Every exit from this command - the EXITs in Startup Sanity Check, Failure Handling Override, Cycle Stop and Story Selection Guards, and the end after this report - finishes by turning autonomous mode off, so the next attended work asks its questions again. When the exit invokes `craft:craft-cycle-complete`, cycle-complete turns autonomous mode off itself as it finishes, after its last step that reads the mode; every other exit runs this:
 
 ```bash
 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/update-global-state.sh RUN_MODE ""
