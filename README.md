@@ -550,7 +550,7 @@ Adhoc is a small change to something that already exists, made now, without the 
 
 Craft sorts every request into one of two flavors and runs the matching path:
 
-- **A fix.** Something is broken: a symptom and a root cause. Craft investigates, writes the root cause down, and asks itself one question before editing: am I 100% certain this resolves it? A hedge stops the edit and offers a story. A yes applies the fix and checks the symptom is gone, on the page where you can see it, not just in the build.
+- **A fix.** Something is broken: a symptom and a root cause. Craft investigates, writes the root cause down, and before editing lists every claim the fix depends on, each backed by something it actually ran or read. A claim the evidence contradicts stops the edit and offers a story. A yes applies the fix and checks the symptom is gone, on the page where you can see it, not just in the build.
 - **A tweak.** It works as built, you want it different. The gate is fit, not certainty: craft looks at the element's neighbors, matches their visual family, and checks your tokens and locks before it edits. A real design question, several plausible directions and no clear fit, isn't edited. Craft says so and suggests a mockup first.
 - **"The icon looks wrong" could be either.** Craft looks before it asks. Clipped or misaligned is a fix. Renders as built but displeasing is a tweak.
 - **Only your reaction closes a tweak.** Each attempt ends with "How does it look?" Your answer is recorded word for word. "Not quite" is the brief for the next attempt. Passing tests never close one.

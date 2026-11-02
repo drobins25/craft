@@ -73,16 +73,18 @@ assert_eq \
 echo ""
 
 # --- Mechanism gate: the record quotes the line that stops the bug before the
-# certainty question is answered. Pinned by POSITION, not presence: a Mechanism
-# section moved below Confidence Check, or the gate sentences moved after the
-# 100% question, would leave a presence grep green while the gate is defeated.
+# evidence check runs. Pinned by POSITION, not presence: a Mechanism section
+# moved below Confidence Check, or the gate sentences moved after the claims
+# list, would leave a presence grep green while the gate is defeated.
 # Line numbers come from grep -n over the whole file so the order is explicit.
 
 MECH_HEADING='## Mechanism'
 MECH_BODY='[The changed line - added or removed - quoted verbatim with file:line, and one clause saying how that change stops the symptom.]'
-GATE_FIRST='Fill Mechanism first. If no line can be quoted, the answer to the question below is no.'
+GATE_FIRST='Fill Mechanism first. If no line can be quoted, escalate.'
 GATE_DEFER='A quoted line that only points at another file is not the mechanism - quote the line it points at.'
-CERTAIN='**Am I 100% certain this solution resolves the root cause?**'
+CLAIMS='List every claim this fix depends on'
+CLAIM_SCOPE='every place the flow can end, including inside any command or skill it hands off to'
+EVIDENCE='Beside each, put the tool result from this session that shows it'
 
 # first line number of a literal, or 0 when absent
 ln_of() { local n; n="$(grep -n -F -- "$1" "$FIX_MD" | head -1 | cut -d: -f1 || true)"; echo "${n:-0}"; }
@@ -125,14 +127,31 @@ assert_contains_literal \
 
 echo ""
 
-begin_test "both gate sentences come before the 100% certain question"
+begin_test "both gate sentences come before the claims list"
 L_FIRST="$(ln_of "$GATE_FIRST")"
 L_DEFER="$(ln_of "$GATE_DEFER")"
-L_CERTAIN="$(ln_of "$CERTAIN")"
+L_CLAIMS="$(ln_of "$CLAIMS")"
 assert_eq \
-  "gate sentences < certainty question by line number" \
+  "gate sentences < claims list by line number" \
   "yes" \
-  "$( [ "$L_FIRST" -gt 0 ] && [ "$L_DEFER" -gt 0 ] && [ "$L_CERTAIN" -gt "$L_FIRST" ] && [ "$L_CERTAIN" -gt "$L_DEFER" ] && echo yes || echo "no (first=$L_FIRST defer=$L_DEFER certain=$L_CERTAIN)")"
+  "$( [ "$L_FIRST" -gt 0 ] && [ "$L_DEFER" -gt 0 ] && [ "$L_CLAIMS" -gt "$L_FIRST" ] && [ "$L_CLAIMS" -gt "$L_DEFER" ] && echo yes || echo "no (first=$L_FIRST defer=$L_DEFER claims=$L_CLAIMS)")"
+
+echo ""
+
+# --- Evidence check: Step 3 asks for each claim's tool result, not a
+# self-graded certainty. The claim scope names where untraced claims hid
+# (what clears a value, who calls it, every place the flow ends, including
+# inside a command it hands off to).
+
+begin_test "Step 3 is an evidence check, not a certainty question"
+assert_contains_literal "Step 3 asks for every claim" "$CLAIMS" "$STEP3"
+assert_contains_literal "Step 3 names the claim scope" "$CLAIM_SCOPE" "$STEP3"
+assert_contains_literal "Step 3 asks for a tool result per claim" "$EVIDENCE" "$STEP3"
+assert_contains_literal "Step 3 continues only when every claim holds" "**If every claim holds**" "$STEP3"
+assert_contains_literal "Step 3 escalates on a contradicted claim" "**If a result contradicts a claim**" "$STEP3"
+assert_not_contains "Step 3 no longer asks for 100% certainty" "100% certain" "$STEP3"
+assert_contains_literal "template asks for the claim table" "claim | evidence | holds" "$STEP1"
+assert_not_contains "template no longer asks for 100% certainty" "100% certain" "$STEP1"
 
 echo ""
 

@@ -48,8 +48,8 @@ satisfied_todo: [stamped by the todo-satisfaction beat - <todo-slug> or none-mat
 [The changed line - added or removed - quoted verbatim with file:line, and one clause saying how that change stops the symptom.]
 
 ## Confidence Check
-Am I 100% certain this solution resolves the root cause?
-[Answer here - see Step 3]
+claim | evidence | holds
+[One row per claim the fix depends on, each with the tool result that shows it - see Step 3]
 
 ## Validation
 [Filled after Step 5]
@@ -75,18 +75,18 @@ Update the Investigation section with what you checked.
 
 ## Step 3: Confidence Check
 
-After writing the Root Cause and Solution sections, pause and ask yourself:
+After writing the Root Cause and Solution sections, check the evidence before you edit.
 
-Fill Mechanism first. If no line can be quoted, the answer to the question below is no.
+Fill Mechanism first. If no line can be quoted, escalate.
 A quoted line that only points at another file is not the mechanism - quote the line it points at.
 
-> **Am I 100% certain this solution resolves the root cause?**
+List every claim this fix depends on: about the code you change, and about what it relies on (what sets or clears a value it reads, who calls it, and every place the flow can end, including inside any command or skill it hands off to). Beside each, put the tool result from this session that shows it: the command and its output, or the file:line you read. A claim with no tool result gets one now.
 
-Write your answer in the Confidence Check section. This is the moment that matters - you're about to edit code, and this question forces you to evaluate your own reasoning before acting.
+Write the list in the Confidence Check section as `claim | evidence | holds`. This is the moment that matters - you're about to edit code, and a claim you never checked is where a confident fix goes wrong.
 
-**If yes** with clear causal reasoning ("The regex captures one URL, my fix captures per-weight URLs, so each font entry gets the correct weight file") - continue to Step 4.
+**If every claim holds** - continue to Step 4.
 
-**If no**, hedging ("should fix it", "I think this will work", "worth trying"), or your thinking evolved significantly during investigation (you started with one theory and ended up somewhere different) - this is more complex than an adhoc fix. Escalate:
+**If a result contradicts a claim**, or your thinking evolved significantly during investigation (you started with one theory and ended up somewhere different) - this is more complex than an adhoc fix. Escalate:
 
 1. Update the fix file status to `escalated`
 2. Tell the user: "This is more complex than an adhoc fix - [explain why]. Want me to create a story for it?"
