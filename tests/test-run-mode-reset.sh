@@ -108,6 +108,10 @@ assert_eq "run mode cleared after two idle hours" "" "$(read_state_key RUN_MODE 
 cleanup_test_dir
 echo ""
 
+begin_test "implement-auto sets autonomous mode on every row except the no-cycle exit, resume rows included"
+assert_contains_literal "names every row except the EXIT" 'on every row except the `No ACTIVE_CYCLE` EXIT, before acting on that row' "$(cat "$AUTO")"
+echo ""
+
 begin_test "implement-auto stamps activity where it sets autonomous mode"
 MODE_BLOCK=$(grep -n -A3 -B3 'update-global-state.sh RUN_MODE "autonomous"' "$AUTO" || true)
 assert_contains_literal "refreshes LAST_ACTIVITY beside the mode" 'update-global-state.sh LAST_ACTIVITY NOW' "$MODE_BLOCK"

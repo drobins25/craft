@@ -42,7 +42,7 @@ First, read `.global-state` and handle stale state from a crashed previous run:
 | `CRAFT_WRITE_ENABLED` set but no `CURRENT_STORY` | Orphaned flag — clear it. Proceed to story selection. |
 | Clean state | Normal start. Proceed to story selection. |
 
-Then, once the table leaves a run to start, mark autonomous mode so compaction recovery knows how to resume:
+Then, on every row except the `No ACTIVE_CYCLE` EXIT, before acting on that row, mark autonomous mode so compaction recovery knows how to resume. This includes the rows that skip to story completion or resume a chunk:
 
 ```bash
 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/update-global-state.sh RUN_MODE "autonomous"
