@@ -108,6 +108,23 @@ assert_eq "run mode cleared after two idle hours" "" "$(read_state_key RUN_MODE 
 cleanup_test_dir
 echo ""
 
+begin_test "autonomous mode with an unreadable activity stamp is kept"
+TEST_DIR=$(create_minimal_craft)
+cat > "$TEST_DIR/.craft/.global-state" << 'EOF'
+ACTIVE_CYCLE=""
+CURRENT_STORY=""
+PLANNING_CYCLE=""
+RUN_MODE="autonomous"
+LAST_ACTIVITY="garbage"
+CRAFT_WRITE_ENABLED=""
+CURRENT_WORKFLOW_SESSION=""
+EOF
+RC=$(run_session "$TEST_DIR")
+assert_eq "exits 0" "0" "$RC"
+assert_eq "run mode kept on an unreadable stamp" "autonomous" "$(read_state_key RUN_MODE "$TEST_DIR")"
+cleanup_test_dir
+echo ""
+
 begin_test "implement-auto sets autonomous mode on every row except the no-cycle exit, resume rows included"
 assert_contains_literal "names every row except the EXIT" 'on every row except the `No ACTIVE_CYCLE` EXIT, before acting on that row' "$(cat "$AUTO")"
 echo ""
@@ -147,7 +164,8 @@ RUN_END=$(sed -n '/^## Final Report/,$p' "$AUTO")
 assert_not_eq "Final Report section found" "" "$RUN_END"
 assert_contains_literal "clears RUN_MODE" 'update-global-state.sh RUN_MODE ""' "$RUN_END"
 assert_contains_literal "covers every exit" 'Every exit from this command' "$RUN_END"
-assert_contains_literal "names cycle-complete's own clear" 'cycle-complete turns autonomous mode off itself' "$RUN_END"
+assert_contains_literal "clears again after cycle-complete returns" 'run it after cycle-complete returns' "$RUN_END"
+assert_contains_literal "names the early-stop backstop" 'catches a cycle-complete that stopped early' "$RUN_END"
 echo ""
 
 begin_test "cycle-complete turns autonomous mode off after the last step that reads it"
