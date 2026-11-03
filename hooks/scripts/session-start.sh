@@ -58,6 +58,25 @@ if [ -f "${PROJECT_ROOT}.craft/.global-state" ]; then
   if [ "$GATE" = "true" ] && [ -z "$CS" ] && [ -z "$WF_NOW" ]; then
     "$SCRIPT_DIR/update-global-state.sh" CRAFT_WRITE_ENABLED "" "${PROJECT_ROOT%/}"
   fi
+  # Autonomous mode left by an unattended run that ended or was killed: clear it
+  # when no story holds it AND craft has been idle for two hours. A live run has
+  # gaps with no story (between stories, mid-cycle planning, cycle-complete), but
+  # it stamps LAST_ACTIVITY at its start and at every chunk and story boundary,
+  # so its last activity is never hours old. An unreadable stamp keeps the mode.
+  RM=$(grep "^RUN_MODE=" "${PROJECT_ROOT}.craft/.global-state" 2>/dev/null | sed 's/RUN_MODE="\(.*\)"/\1/')
+  LA=$(grep "^LAST_ACTIVITY=" "${PROJECT_ROOT}.craft/.global-state" 2>/dev/null | sed 's/LAST_ACTIVITY="\(.*\)"/\1/')
+  RM_IDLE="no"
+  if [ -z "$LA" ]; then
+    RM_IDLE="yes"
+  else
+    LA_EPOCH=$(date -u -d "$LA" +%s 2>/dev/null || date -u -j -f '%Y-%m-%dT%H:%M:%SZ' "$LA" +%s 2>/dev/null || echo "")
+    if [ -n "$LA_EPOCH" ] && [ $(( $(date -u +%s) - LA_EPOCH )) -gt 7200 ]; then
+      RM_IDLE="yes"
+    fi
+  fi
+  if [ -n "$RM" ] && [ -z "$CS" ] && [ "$RM_IDLE" = "yes" ]; then
+    "$SCRIPT_DIR/update-global-state.sh" RUN_MODE "" "${PROJECT_ROOT%/}"
+  fi
 fi
 
 # Persist project root for this session

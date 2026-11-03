@@ -97,11 +97,11 @@ options:
 
 A design-tied story skips the planning routing below and the Step 3a-3e / Step 3-Fast template. Handle the kept list in order, so each moved story's number follows the one before it. A candidate the user removed at "Remove/combine some" leaves its record untouched and still waiting; nothing is graduated until its story is written.
 
-**Before doing per-story work in Step 3 or Step 3-Fast**, read `cycle.yaml` to check whether this cycle has `source_concept` set.
+**Before doing per-story work in Step 3 or Step 3-Fast**, read `cycle.yaml` to check whether this cycle has `source_concept` set. This cycle is the one being designed - the cycle Step 1 created and recorded as `PLANNING_CYCLE` - not the active cycle, which can be a different cycle still being built.
 
 ```bash
-ACTIVE_CYCLE=$(grep "^ACTIVE_CYCLE=" "${CRAFT_PROJECT_ROOT}/.craft/.global-state" | cut -d= -f2)
-CYCLE_SOURCE_CONCEPT=$(grep "^source_concept:" "${CRAFT_PROJECT_ROOT}/.craft/cycles/${ACTIVE_CYCLE}/cycle.yaml" | sed 's/^source_concept: //')
+PLANNING_CYCLE=$(grep "^PLANNING_CYCLE=" "${CRAFT_PROJECT_ROOT}/.craft/.global-state" | cut -d= -f2 | tr -d '"')
+CYCLE_SOURCE_CONCEPT=$(grep "^source_concept:" "${CRAFT_PROJECT_ROOT}/.craft/cycles/${PLANNING_CYCLE}/cycle.yaml" | sed 's/^source_concept: //')
 ```
 
 If `source_concept` is `[]` or empty: this cycle is freeform. Skip the rest of this step and proceed to Step 3 / Step 3-Fast as usual.

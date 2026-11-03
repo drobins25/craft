@@ -176,6 +176,12 @@ This updates:
 
 ### Step 5: Cycle Complete Summary
 
+First, turn autonomous mode off. An unattended run ends with its cycle, and Step 3c was the last step that reads the mode. In an attended run it is already off and this changes nothing:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/hooks/scripts/update-global-state.sh RUN_MODE ""
+```
+
 > "**Cycle Complete: [Name]**
 >
 > **Stories:** [N] completed, [M] returned to backlog
