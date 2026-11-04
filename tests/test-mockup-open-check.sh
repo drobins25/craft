@@ -27,6 +27,10 @@ begin_test "the mockup this conversation is running still keeps a new one waitin
 assert_contains_literal "this-conversation case named" "the mockup this conversation is running" "$STEP2"
 assert_contains_literal "offers a fresh session" "start the new mockup in a fresh session" "$STEP2"
 
+begin_test "abandoning a mockup left by an earlier session skips the live-session steps"
+assert_file_contains "left-open abandon runs only strip and the status write" "A mockup left open by an earlier session has no watch, listener or session id in hand" "$FUNNEL"
+assert_file_contains "names the steps it skips" "skip the watch stop, annotate clear and tombstone" "$FUNNEL"
+
 begin_test "the check finds the project folder before init"
 assert_contains_literal "cold root resolved first" "craft_before_init_root" "$STEP2"
 
