@@ -5,6 +5,7 @@ Notable, user-facing changes per version. Internal changes (tests, refactors, co
 ## 2.15.2 - 2026-11-03
 
 - Fixed the last question of a full story design in `/craft:story-new`. It used to ask "Anything to change?", so answering "yes" to approve was read as a request for changes. It now asks whether to save the design as written, so yes saves it.
+- Fixed an autonomous run leaving unattended mode on when finishing the cycle stopped partway. The run now always switches it off at the end, so your next hands-on session asks its questions again.
 
 ## 2.15.1 - 2026-11-01
 
