@@ -71,6 +71,8 @@ options:
     description: "Back out"
 ```
 
+With one finding, the question reads "How should I verify this finding?"
+
 **If "Source verification"** -> Jump to **Step 3b** (select findings), then **Step 4** (verifiers).
 **If "Practitioner review"** -> Jump to **Step 4b** (practitioner reviewer).
 **If "Both passes"** -> Jump to **Step 3b** (select findings), then **Step 4** (verifiers), then **Step 4b** (practitioner reviewer on results).

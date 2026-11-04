@@ -59,8 +59,7 @@ assert_literal "Confirm cycle header" "$DESIGN" 'header: "Confirm cycle"'
 assert_literal "Confirm and proceed" "$DESIGN" 'label: "Confirm and proceed"'
 assert_literal "Depth header" "$DESIGN" 'header: "Depth"'
 assert_literal "Add stories now" "$DESIGN" 'label: "Add stories now"'
-assert_literal "Stories header" "$DEFAULT" 'header: "Stories"'
-assert_literal "Save these sparks" "$DEFAULT" 'label: "Save these sparks"'
+assert_literal "story list closing ask" "$DEFAULT" 'Save these as the sparks?'
 assert_literal "Review header" "$DEFAULT" 'header: "Review"'
 assert_literal "Yes, finalize the cycle" "$DEFAULT" 'label: "Yes, finalize the cycle"'
 assert_literal "Design header" "$DEFAULT" 'header: "Design"'
@@ -87,7 +86,7 @@ echo ""
 
 begin_test "every known prompt label is named in go-run.md"
 KNOWN="$(sed -n '/^## Known prompts/,/^## Planning/p' "$GORUN")"
-for label in "Confirm and proceed" "Add stories now" "Save these sparks" "Yes, finalize the cycle" "Skip for now" \
+for label in "Confirm and proceed" "Add stories now" "Save these as the sparks?" "Yes, finalize the cycle" "Skip for now" \
   "Plan all [N] stories" "Plan a story now" "Run content-spark first (Recommended)" "Skip - I know what I want" \
   "Keep it" "Yes, that's right" "Run the alignment check first" "Re-plan with the failure list" "Yes, mark ready" \
   "Approve all" "Yes, implement now" "Come back later" "Start implementing" "Done for now"; do

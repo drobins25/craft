@@ -255,8 +255,8 @@ assert_contains_literal "trailing line" 'Also waiting, not in this goal: <slug> 
 assert_eq "tag appears in both templates" "2" "$(printf '%s\n' "$DM_S2" | grep -c '^> .*waiting)' || true)"
 
 begin_test "no new question in Step 2"
-assert_eq "exactly one question line" "1" "$(printf '%s\n' "$DM_S2" | grep -c '^question: ' || true)"
-assert_contains_literal "the existing question" 'question: "Does this capture the scope?"' "$DM_S2"
+assert_eq "no widget question line" "0" "$(printf '%s\n' "$DM_S2" | grep -c '^question: ' || true)"
+assert_eq "both list templates end on the one save ask" "2" "$(printf '%s\n' "$DM_S2" | grep -c '^> Save these as the sparks?' || true)"
 
 begin_test "the Step 2.7 heading and its mentions say Story-Source Routing"
 assert_eq "heading" "1" "$(grep -c '^### Step 2.7: Story-Source Routing (Per Story, Before Step 3 or Step 3-Fast)$' "$DM" || true)"
