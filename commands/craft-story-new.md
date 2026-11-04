@@ -395,11 +395,12 @@ what would prove it is handled. Never "none".
 After the fifth pass, one message: the five sections read back from the story
 file and printed as written, then:
 
-> Anything to change?
+> Save the design as written? Or tell me which section to change.
 
-A reply edits that section in place with one Edit and is confirmed in one
-sentence, without re-posting the design. Then continue to Step 10, which
-updates the existing file rather than creating it.
+A yes continues to Step 10, which updates the existing file rather than
+creating it. A named change edits that section in place with one Edit and is
+confirmed in one sentence, without re-posting the design, then continues to
+Step 10.
 
 ### Step 10: Save & Place
 

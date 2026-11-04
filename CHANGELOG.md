@@ -2,6 +2,10 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.15.2 - 2026-11-03
+
+- Fixed the last question of a full story design in `/craft:story-new`. It used to ask "Anything to change?", so answering "yes" to approve was read as a request for changes. It now asks whether to save the design as written, so yes saves it.
+
 ## 2.15.1 - 2026-11-01
 
 - Fixed designing a new cycle from a planning doc while another cycle is running. Craft now reads the planning doc of the cycle you are designing, not the one being built, so each new story starts from that doc's content and is saved into the new cycle.
