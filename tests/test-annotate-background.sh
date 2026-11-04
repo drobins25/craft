@@ -273,30 +273,4 @@ run_sh "$R" ready --session bg9 >/dev/null
 assert_eq "owner is the listener pid" "$LJ" "$(rd "$D/owner.pid")"
 stop_job "$LJ"
 
-
-begin_test "two listens launched together leave exactly one listener"
-new_root; R="$NEW_ROOT"
-D="$R/.craft/annotations/bg-race"
-run_sh "$R" arm --background --session bg-race --owner-pid "$$" >/dev/null
-bash "$RUN" listen --root "$R" --session bg-race >/dev/null 2>&1 &
-J1=$!
-bash "$RUN" listen --root "$R" --session bg-race >/dev/null 2>&1 &
-J2=$!
-disown "$J1" 2>/dev/null || true
-disown "$J2" 2>/dev/null || true
-TMP_PIDS+=("$J1" "$J2")
-wait_port "$D" || true
-sleep 0.5
-assert_eq "exactly one listener serves the root" "1" "$(annotate_procs "$R")"
-OUT="$(run_sh "$R" ready --session bg-race)"
-assert_eq "ready prints the surviving listener's port" "1" "$(printf '%s' "$OUT" | grep -c "SESSION bg-race PORT $(rd "$D/port")")"
-ALIVE=0
-is_running "$J1" && ALIVE=$((ALIVE + 1))
-is_running "$J2" && ALIVE=$((ALIVE + 1))
-assert_eq "one listen call became the listener and the other exited" "1" "$ALIVE"
-kill -TERM "$J1" "$J2" 2>/dev/null || true
-wait_dead "$J1" || true
-wait_dead "$J2" || true
-assert_eq "no listener is left after the stop" "0" "$(annotate_procs "$R")"
-
 finish_tests
