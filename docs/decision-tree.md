@@ -496,9 +496,10 @@ Reached two ways: the user invokes `/craft:mockup` directly, or `/craft:init`'s 
 ```mermaid
 %%{init: {'theme': 'dark'}}%%
 flowchart TD
-    MOCKUP["/craft:mockup [subject]"] --> GUARD{"Open record with<br/>status: converging?"}
-    GUARD -->|Yes| DECLINE["Decline - point at the open record"]
-    GUARD -->|No| PREFLIGHT{"First-ever mockup<br/>on a cold project?"}
+    MOCKUP["/craft:mockup [subject]"] --> GUARD{"Mockup open in<br/>this conversation?"}
+    GUARD -->|Yes| WAIT["Offer: finish it, abandon it,<br/>or start the new one in a fresh session"]
+    GUARD -->|No| LEFTOPEN["Name any mockups left open<br/>by earlier sessions (one line)"]
+    LEFTOPEN --> PREFLIGHT{"First-ever mockup<br/>on a cold project?"}
     PREFLIGHT -->|Yes| SETUPQ["Pre-flight Setup AUQ:<br/>Init first (Recommended) /<br/>Go from what's on disk"]
     SETUPQ -->|"Init first"| TOINIT["Funnel stops -<br/>/craft:init takes over"]
     SETUPQ -->|"Go from disk"| BRIEF

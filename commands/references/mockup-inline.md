@@ -13,7 +13,7 @@
      tweak port) and by recovery - the material's identity ports onward, never
      the inlined bytes. -->
 
-A converged mockup is design truth the user approved in their browser. This flow gets there through three rounds of real reactions - diverge, refine, polish - then solidifies new design values to tokens.yaml BEFORE any destination artifact exists, so every downstream gate (binding contracts, chunk-validator, style-analyzer) enforces the mockup because the bible already agrees with it. The shell has already parsed the subject and run the single-session guard - this file owns everything else.
+A converged mockup is design truth the user approved in their browser. This flow gets there through three rounds of real reactions - diverge, refine, polish - then solidifies new design values to tokens.yaml BEFORE any destination artifact exists, so every downstream gate (binding contracts, chunk-validator, style-analyzer) enforces the mockup because the bible already agrees with it. The shell has already parsed the subject and run the open-mockup check - this file owns everything else.
 
 **At most three taste AskUserQuestion calls exist in this flow: vibe (Brief - not rendered on the muse path, where the built spread is the checkpoint), solidify (acceptance), destination (fork). One first-run pre-flight AUQ (Setup - Step 1) may precede them, on a project's first-ever mockup only.** Round picks and reactions are conversational text - a widget between the user and their taste kills the funnel. The taste budget is at most three, permanently: pre-flight is logistics, not taste, and deletes itself once a mockup record exists; nothing else may add a widget to this flow.
 
