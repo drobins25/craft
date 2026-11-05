@@ -27,7 +27,7 @@ assert_eq "no em dash in the new ask" "0" "$(printf '%s\n' "$DM_S2" | grep -c --
 begin_test "roadmap mode Step R1 ends on the prose save ask"
 assert_not_contains "no widget spec" 'AskUserQuestion' "$RM_R1"
 assert_not_contains "no fixed plural label" 'Yes, save these' "$RM_R1"
-assert_contains_literal "the ask" 'Save these? Or tell me what to add, change or remove.' "$RM_R1"
+assert_contains_literal "the ask" '> Save these?"' "$RM_R1"
 assert_contains_literal "a yes continues to R2" 'continue to Step R2' "$RM_R1"
 assert_contains_literal "unclear reply gets the same question" 'gets the same question back' "$RM_R1"
 

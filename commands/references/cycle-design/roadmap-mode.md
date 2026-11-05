@@ -24,7 +24,7 @@ Include inferred type tags where possible. If there's enough context to classify
 > 2. [Title 2] `technical`
 > 3. [Title 3]
 >
-> Save these? Or tell me what to add, change or remove. (Check the type tags - correct any that are wrong.)"
+> Save these?"
 
 What each reply does:
 

@@ -50,7 +50,7 @@ If the scope looks thin, include a **Scope check** note inline with the story li
 >
 > Also waiting, not in this goal: <slug> (<kind>, <date>)
 >
-> Save these as the sparks? Or tell me what to add, drop, combine, or go through one at a time. (Check the type tags - correct any that are wrong.)"
+> Save these as the sparks?"
 
 **When the check doesn't fire:**
 
@@ -62,7 +62,7 @@ If the scope looks thin, include a **Scope check** note inline with the story li
 >
 > Also waiting, not in this goal: <slug> (<kind>, <date>)
 >
-> Save these as the sparks? Or tell me what to add, drop, combine, or go through one at a time. (Check the type tags - correct any that are wrong.)"
+> Save these as the sparks?"
 
 What each reply does:
 
