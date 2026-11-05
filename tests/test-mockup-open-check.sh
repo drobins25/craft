@@ -12,8 +12,8 @@ TREE="$PLUGIN_ROOT/docs/decision-tree.md"
 STEP2=$(awk '/^### Step 2:/{on=1} /^### Step 3:/{on=0} on' "$SHELL_FILE")
 
 begin_test "the project-wide decline is gone"
-assert_not_contains "no one-at-a-time rule" "$STEP2" "One mockup session at a time"
-assert_not_contains "no blanket decline" "$STEP2" "DECLINE the new invocation"
+assert_not_contains "no one-at-a-time rule" "One mockup session at a time" "$STEP2"
+assert_not_contains "no blanket decline" "DECLINE the new invocation" "$STEP2"
 assert_file_not_contains "funnel no longer names the single-session guard" "single-session guard" "$FUNNEL"
 assert_file_not_contains "decision tree no longer declines on any converging record" "Decline - point at the open record" "$TREE"
 
@@ -22,6 +22,11 @@ assert_contains_literal "left-open mockups never block" "A mockup left open by a
 assert_contains_literal "newest first, with a count of the rest" ", and <m> more" "$STEP2"
 assert_contains_literal "continues to the funnel" "then continue to Step 3" "$STEP2"
 assert_contains_literal "resume re-anchors from the record" "the funnel's Recovery" "$STEP2"
+
+begin_test "a mockup this conversation did not start may still be live in another terminal"
+assert_not_contains "no claim that every other open mockup was left behind" "every open mockup was left by an earlier session" "$STEP2"
+assert_contains_literal "names the other-terminal case" "may still be open in another terminal" "$STEP2"
+assert_contains_literal "asks once before resume or abandon, a yes runs it" "A yes runs it" "$STEP2"
 
 begin_test "the mockup this conversation is running still keeps a new one waiting"
 assert_contains_literal "this-conversation case named" "the mockup this conversation is running" "$STEP2"
