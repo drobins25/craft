@@ -26,8 +26,6 @@ Include inferred type tags where possible. If there's enough context to classify
 >
 > Save these? Or tell me what to add, change or remove. (Check the type tags - correct any that are wrong.)"
 
-With one story, the closing line reads in the singular: "Save this? Or tell me what to add or change."
-
 What each reply does:
 
 - **A yes** creates the cycle with these titles: continue to Step R2.

@@ -64,8 +64,6 @@ If the scope looks thin, include a **Scope check** note inline with the story li
 >
 > Save these as the sparks? Or tell me what to add, drop, combine, or go through one at a time. (Check the type tags - correct any that are wrong.)"
 
-With one story, the closing line reads in the singular: "Save this as the spark? Or tell me what to add, drop, combine, or go through it in detail."
-
 What each reply does:
 
 - **A yes** saves the list as it stands: jump to **Step 3-Fast** below.

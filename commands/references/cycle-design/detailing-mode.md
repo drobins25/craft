@@ -92,8 +92,6 @@ options:
     description: "Reorder or rename existing stories"
 ```
 
-With one story, the question reads "How do you want to detail this story?" and the first option reads "Detail it now".
-
 **If user provides custom text:** Ask a clarifying AskUserQuestion to understand their intent.
 
 ### Step D2: Capture Sparks

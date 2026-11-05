@@ -5,8 +5,7 @@ Notable, user-facing changes per version. Internal changes (tests, refactors, co
 ## 2.15.3 - 2026-11-04
 
 - Fixed `/craft:mockup` refusing to start while a mockup from an earlier session was still open. Craft now names the mockup you left open and starts the new one, and you can resume or abandon the old one by name whenever you like. Only a mockup open in the same conversation still asks you to finish it first.
-- Changed how `/craft:cycle-design` confirms your story list. It ends on one plain question, "Save these as the sparks?", so a yes saves them, and anything you want changed you just say: add, drop, combine, or go through them one at a time. With one story it asks in the singular. The quick roadmap sketch confirms its list the same way.
-- Fixed questions that read wrong when there is only one item, like "I'd suggest 1 stories", in `/craft:planning`, the `/craft` menu, `/craft:research-verify` and cycle detailing.
+- Changed how `/craft:cycle-design` confirms your story list. It ends on one plain question, "Save these as the sparks?", so a yes saves them, and anything you want changed you just say: add, drop, combine, or go through them one at a time. The quick roadmap sketch confirms its list the same way.
 
 ## 2.15.2 - 2026-11-03
 

@@ -329,8 +329,6 @@ options:
     description: "Go back - concept needs more work"
 ```
 
-With one story, the question reads "I'd suggest one story from this concept. Approve it?"
-
 **9d. Create stories**
 
 For each approved story:

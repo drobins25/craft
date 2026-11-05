@@ -149,8 +149,6 @@ options:
     → falls through to planning cycle check
 ```
 
-With one story, the question reads "Cycle '[plan_title]' - its one story is ready. What would you like to do?"
-
 **If stories still need planning:**
 
 Use **AskUserQuestion** (if `requests_count > 0`, append `" ([N] request(s) pending)"` to the question text):
@@ -257,7 +255,7 @@ Use **AskUserQuestion** with options based on state. **Each option maps to a ski
 Cycle [Name] - [N] stories ready. What would you like to do?
 ```
 
-**If ACTIVE_CYCLE with ready stories:** (with one ready story, write "1 story ready" here and in the planning-mention example above)
+**If ACTIVE_CYCLE with ready stories:**
 ```
 question: "Cycle [Name] — [N] stories ready. What would you like to do?"
 header: "Next"
