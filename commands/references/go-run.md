@@ -36,13 +36,14 @@ Check `## What still stops` first. A prompt that is not a stop is answered, neve
 2. The option marked `(Recommended)`, `(recommended)`, or a card's `(proposed)` option `a.`, or the option its own step's prose recommends.
 3. The first listed option.
 
-A free-text question is answered with words quoted from the copied issue, or else one sentence drafted from it. Never invent a goal the issue does not support.
+A free-text question is answered with words quoted from the copied issue, or else one sentence drafted from it. Never invent a goal the issue does not support. A prose question with its own row in `## Known prompts` is not free text: it takes the row's answer.
 
 The prompt is not shown. After the answer's effects and writes have landed, print one line so the run stays traceable:
 
 - picker: `Answered '<header, else question text>' with '<label>' (recommended).`
 - card: `Answered '<card question>' with 'a. <option title>' (recommended).`
 - free text: `Answered '<question>' with '<answer>' (drafted from <KEY>).`
+- prose question with a row: `Answered '<question>' with '<row answer>'.`
 
 The line comes after the writes so it never claims something that has not happened.
 
@@ -107,7 +108,7 @@ These prompts sit on the path from pickup to the stage. Each row names where the
 | Step 1 goal | free text, when the issue has no quotable goal | the drafted goal |
 | Step 1 gate | `Confirm cycle` | `Confirm and proceed` |
 | Step 1b | `Depth` | `Add stories now`. If Step 1b's own check would recommend the roadmap, it is a product fork. |
-| Step 2 | `Stories` | `Save these sparks` |
+| Step 2 | the story list's closing ask, `Save these as the sparks?` | yes. The list itself still prints. |
 | Step 5 | `Review` | `Yes, finalize the cycle` |
 | Step 7 | `Design` | `Skip for now` |
 | Step 8 | `Next step` | `Plan all [N] stories` when N > 1, `Plan a story now` when N = 1 |

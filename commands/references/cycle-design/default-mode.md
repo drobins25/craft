@@ -26,7 +26,7 @@ Help the user decompose the cycle into stories through conversation:
 - A design that fits the goal goes into the numbered list as a story candidate with its type tag and a source tag, `*From the <slug> <mockup|annotate run>* (<status word>, waiting)`, after its one-line description. It counts as one deliverable like any other story line.
 - A design that does not fit is named once, after the list, on a single line: `Also waiting, not in this goal: <slug> (<kind>, <date>)`. List several as one line, comma-separated.
 
-This adds no question: the "Does this capture the scope?" question below carries it.
+This adds no question: the save question that closes the list carries it.
 
 Present initial story list with inferred type tags (`ui`, `technical`, or `content`). Infer the type from conversational context — if the story involves visual design, layout, or animation it's `ui`; if it's API routes, data, or infrastructure it's `technical`; if it's copy, tone, or onboarding flow it's `content`.
 
@@ -50,7 +50,7 @@ If the scope looks thin, include a **Scope check** note inline with the story li
 >
 > Also waiting, not in this goal: <slug> (<kind>, <date>)
 >
-> Does this capture the scope? (Check the type tags — correct any that are wrong.)"
+> Save these as the sparks?"
 
 **When the check doesn't fire:**
 
@@ -62,30 +62,16 @@ If the scope looks thin, include a **Scope check** note inline with the story li
 >
 > Also waiting, not in this goal: <slug> (<kind>, <date>)
 >
-> Does this capture the scope? (Check the type tags — correct any that are wrong.)"
+> Save these as the sparks?"
 
-Use **AskUserQuestion**:
-```
-question: "Does this capture the scope?"
-header: "Stories"
-options:
-  - label: "Save these sparks"
-    description: "The descriptions above are the sparks — write all story files now"
-  - label: "Flesh out individually"
-    description: "Go through each story to explore or refine the spark"
-  - label: "Add another story"
-    description: "I have more stories to include"
-  - label: "Remove/combine some"
-    description: "Some of these should be merged or dropped"
-```
+What each reply does:
 
-**If user selects "Other" or provides custom text:** Ask a clarifying AskUserQuestion before proceeding. Don't assume intent — confirm what they want to change.
+- **A yes** saves the list as it stands: jump to **Step 3-Fast** below.
+- **Going through them one at a time** runs every story through Step 3 (per-story flow).
+- **Adding, dropping or combining stories** edits the list and shows it again, ending on the same question.
+- **A reply that is none of these** gets the same question back, with the list unchanged. Never assume what it means.
 
-**Important:** Don't proceed until user confirms the story list is complete.
-
-**If "Save these sparks":** Jump to **Step 3-Fast** below.
-
-**If "Flesh out individually":** Continue to Step 3 (per-story flow).
+Don't proceed until the user confirms the story list is complete.
 
 ### Step 2.7: Story-Source Routing (Per Story, Before Step 3 or Step 3-Fast)
 
@@ -95,7 +81,7 @@ options:
 2. Move the written story into this cycle: `bash "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/move-story.sh" "<story path the graduation reference reported>" "<this cycle's directory name>"` (the full directory name, for example `<N>-<cycle-name>`).
 3. Continue with the next kept story.
 
-A design-tied story skips the planning routing below and the Step 3a-3e / Step 3-Fast template. Handle the kept list in order, so each moved story's number follows the one before it. A candidate the user removed at "Remove/combine some" leaves its record untouched and still waiting; nothing is graduated until its story is written.
+A design-tied story skips the planning routing below and the Step 3a-3e / Step 3-Fast template. Handle the kept list in order, so each moved story's number follows the one before it. A candidate the user dropped from the list leaves its record untouched and still waiting; nothing is graduated until its story is written.
 
 **Before doing per-story work in Step 3 or Step 3-Fast**, read `cycle.yaml` to check whether this cycle has `source_concept` set. This cycle is the one being designed - the cycle Step 1 created and recorded as `PLANNING_CYCLE` - not the active cycle, which can be a different cycle still being built.
 

@@ -18,20 +18,19 @@ Capture story titles conversationally. The user can list them all at once or one
 
 Include inferred type tags where possible. If there's enough context to classify a story (from the title and any brief description), tag it. If not, leave the type out — it will be set during Detailing Mode when the spark is captured.
 
-Use **AskUserQuestion**:
-```
-question: "Here are the stories for [cycle name]:\n\n1. [Title 1] `ui`\n2. [Title 2] `technical`\n3. [Title 3]\n\nLook right? (Check the type tags — correct any that are wrong.)"
-header: "Stories"
-options:
-  - label: "Yes, save these"
-    description: "Create the cycle with these story titles"
-  - label: "Add more"
-    description: "I have more stories to add"
-  - label: "Edit the list"
-    description: "Change or remove some titles"
-```
+> "Here are the stories for **[cycle name]**:
+>
+> 1. [Title 1] `ui`
+> 2. [Title 2] `technical`
+> 3. [Title 3]
+>
+> Save these?"
 
-**If user provides custom text:** Ask a clarifying AskUserQuestion to understand what they want to change.
+What each reply does:
+
+- **A yes** creates the cycle with these titles: continue to Step R2.
+- **Adding, changing or removing titles** edits the list and shows it again, ending on the same question.
+- **A reply that is none of these** gets the same question back, with the list unchanged. Never assume what it means.
 
 ### Step R2: Create Cycle and Story Files
 
