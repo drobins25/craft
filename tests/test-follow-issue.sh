@@ -342,5 +342,18 @@ assert_eq "nothing written" "1" "$(ls "$CTX" | grep -c -- '-issue-')"
 assert_eq "yaml byte-identical" "" "$(cmp "$BEFORE_YAML" "$YAML" 2>&1)"
 assert_eq "readme byte-identical" "" "$(cmp "$WORK/err-readme.notable" "$CTX/README.md" 2>&1)"
 
+begin_test "a ValueError from the shared module is one stderr line, not a traceback"
+VALUE_ERR=$(python3 -c "
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location('follow_issue', sys.argv[1])
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+def boom(args):
+    raise ValueError('no source_issue line to record after')
+mod.COMMANDS['check'] = boom
+print('code=%s' % mod.main(['follow-issue.py', 'check']))" "$FOLLOW" 2>&1 < /dev/null || true)
+assert_eq "exit 1 and one stderr line" "follow-issue.py: no source_issue line to record after
+code=1" "$VALUE_ERR"
+
 echo ""
 finish_tests

@@ -324,7 +324,7 @@ def main(argv):
         if len(argv) < 2 or argv[1] not in COMMANDS:
             raise FollowError('Usage: follow-issue.py check|keep|update <cycle-dir> ...')
         result = COMMANDS[argv[1]](argv[2:])
-    except FollowError as err:
+    except (FollowError, ValueError) as err:
         sys.stderr.write('follow-issue.py: %s\n' % err)
         return 1
     names = FIELDS if argv[1] == 'check' else ('say',)

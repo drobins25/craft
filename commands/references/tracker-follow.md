@@ -16,9 +16,9 @@ Stage the issue alone, no comments: empty `${CRAFT_PROJECT_ROOT:-.}/.craft/.inta
 python3 "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/follow-issue.py" check <cycle-dir> --issue <staged> --tool "<tool names as used>"
 ```
 
-When the host has no tracker tools, or the read fails, or the issue is gone, run it with `--unreadable <reason>` in place of `--issue` and `--tool`, where the reason is `no-tools`, `read-failed` or `not-found`. Then delete the staging folder.
+When the host has no tracker tools, or the read fails, or the issue is gone, run it with `--unreadable <reason>` in place of `--issue` and `--tool`, where the reason is `no-tools`, `read-failed` or `not-found`. Whichever form ran, delete the staging folder right after the script returns.
 
-It prints ten `key=value` lines: `verdict`, `key`, `cycle`, `old_title`, `new_title`, `changed_lines`, `first_changed`, `as_of`, `issue_type`, `say`. If it exits non-zero, print its one stderr line and treat the verdict as `unreadable` with reason `read-failed`.
+It prints ten `key=value` lines: `verdict`, `key`, `cycle`, `old_title`, `new_title`, `changed_lines`, `first_changed`, `as_of`, `issue_type`, `say`. If it exits non-zero, print its one stderr line, then `Checking <KEY> failed, so I can't tell whether cycle <N> still matches it.`, and treat the verdict as `unreadable`.
 
 - `verdict=current` or `verdict=none`: go to `## Continue` with nothing printed.
 - `verdict=changed`: go to `## The card`.
@@ -110,7 +110,7 @@ Print nothing and write nothing. The change stays recorded in the cycle, so the 
 
 ## Can't read the issue
 
-Print check's `say`, then ask `Plan anyway, or stop here?` as a plain question. Plan anyway goes to `## Continue`. Stop ends the flow, like `## Stop`. Neither runs `keep` or `update`, and nothing is written.
+Print check's `say` (or the failure line from `## Check` when the script failed), then ask `Plan anyway, or stop here?` as a plain question. Plan anyway goes to `## Continue`. Stop ends the flow, like `## Stop`. Neither runs `keep` or `update`, and nothing is written.
 
 ## Continue
 
