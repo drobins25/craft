@@ -16,9 +16,10 @@ author, timestamp). New comments keep their order and are numbered on from the
 earlier maximum, so each comment keeps one number for life. Comments edited or
 deleted on the tracker after being copied are not detected.
 
-The staged issue is copied only when it differs from the newest earlier issue
-copy once the "Status at retrieval:" line is dropped from both: status is
-never authority, so a status-only change is not a change.
+The staged issue is copied only when its title or description differs from the
+newest earlier issue copy (tracker_issue.same_issue): status, source and type
+header lines are never authority, so changing one is not a change. After an
+issue copy is written, cycle.yaml records whether the cycle's issue moved.
 
 Output: exactly five lines, in order
   comments_file=<path written, or empty>
@@ -43,9 +44,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from annotate_write import write_atomic  # noqa: E402
 from tracker_comments import (  # noqa: E402
     newest_stamp, next_stamp, parse_blocks, read_key, slug, stamp_time)
+from tracker_issue import issue_copies, record_change, same_issue  # noqa: E402
 
 MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-STATUS_LINE = 'Status at retrieval:'
 NOW_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
 
 
@@ -110,15 +111,6 @@ def new_blocks(staged, earlier):
     return fresh
 
 
-def issue_signature(text):
-    """The issue text without its status line, for comparing two copies."""
-    lines = [line for line in text.replace('\r\n', '\n').split('\n')
-             if not line.startswith(STATUS_LINE)]
-    while lines and not lines[-1].strip():
-        lines.pop()
-    return lines
-
-
 def month_day(stamp):
     when = stamp_time(stamp)
     return '%s %d' % (MONTHS[when.month - 1], when.day)
@@ -164,15 +156,14 @@ def refresh(cycle_dir, comments_path, issue_path, tool, now):
     earlier = []
     for path in sorted(glob.glob(base + '-comments-*.md')):
         earlier.extend(parse_blocks(read_text(path)))
-    issue_copies = sorted(glob.glob(base + '-issue-*.md'))
+    copies = issue_copies(context, key)
     newest = newest_stamp(context)
     previous = newest or now.strftime('%Y-%m-%dT%H%MZ')
     since = month_day(previous)
 
     fresh = new_blocks(staged, earlier)
     issue_changed = staged_issue is not None and (
-        not issue_copies
-        or issue_signature(staged_issue) != issue_signature(read_text(issue_copies[-1])))
+        not copies or not same_issue(staged_issue, read_text(copies[-1])))
 
     result = {'comments_file': '', 'new_comments': len(fresh), 'issue_file': '', 'stamp': ''}
     if fresh or issue_changed:
@@ -201,6 +192,8 @@ def refresh(cycle_dir, comments_path, issue_path, tool, now):
         mode = os.stat(readme_path).st_mode & 0o777
         write_atomic(readme_path, add_rows(readme, rows), mode=mode)
         result['stamp'] = stamp
+        if issue_changed:
+            record_change(cycle_dir)
 
     if fresh or issue_changed:
         count = len(fresh)

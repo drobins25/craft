@@ -52,7 +52,7 @@ The line comes after the writes so it never claims something that has not happen
 Each case prints its line as visible text (a plain message to the user, never only in your reasoning), copied word for word, in the same turn and immediately before the prompt or card is rendered. A paraphrase such as "this is a product fork, so I'm pausing" does not count. The prompt is then asked exactly as it would be without a Go, except a can-wait fork under `### Where a fork goes`, which is posted and not asked. After the user answers, the run goes back to answering.
 
 - A product fork prints `This one is a product fork, so it's yours.` When forks are posted to the issue, the lines under `### What the session says` replace this one.
-- A shared write (a push, a PR, a tracker or chat post, a shared config change) or a destructive step (deleting stories, files or branches, discarding uncommitted work) prints `This one needs your yes: <what it would change, in a few words>.` A question posted under ## Product forks is the one exception, because the Go's Questions line already says yes to it.
+- A shared write (a push, a PR, a tracker or chat post, a shared config change) or a destructive step (deleting stories, files or branches, discarding uncommitted work) prints `This one needs your yes: <what it would change, in a few words>.` A question posted under ## Product forks is the one exception, because the Go's Questions line already says yes to it. The cycle-update post named in `## Known prompts` is the second exception, for the same reason.
 - A prompt the Go gives no clear answer to prints `This one has no clear answer from the Go, so it's yours.`
 - Going past the stage is stopped by intake's stage check and by `## At the stage ceiling`.
 
@@ -123,6 +123,9 @@ These prompts sit on the path from pickup to the stage. Each row names where the
 | S-6 | offer implementation | `Yes, implement now` at a build stage, `Come back later` at plan |
 | BT-7 | next steps | `Start implementing` at a build stage, `Done for now` at plan |
 | implement-auto | `Gates` offer | not answered: it takes its no-answer branch |
+| tracker-follow.md card | `Update cycle <N> from <KEY>, keep cycle <N> as it is and plan anyway, or stop here?` | `a. Update cycle <N> from <KEY>`. The diff prints as the log and the save question takes yes. After the write, print `Answered 'Update cycle <N> from <KEY>' with 'a. Update cycle <N> from <KEY>' (recommended).` and the update's `say`. When `go-brief.py <cycle-dir>` prints `questions_line=Questions go to: the issue`, also post one new top-level comment headed `## Update from Claude - cycle <N> follows <KEY>` carrying the diff and `Stories already in cycle <N> are not changed.`, with no file paths and no line starting `## Go`. A confirmed post prints `Posted the update to cycle <N> on <KEY>.`; an unconfirmed one prints `I couldn't post this on <KEY>, so the update is only in this log.` |
+| tracker-follow.md | `Plan anyway, or stop here?` | `Plan anyway` |
+| cycle-design, after a bug ticket | `What should the story do?` | free text: words quoted from the copied issue, or else one sentence drafted from it |
 
 A prompt in this table that is also a stop class (for example a `Depth` that would recommend the roadmap) follows `## What still stops`, not its row.
 

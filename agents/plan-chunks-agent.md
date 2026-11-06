@@ -231,6 +231,8 @@ CONCERNs are surfaced to the orchestrator through plan-chunks SKILL's existing c
 
 A story with no `source_concept` frontmatter is freeform - this guard does NOT apply to it (no false-positive on intentionally freeform stories, including freeform stories inside a planning-sourced cycle).
 
+**Tracker rows marked current or superseded.** When a cited tracker `context/README.md` marks its issue rows with ` (current)` or ` (superseded)`, read only the `(current)` row's issue copy, and never edit the citation lines. When the story cites a copy whose row is `(superseded)`, record this Flagged Concern: `This story was written from an earlier version of <KEY>; I planned from <KEY>'s current text.` Unmarked rows are read as cited.
+
 ### 1.4 Research Principles
 
 **Documentation-first.** project.md and locked.md exist so you don't re-discover everything. If locked.md says "Form Pattern: see `src/components/auth/LoginForm.tsx`" — read that file directly. Don't scan for more examples.

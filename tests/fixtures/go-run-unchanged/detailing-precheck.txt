@@ -1,0 +1,18 @@
+### Pre-check
+
+If args are provided:
+1. Check if `.craft/cycles/[arg]/` exists
+2. Check if `cycle.yaml` has `status: planning`
+3. If valid: set PLANNING_CYCLE, **capture cycle.yaml's `source_concept`** into context, and proceed to Step D1
+4. If invalid: show error and offer cycle picker
+
+Use **Read** to read `.craft/cycles/[arg]/cycle.yaml`. Parse `status:` AND `source_concept:` values.
+
+If the file exists and `status == "planning"`:
+```bash
+${CLAUDE_PLUGIN_ROOT}/hooks/scripts/update-global-state.sh PLANNING_CYCLE "[arg]"
+```
+
+Remember the cycle's `source_concept` for the rest of this session - it determines routing for any NEW stories added during detailing (see Step D2b).
+
+If the file doesn't exist or status is not `planning` → show error and offer cycle picker.

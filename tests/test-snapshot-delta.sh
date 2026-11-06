@@ -307,5 +307,106 @@ run "$CYCLE" "$STAGED/comments.md" --tool linear --now 2026-11-02T10:15:30Z
 assert_eq "no source_issue exits 1" "1" "$CODE"
 assert_eq "still nothing created" "2" "$(ls "$CTX" | grep -c 'dro-21-')"
 
+
+
+begin_test "a Type line does not make a change"
+project typed
+sed '/^Status at retrieval:/a\
+Type: Bug' "$STAGED/issue.md" > "$STAGED/issue-typed.md"
+assert_eq "fixture really has a Type line" "1" "$(grep -c '^Type: Bug$' "$STAGED/issue-typed.md")"
+cp "$CYCLE/cycle.yaml" "$WORK/typed-yaml.before"
+head -n 10 "$STAGED/comments.md" > "$STAGED/c-short.md"
+run "$CYCLE" "$STAGED/c-short.md" --issue "$STAGED/issue-typed.md" --tool linear --now 2026-11-02T10:15:30Z
+assert_eq "exits 0" "0" "$CODE"
+assert_eq "issue_file empty" "" "$(field issue_file)"
+assert_eq "say" "Refreshed DRO-21: nothing new since Oct 31." "$(field say)"
+cmp "$WORK/typed-yaml.before" "$CYCLE/cycle.yaml" && echo "  cycle.yaml unchanged"
+
+begin_test "a Source-only change is no change"
+project sourced
+sed 's#^Source: .*#Source: https://linear.app/other/issue/DRO-21#' "$STAGED/issue.md" > "$STAGED/issue-src.md"
+head -n 10 "$STAGED/comments.md" > "$STAGED/c-short.md"
+cp "$CYCLE/cycle.yaml" "$WORK/sourced-yaml.before"
+run "$CYCLE" "$STAGED/c-short.md" --issue "$STAGED/issue-src.md" --tool linear --now 2026-11-02T10:15:30Z
+assert_eq "issue_file empty" "" "$(field issue_file)"
+assert_eq "say" "Refreshed DRO-21: nothing new since Oct 31." "$(field say)"
+cmp "$WORK/sourced-yaml.before" "$CYCLE/cycle.yaml" && echo "  cycle.yaml unchanged"
+
+begin_test "trailing whitespace and outer blank lines are no change"
+project spaced
+printf '# DRO-21:   Hand the story over  \r\n\r\nSource: https://linear.app/x/issue/DRO-21\r\nStatus at retrieval: Done\r\n\r\n\r\nMake the handoff invisible.   \r\n\r\n\r\n' > "$STAGED/issue-spaced.md"
+head -n 10 "$STAGED/comments.md" > "$STAGED/c-short.md"
+cp "$CYCLE/cycle.yaml" "$WORK/spaced-yaml.before"
+run "$CYCLE" "$STAGED/c-short.md" --issue "$STAGED/issue-spaced.md" --tool linear --now 2026-11-02T10:15:30Z
+assert_eq "issue_file empty" "" "$(field issue_file)"
+cmp "$WORK/spaced-yaml.before" "$CYCLE/cycle.yaml" && echo "  cycle.yaml unchanged"
+
+begin_test "description change records the change"
+project recorded
+printf 'Also make it fast.\n' >> "$STAGED/issue.md"
+head -n 10 "$STAGED/comments.md" > "$STAGED/c-short.md"
+cp "$CYCLE/cycle.yaml" "$WORK/recorded-yaml.before"
+run "$CYCLE" "$STAGED/c-short.md" --issue "$STAGED/issue.md" --tool linear --now 2026-11-02T10:15:30Z
+assert_eq "issue file written" "$CTX/dro-21-issue-2026-11-02T1015Z.md" "$(field issue_file)"
+assert_eq "exactly one record line" "1" "$(grep -c "^issue_changed: '2026-11-02T1015Z'$" "$CYCLE/cycle.yaml")"
+assert_eq "record sits right after the last tracker key" "go_date" "$(grep -B1 '^issue_changed:' "$CYCLE/cycle.yaml" | head -1 | sed 's/:.*//')"
+assert_eq "only the record line was added" "1" "$(diff "$WORK/recorded-yaml.before" "$CYCLE/cycle.yaml" | grep -c '^[<>]')"
+assert_eq "say still names the change" "Refreshed DRO-21: 0 new comments since Oct 31, and the issue text changed." "$(field say)"
+
+begin_test "status-only change still writes nothing"
+project statusonly
+sed 's/^Status at retrieval: .*/Status at retrieval: Done/' "$STAGED/issue.md" > "$STAGED/issue-done.md"
+head -n 10 "$STAGED/comments.md" > "$STAGED/c-short.md"
+cp "$CYCLE/cycle.yaml" "$WORK/statusonly-yaml.before"
+run "$CYCLE" "$STAGED/c-short.md" --issue "$STAGED/issue-done.md" --tool linear --now 2026-11-02T10:15:30Z
+assert_eq "issue_file empty" "" "$(field issue_file)"
+cmp "$WORK/statusonly-yaml.before" "$CYCLE/cycle.yaml" && echo "  cycle.yaml unchanged"
+
+begin_test "a changed-back issue clears the record"
+project changedback
+printf "issue_changed: '2026-11-02T1015Z'\n" >> "$CYCLE/cycle.yaml"
+OUT=$(python3 -c "
+import sys
+sys.path.insert(0, '$SCRIPTS_DIR')
+import tracker_issue
+print('stamp=' + tracker_issue.record_change('$CYCLE'))")
+assert_eq "returns empty stamp" "stamp=" "$OUT"
+assert_eq "record line gone" "0" "$(grep -c '^issue_changed:' "$CYCLE/cycle.yaml")"
+
+begin_test "marks replace earlier marks and leave other rows"
+cat > "$WORK/marks-readme.md" <<'FIX'
+# DRO-21 context
+
+<!-- a comment -->
+
+| File | What | Retrieved | Tool |
+|---|---|---|---|
+| dro-21-issue-2026-10-31T1840Z.md | Issue title, status and description | 2026-10-31T18:40:12Z | linear |
+| dro-21-comments-2026-10-31T1840Z.md | Every comment, oldest first | 2026-10-31T18:40:12Z | linear |
+| dro-21-go-2026-10-31T1840Z.md | Newest Go: comment 2 | 2026-10-31T18:40:12Z | resolve-go.py |
+| dro-21-issue-2026-11-02T1015Z.md | Issue text changed since 2026-10-31T1840Z | 2026-11-02T10:15:30Z | linear |
+
+trailing note
+FIX
+marks() {
+  python3 -c "
+import sys
+sys.path.insert(0, '$SCRIPTS_DIR')
+import tracker_issue
+text = open('$1').read()
+sys.stdout.write(tracker_issue.mark_rows(text, '$2'))"
+}
+marks "$WORK/marks-readme.md" dro-21-issue-2026-10-31T1840Z.md > "$WORK/marks-1.md"
+assert_eq "first copy current" "1" "$(grep -c '^| dro-21-issue-2026-10-31T1840Z.md | Issue title, status and description (current) |' "$WORK/marks-1.md")"
+assert_eq "second copy superseded" "1" "$(grep -c 'Issue text changed since 2026-10-31T1840Z (superseded) |' "$WORK/marks-1.md")"
+assert_eq "comments row untouched" "1" "$(grep -c '^| dro-21-comments-2026-10-31T1840Z.md | Every comment, oldest first | ' "$WORK/marks-1.md")"
+assert_eq "go row untouched" "1" "$(grep -c '^| dro-21-go-2026-10-31T1840Z.md | Newest Go: comment 2 | ' "$WORK/marks-1.md")"
+assert_eq "only issue rows carry a mark" "2" "$(grep -c '(current)\|(superseded)' "$WORK/marks-1.md")"
+assert_eq "comment and trailing note kept" "2" "$(grep -c -e '^<!-- a comment -->$' -e '^trailing note$' "$WORK/marks-1.md")"
+marks "$WORK/marks-1.md" dro-21-issue-2026-11-02T1015Z.md > "$WORK/marks-2.md"
+assert_eq "mark moves, no stacking" "2" "$(grep -c '(current)\|(superseded)' "$WORK/marks-2.md")"
+assert_eq "second copy now current" "1" "$(grep -c 'Issue text changed since 2026-10-31T1840Z (current) |' "$WORK/marks-2.md")"
+assert_eq "first copy now superseded" "1" "$(grep -c 'Issue title, status and description (superseded) |' "$WORK/marks-2.md")"
+
 echo ""
 finish_tests

@@ -62,6 +62,11 @@ assert_span "cycle-start Step 3 tail" commands/craft-cycle-start.md cycle-start-
 assert_span "implement-auto Gate Pre-Flight" commands/craft-story-implement-auto.md implement-auto-gate-preflight.txt
 assert_span "implement-auto Story Selection Guards" commands/craft-story-implement-auto.md implement-auto-selection-guards.txt
 
+begin_test "no-issue spans at the tracker issue check sites unchanged"
+assert_span "default-mode Step 2 head" commands/references/cycle-design/default-mode.md default-mode-step2-head.txt
+assert_span "detailing-mode Pre-check" commands/references/cycle-design/detailing-mode.md detailing-precheck.txt
+assert_span "plan-chunks Gather Launch Context" skills/plan-chunks/SKILL.md plan-chunks-gather-launch-context.txt
+
 begin_test "one Go paragraph per site"
 assert_one_go_paragraph "cycle-design" commands/craft-cycle-design.md
 assert_one_go_paragraph "plan-chunks SKILL" skills/plan-chunks/SKILL.md

@@ -6,6 +6,8 @@ The orchestrator command (`commands/craft-cycle-design.md`) defines the routing 
 
 ---
 
+**Tracker issue check**: read `.craft/cycles/[PLANNING_CYCLE]/cycle.yaml`. If it has a non-empty `source_issue`, Read `${CLAUDE_PLUGIN_ROOT}/commands/references/tracker-follow.md` with that cycle's directory and continue only through its `## Continue`. A cycle without a `source_issue` skips this and nothing below changes.
+
 ### Step 2: Story Brainstorm
 
 > "Let's map out the stories for this cycle.

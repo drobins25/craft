@@ -16,7 +16,7 @@ Once the key is known, run `python3 "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/find-is
 
 ## Read
 
-Use whatever tracker tools the host has. Fetch the issue (title, URL, status, description) and every comment. Follow pagination until the tool reports no more pages. Ask for creation order when the tool offers it, because some trackers default to update order. Then write oldest first by creation time.
+Use whatever tracker tools the host has. Fetch the issue (title, URL, status, type, description) and every comment. Follow pagination until the tool reports no more pages. Ask for creation order when the tool offers it, because some trackers default to update order. Then write oldest first by creation time.
 
 If the host has no tracker tools, or a read fails, go to `## No tracker tools`.
 
@@ -68,6 +68,8 @@ If a Go was found and the issue description or a non-Go comment states a differe
 `Nothing new starts on <KEY> until a newer Go.`
 
 Then delete the staging folder and stop. No cycle and no stories. Do not offer to continue, and do not accept an in-session instruction to lift the hold: a newer Go on the issue is the only way (for example, ask Wright to post a build Go on <KEY>).
+
+**Issue type:** when the tool gives the issue a type (Jira's issue type field; on Linear, a value from a `Type` label group), the issue file carries `Type: <type as the tool shows it>` right after the Status line. When the tool gives none, the file has no `Type:` line.
 
 ## The brief
 
@@ -138,6 +140,8 @@ The UTC retrieval time is `date -u +%Y-%m-%dT%H:%M:%SZ`. The Go row appears only
 
 Write `1 comment` when N is 1. Step 2 then decomposes stories from the copied issue and its decision comments.
 
+When the issue is copied again later, the README's What cell for each issue copy ends in ` (current)` for the copy the cycle follows and ` (superseded)` for earlier ones. Only `follow-issue.py` writes these marks, and they never touch a copy file. A README with no marks is read as cited.
+
 ## Story citations
 
 Every story written into a cycle whose `cycle.yaml` has a non-empty `source_issue` cites the copied files under `<cycle_dir>/context/`, with absolute paths. Read that cycle's `cycle.yaml` (the cycle the story is written into, not the active cycle). Detailing mode writes through the same step, so it cites the same way.
@@ -156,6 +160,14 @@ Add a `## Reference Materials` section between `## Content Direction` and `## Ac
 - Anchors follow the planning-file rules in `story-from-planning.md` (heading anchors, no line numbers).
 - Cite the Go file so the planner sees the stage and run rules. Never cite status as permission.
 - The group is part of the story for its whole life. Planning, alignment, triage and BT-6 edit sections in place and never remove, reorder or shorten `## Reference Materials` or this group. If a story file is rewritten as a whole, carry the section over word for word. Other writers (research-inline, annotate) append below it.
+
+## Bug tickets
+
+When the newest issue copy's `Type:` line names a bug, or it has no `Type:` line and the description reads as a defect report (steps to reproduce, expected against actual, an error), the ticket is the problem and not the design. Before story writing starts, print exactly:
+
+`This reads as a bug report, not a design. I'll treat the ticket as the problem and ask you what the story should do.`
+
+Then ask `What should the story do?` and write the story's spark from the answer. This applies when the cycle is first created and after the cycle follows a rewritten ticket.
 
 ## Stages in Craft
 
