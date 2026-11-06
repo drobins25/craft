@@ -114,4 +114,4 @@ Print check's `say`, then ask `Plan anyway, or stop here?` as a plain question. 
 
 ## Continue
 
-When the caller is cycle-design, first apply tracker-intake.md's `## Bug tickets` (`${CLAUDE_PLUGIN_ROOT}/commands/references/tracker-intake.md`) to the newest issue copy under the cycle's `context/` folder. When the caller is plan-chunks after an update, read the cycle goal again from the cycle's `cycle.yaml` and drop any `CYCLE_GOAL:` arg given before the update, because it holds the old goal. Then return to the calling step.
+When the caller is cycle-design and either the cycle has no stories yet or the route came through `## Update`, first apply tracker-intake.md's `## Bug tickets` (`${CLAUDE_PLUGIN_ROOT}/commands/references/tracker-intake.md`) to the newest issue copy under the cycle's `context/` folder. On every other route, skip it. When the caller is plan-chunks after an update, read the cycle goal again from the cycle's `cycle.yaml` and drop any `CYCLE_GOAL:` arg given before the update, because it holds the old goal. Then return to the calling step.
