@@ -71,8 +71,9 @@ fi
 
 yaml_quote() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/''/g")"; }
 
-# A title or target is one line: each newline or CR becomes one space.
-one_line() { local text="${1//$'\n'/ }"; printf '%s' "${text//$'\r'/ }"; }
+# A title or target is one line, cleaned by the same rule the values file gets:
+# each line break or control character becomes one space.
+one_line() { printf '%s' "$1" | python3 "$SCRIPT_DIR/cycle_values.py" clean; }
 CYCLE_TITLE=$(one_line "$CYCLE_TITLE")
 CYCLE_TARGET=$(one_line "$CYCLE_TARGET")
 

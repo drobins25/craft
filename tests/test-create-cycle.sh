@@ -348,12 +348,6 @@ DASH_ROOT="$SCRIPT_DIR/../scripts/dashboard"
 TAB=$(printf '\t')
 BT='`'
 
-strict_get() { # strict_get <file> <key>
-  python3 -c '
-import sys, yaml
-sys.stdout.write(str(yaml.safe_load(open(sys.argv[1], encoding="utf-8"))[sys.argv[2]]))
-' "$1" "$2"
-}
 py_read_key() {
   python3 -c '
 import sys
@@ -480,6 +474,18 @@ assert_eq "malformed: exits 1" "1" "$TC_EXIT"
 run_create --values "$TEST_DIR/missing.txt" auth "" "" "$TEST_DIR" >/dev/null
 assert_eq "missing file: exits 1" "1" "$TC_EXIT"
 assert_eq "no cycle dir created" "0" "$(ls -d "$TEST_DIR"/.craft/cycles/*/ 2>/dev/null | wc -l | tr -d ' ')"
+cleanup_test_dir
+echo ""
+
+begin_test "control characters in a positional title and target become spaces"
+TEST_DIR=$(create_minimal_craft)
+ESC=$(printf '\033')
+BEL=$(printf '\007')
+run_create ctl "Bad${ESC}[31mtitle${BEL}" "tgt${ESC}x" "$TEST_DIR" >/dev/null
+assert_eq "exits 0" "0" "$TC_EXIT"
+Y=$(ls -d "$TEST_DIR"/.craft/cycles/*-ctl/ | head -1)cycle.yaml
+assert_all_readers "[control]" "$Y" title "Cycle 01: Bad [31mtitle"
+assert_all_readers "[control]" "$Y" target "tgt x"
 cleanup_test_dir
 echo ""
 
