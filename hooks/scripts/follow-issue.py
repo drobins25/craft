@@ -40,14 +40,13 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from annotate_write import write_atomic  # noqa: E402
 import cycle_values  # noqa: E402
+import tracker_comments  # noqa: E402
 from tracker_comments import (  # noqa: E402
-    newest_stamp, next_stamp, read_key, slug, stamp_of, stamp_time)
+    NOW_FORMAT, month_day, newest_stamp, next_stamp, read_key, slug, split_lines, stamp_of)
 from tracker_issue import (  # noqa: E402
     CHANGE_KEY, issue_copies, issue_text, issue_type, mark_rows, reconciled_copy,
     record_change, same_issue)
 
-MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-NOW_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
 PASTE_TOOL = 'pasted into the session'
 FIELDS = ('verdict', 'key', 'cycle', 'old_title', 'new_title', 'changed_lines',
           'first_changed', 'as_of', 'issue_type', 'say')
@@ -70,18 +69,12 @@ def read_text(path):
         raise FollowError('cannot read %s: %s' % (path, err))
 
 
-def one_line(value):
-    return cycle_values.CONTROL.sub(' ', re.sub(r'\r\n|\r|\n', ' ', value)).strip()
-
-
-def month_day(stamp):
-    when = stamp_time(stamp)
-    return '%s %d' % (MONTHS[when.month - 1], when.day)
+one_line = cycle_values.one_line
 
 
 def parse_now(value):
     try:
-        return datetime.datetime.strptime(value, NOW_FORMAT)
+        return tracker_comments.parse_now(value)
     except ValueError:
         raise FollowError('--now must look like 2026-10-31T18:40:00Z')
 
@@ -222,7 +215,9 @@ def check(args):
         copies = issue_copies(cycle.context, cycle.key)
         if not copies or not same_issue(staged, read_text(copies[-1])):
             write_issue_copy(cycle, staged, options['--tool'], now)
-        record_change(cycle.dir)
+    # The copies on disk decide whether the cycle still matches its issue, whether or
+    # not this check could read the tracker.
+    record_change(cycle.dir)
     if cycle.recorded():
         return changed_result(cycle)
 
@@ -261,6 +256,13 @@ def open_cycle_with_record(args, with_value=(), repeated=()):
     stamp = cycle.recorded()
     if not stamp:
         raise FollowError('%s has no recorded issue change to answer' % cycle.dir)
+    if not any(stamp_of(os.path.basename(p)) == stamp
+               for p in issue_copies(cycle.context, cycle.key)):
+        # The copy the record pointed at is gone: let the copies on disk decide again.
+        stamp = record_change(cycle.dir)
+        if not stamp:
+            raise FollowError('%s recorded a change for an issue copy that is gone; '
+                              'the record is cleared and there is nothing to answer' % cycle.dir)
     return cycle, stamp, options
 
 
@@ -296,7 +298,7 @@ def update(args):
         raise FollowError('update needs --values <file>')
     try:
         values = cycle_values.read_values(options['--values'])
-        cycle_values.check(options['--values'], ['target', 'focus', 'goal'])
+        cycle_values.check_values(values, ['target', 'focus', 'goal'])
     except cycle_values.ValuesError as err:
         raise FollowError(err)
     values = {name: [one_line(v) for v in text] if isinstance(text, list) else one_line(text)
@@ -311,7 +313,7 @@ def update(args):
             new_yaml = cycle_values.apply(yaml_text, values)
         except cycle_values.ValuesError as err:
             raise FollowError(err)
-        lines = re.findall(r'[^\n]*\n|[^\n]+', new_yaml)  # \n only: a title may hold other line separators
+        lines = split_lines(new_yaml)
         replace_line(lines, 'updated', 'updated: %s' % now.strftime('%Y-%m-%d'))
         return ''.join(lines)
 

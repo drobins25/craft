@@ -443,5 +443,24 @@ assert_eq "keep exits 0" "0" "$CODE"
 assert_eq "title line untouched by keep" "$SEP_TITLE" "$(sed -n '2p' "$YAML")"
 assert_eq "record removed" "0" "$(grep -c '^issue_changed' "$YAML" || true)"
 
+begin_test "legacy two unmarked copies are changed even when the tracker is unreachable"
+cycle legacyoff
+sed 's|^Second line\.|Second line, v2.|' "$CTX/$FIRST" > "$CTX/dro-21-issue-2026-11-01T0900Z.md"
+echo "| dro-21-issue-2026-11-01T0900Z.md | Issue text changed since 2026-10-31T1840Z | 2026-11-01T09:00:00Z | linear |" >> "$CTX/README.md"
+run check "$CYCLE_DIR" --unreadable no-tools --now 2026-11-02T10:15:30Z
+assert_eq "verdict" "changed" "$(field verdict)"
+assert_eq "record is the newest copy" "1" "$(grep -c "^issue_changed: '2026-11-01T0900Z'$" "$YAML" || true)"
+assert_eq "no copy written" "2" "$(ls "$CTX" | grep -c -- '-issue-')"
+
+begin_test "a record whose copy is gone is cleared by keep instead of refused"
+cycle stale
+sed -i.bak "s|^go_date:.*|&\nissue_changed: '2026-11-01T0900Z'|" "$YAML"
+rm -f "$YAML.bak"
+run keep "$CYCLE_DIR"
+assert_eq "exits 1" "1" "$CODE"
+assert_contains "one line says the record was cleared" "cleared" "$ERR"
+assert_eq "record removed" "0" "$(grep -c '^issue_changed' "$YAML" || true)"
+assert_eq "yaml is back to the original" "" "$(cmp "$BEFORE_YAML" "$YAML" 2>&1)"
+
 echo ""
 finish_tests
