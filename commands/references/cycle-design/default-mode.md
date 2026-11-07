@@ -377,16 +377,22 @@ Stories are already saved. Update the cycle metadata created in Step 1 with fina
 
 **6b. Update cycle.yaml** — use targeted edits on the existing file (created by `create-cycle.sh` in Step 1). **NEVER rewrite cycle.yaml from scratch** — that causes YAML formatting bugs (null goals, unquoted titles).
 
-Use `sed` for simple field updates:
+Use `sed` for the two fixed fields, status and updated:
 ```bash
 cycle_yaml="[cycle_dir]/cycle.yaml"
 sed -i.bak "s/^status:.*/status: ready/" "$cycle_yaml"
 sed -i.bak "s/^updated:.*/updated: $(date +%Y-%m-%d)/" "$cycle_yaml"
-sed -i.bak "s/^focus:.*/focus: [Primary focus area]/" "$cycle_yaml"
 rm -f "$cycle_yaml.bak"
 ```
 
-For goals and notes, use the Edit tool to replace the existing `goals:` and `notes:` sections.
+Focus and goals can carry a ticket's own words, so they never go into a typed shell command. Write them with the Write tool to `${CRAFT_PROJECT_ROOT:-.}/.craft/.intake/cycle-values.txt`: one `focus:` line, then one `goal:` line per goal. Each line is the field name, `: `, then the text exactly as it should read, with no quotes or escapes added (a quote you type becomes part of the text). Leave the `goal:` lines out to keep the existing `- TBD` untouched. Then run the writer and delete the file:
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/cycle_values.py" write "[cycle_dir]" "${CRAFT_PROJECT_ROOT:-.}/.craft/.intake/cycle-values.txt"
+rm -f "${CRAFT_PROJECT_ROOT:-.}/.craft/.intake/cycle-values.txt"
+```
+The writer replaces the whole `focus:` value and the whole `goals:` list and leaves every other line alone. If it prints a refusal, fix the values file and run it again.
+
+For notes, use the Edit tool to replace the existing `notes:` section.
 
 **Goals are outcomes, not story summaries.** Each goal should be a state that will be TRUE when the cycle completes - something you could verify. Good: "Failures feed back into learnings pipeline instead of being discarded." Bad: "Implement failure tracking story." If you find yourself restating story sparks as goals, stop - that's the wrong level.
 

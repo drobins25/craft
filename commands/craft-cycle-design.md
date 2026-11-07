@@ -227,18 +227,22 @@ The safety gate runs every time, on every path - it cannot be skipped. The user 
 
 **After confirmation, create the cycle directory and set the planning state:**
 
+Write the values file first with the Write tool, so the cycle's name and goal are never typed into a shell command. The file is `${CRAFT_PROJECT_ROOT:-.}/.craft/.intake/cycle-values.txt`, two lines: `title: ` followed by the confirmed cycle name (for a tracker cycle, the issue title verbatim per tracker-intake.md `## Into Step 1`) and `target: ` followed by the confirmed goal. Then:
+
 ```bash
 # Create cycle directory with proper auto-numbering, cycle.yaml, and .state
+# --values supplies the title and target; the two empty args after the slug are required
 # 5th arg is comma-separated planning doc paths (empty string for no source)
 # 6th-9th args are the tracker source, stage, Go author and Go date (all empty for a freeform cycle)
-cycle_dir=$(${CLAUDE_PLUGIN_ROOT}/hooks/scripts/create-cycle.sh "[cycle-slug]" "[Cycle Title]" "[Goal]" "." "[source-concept-paths]" "[source-issue]" "[authorized-stage]" "[go-author]" "[go-date]")
+cycle_dir=$(${CLAUDE_PLUGIN_ROOT}/hooks/scripts/create-cycle.sh --values "${CRAFT_PROJECT_ROOT:-.}/.craft/.intake/cycle-values.txt" "[cycle-slug]" "" "" "." "[source-concept-paths]" "[source-issue]" "[authorized-stage]" "[go-author]" "[go-date]")
+rm -f "${CRAFT_PROJECT_ROOT:-.}/.craft/.intake/cycle-values.txt"
 
 # Set planning state
 ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/update-global-state.sh PLANNING_CYCLE "$(basename $cycle_dir)"
 ```
 
 - **`cycle-slug`** = kebab-case slug (e.g., `auth-flow`). The script auto-numbers it (creates `11-auth-flow/` if cycles 1-10 exist).
-- **`Cycle Title`** = human-readable name (e.g., `"Auth Flow"`). Always provide this.
+- **The values file** carries the human-readable `Cycle Title` (e.g., `Auth Flow`; always provide it) and the `Goal`. The script writes both single-quoted, so any characters in them are safe, and puts the `Cycle NN: ` label in front of the title.
 - **`source-concept-paths`** = comma-separated planning doc paths, or empty string. The script writes the value to `cycle.yaml`'s `source_concept` field (empty becomes `[]`).
 - **`source-issue`, `authorized-stage`, `go-author`, `go-date`** = the tracker-intake.md values (the resolver's `stage`, `go_author` and `go_date`), all four empty for a freeform cycle. After the script returns on a tracker cycle, finish with tracker-intake.md `## After the cycle exists`.
 - The script creates `cycle.yaml` and `.state` immediately — no orphaned directories if the session interrupts later.

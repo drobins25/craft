@@ -11,6 +11,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/read-key.sh"
 
 CYCLE_DIR="$1"
 PROJECT_ROOT=""
@@ -89,6 +90,6 @@ bash "$SCRIPT_DIR/../../scripts/dashboard/dashboard-run.sh" --root "${PROJECT_RO
 # Display human-readable title
 cycle_title=""
 if [ -f "$CYCLE_DIR/cycle.yaml" ]; then
-  cycle_title=$(grep "^title:" "$CYCLE_DIR/cycle.yaml" 2>/dev/null | sed 's/title: *//' | tr -d '"')
+  cycle_title=$(read_key "$CYCLE_DIR/cycle.yaml" title)
 fi
 echo "Cycle completed: ${cycle_title:-$CYCLE_NAME}"

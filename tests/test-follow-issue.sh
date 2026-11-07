@@ -252,24 +252,31 @@ assert_eq "new text is changed again" "changed" "$(field verdict)"
 assert_eq "old title" "Hand the story over" "$(field old_title)"
 assert_eq "first changed against the kept copy" "Second line, v3." "$(field first_changed)"
 
+# values <file> <line>... : write a values file, one line per argument
+values() {
+  local file="$1"; shift
+  printf '%s\n' "$@" > "$file"
+}
+
 begin_test "update rewrites only its fields"
 cycle upd
 edit_staged 's|^# DRO-21: Hand the story over|# DRO-21: Hand it over, quietly|;s|^Second line\.|Second line, rewritten.|'
 run check "$CYCLE_DIR" --issue "$STAGED" --tool linear --now 2026-11-02T10:15:30Z
 cp "$YAML" "$WORK/upd-yaml.recorded"
 before_sums=$(sums "$CTX")
-run update "$CYCLE_DIR" --title "Hand it over, quietly" --target "Quiet handoff" --focus "Quiet" \
-  --goal "Handoff needs no ceremony" --goal "Second line, rewritten." --now 2026-11-03T08:00:00Z
+values "$WORK/upd-values.txt" "target: Quiet handoff" "focus: Quiet" \
+  "goal: Handoff needs no ceremony" "goal: Second line, rewritten."
+run update "$CYCLE_DIR" --values "$WORK/upd-values.txt" --now 2026-11-03T08:00:00Z
 assert_eq "exits 0" "0" "$CODE"
 assert_eq "one line" "1" "$(lines)"
 assert_eq "say" "Cycle 7 now follows DRO-21 as of Nov 2." "$(field say)"
-assert_eq "title line" 'title: "Hand it over, quietly"' "$(grep '^title:' "$YAML")"
-assert_eq "target line" "target: Quiet handoff" "$(grep '^target:' "$YAML")"
-assert_eq "focus line" "focus: Quiet" "$(grep '^focus:' "$YAML")"
+assert_eq "title line comes from the recorded copy" "title: 'Hand it over, quietly'" "$(grep '^title:' "$YAML")"
+assert_eq "target line" "target: 'Quiet handoff'" "$(grep '^target:' "$YAML")"
+assert_eq "focus line" "focus: 'Quiet'" "$(grep '^focus:' "$YAML")"
 assert_eq "updated line" "updated: 2026-11-03" "$(grep '^updated:' "$YAML")"
 assert_eq "goals block" "goals:
-  - Handoff needs no ceremony
-  - Second line, rewritten.
+  - 'Handoff needs no ceremony'
+  - 'Second line, rewritten.'
 notes: keep this line" "$(sed -n '/^goals:/,$p' "$YAML")"
 for keep_line in "name: intake" "status: planning" "created: 2026-10-31" "source_concept:" \
   "source_issue: 'DRO-21'" "authorized_stage: 'build'" "go_author: 'Darin'" \
@@ -280,31 +287,83 @@ assert_eq "record removed" "0" "$(grep -c '^issue_changed' "$YAML")"
 assert_eq "only expected lines differ" "$(printf '%s\n' \
   '< title: "Intake"' '< updated: 2026-10-31' '< target: Hand the story over' '< focus: Handoff' \
   '< - Make the handoff invisible' \
-  '> title: "Hand it over, quietly"' '> updated: 2026-11-03' '> target: Quiet handoff' '> focus: Quiet' \
-  '> - Handoff needs no ceremony' '> - Second line, rewritten.' | sort)" \
+  "> title: 'Hand it over, quietly'" '> updated: 2026-11-03' "> target: 'Quiet handoff'" "> focus: 'Quiet'" \
+  "> - 'Handoff needs no ceremony'" "> - 'Second line, rewritten.'" | sort)" \
   "$(diff "$BEFORE_YAML" "$YAML" | grep '^[<>]' | sed 's/^\([<>]\)  */\1 /' | sort)"
 assert_eq "copies unchanged" "$before_sums" "$(sums "$CTX")"
 assert_eq "first superseded" "1" "$(grep -c "(superseded) |" "$CTX/README.md")"
 assert_eq "newest current" "1" "$(grep -c "(current) |" "$CTX/README.md")"
 assert_eq "check now current" "current" "$(python3 "$FOLLOW" check "$CYCLE_DIR" --issue "$STAGED" --tool linear | sed -n 's/^verdict=//p')"
 
-begin_test "update refuses empty values and drafts without a goal"
+begin_test "update takes the title from the recorded copy and keeps the label"
+cycle lab
+sed -i.bak "s|^title: .*|title: 'Cycle 07: Intake'|" "$YAML" && rm -f "$YAML.bak"
+edit_staged "s|^# DRO-21: Hand the story over|# DRO-21: Login fails: \"Remember me\" ignored #SSO, it's 'odd'|"
+run check "$CYCLE_DIR" --issue "$STAGED" --tool linear --now 2026-11-02T10:15:30Z
+values "$WORK/lab-values.txt" "target: T" "focus: F" "goal: G"
+run update "$CYCLE_DIR" --values "$WORK/lab-values.txt" --now 2026-11-03T08:00:00Z
+assert_eq "exits 0" "0" "$CODE"
+assert_eq "label kept, title exact" "title: 'Cycle 07: Login fails: \"Remember me\" ignored #SSO, it''s ''odd'''" "$(grep '^title:' "$YAML")"
+
+begin_test "a title line in the values file wins"
+cycle win
+edit_staged 's|^# DRO-21: Hand the story over|# DRO-21: From the ticket|'
+run check "$CYCLE_DIR" --issue "$STAGED" --tool linear --now 2026-11-02T10:15:30Z
+values "$WORK/win-values.txt" "title: Corrected by the user" "target: T" "focus: F" "goal: G"
+run update "$CYCLE_DIR" --values "$WORK/win-values.txt" --now 2026-11-03T08:00:00Z
+assert_eq "exits 0" "0" "$CODE"
+assert_eq "user's title lands" "title: 'Corrected by the user'" "$(grep '^title:' "$YAML")"
+
+begin_test "update replaces a block focus whole"
+cycle blk
+python3 - "$YAML" <<'INNER'
+import sys
+p = sys.argv[1]
+t = open(p).read().replace("focus: Handoff\n", "focus: |\n  first\n\n  second\n")
+open(p, "w").write(t)
+INNER
+edit_staged 's|^Second line\.|Second line, v2.|'
+run check "$CYCLE_DIR" --issue "$STAGED" --tool linear --now 2026-11-02T10:15:30Z
+values "$WORK/blk-values.txt" "target: T" "focus: One line now" "goal: G"
+run update "$CYCLE_DIR" --values "$WORK/blk-values.txt" --now 2026-11-03T08:00:00Z
+assert_eq "exits 0" "0" "$CODE"
+assert_eq "focus is one line" "focus: 'One line now'" "$(grep '^focus:' "$YAML")"
+assert_eq "no block leftovers" "0" "$(grep -c '^  first\|^  second' "$YAML")"
+assert_eq "the next key follows" "source_concept:" "$(grep -A1 '^focus:' "$YAML" | tail -1)"
+
+begin_test "update refuses bad values files and the old flags"
 cycle bad
 edit_staged 's|^Second line\.|Second line, v2.|'
 run check "$CYCLE_DIR" --issue "$STAGED" --tool linear --now 2026-11-02T10:15:30Z
 cp "$YAML" "$WORK/bad-yaml.recorded"
 cp "$CTX/README.md" "$WORK/bad-readme.recorded"
-run update "$CYCLE_DIR" --title T --target X --focus F --goal "  "
-assert_eq "empty goal exits 1" "1" "$CODE"
-run update "$CYCLE_DIR" --title T --target X --focus F
-assert_eq "no goal exits 1" "1" "$CODE"
-run update "$CYCLE_DIR" --title "" --target X --focus F --goal G
-assert_eq "empty title exits 1" "1" "$CODE"
-assert_eq "yaml untouched" "" "$(cmp "$WORK/bad-yaml.recorded" "$YAML" 2>&1)"
-assert_eq "readme untouched" "" "$(cmp "$WORK/bad-readme.recorded" "$CTX/README.md" 2>&1)"
-run update "$CYCLE_DIR" --title $'Line one\nline two' --target X --focus F --goal $'A\nB' --now 2026-11-03T08:00:00Z
-assert_eq "newlines collapse in the title" 'title: "Line one line two"' "$(grep '^title:' "$YAML")"
-assert_eq "newlines collapse in the goal" "  - A B" "$(grep -A1 '^goals:' "$YAML" | tail -1)"
+refuse() { # refuse <desc> <args...>
+  local desc="$1"; shift
+  run update "$CYCLE_DIR" "$@"
+  assert_eq "$desc: exits 1" "1" "$CODE"
+  assert_eq "$desc: prints nothing" "" "$OUT"
+  assert_eq "$desc: one stderr line" "1" "$(printf '%s\n' "$ERR" | wc -l | tr -d ' ')"
+  assert_eq "$desc: yaml untouched" "" "$(cmp "$WORK/bad-yaml.recorded" "$YAML" 2>&1)"
+  assert_eq "$desc: readme untouched" "" "$(cmp "$WORK/bad-readme.recorded" "$CTX/README.md" 2>&1)"
+}
+values "$WORK/v-nofocus.txt" "target: X" "goal: G"
+refuse "no focus" --values "$WORK/v-nofocus.txt"
+values "$WORK/v-nogoal.txt" "target: X" "focus: F"
+refuse "no goal" --values "$WORK/v-nogoal.txt"
+values "$WORK/v-notarget.txt" "focus: F" "goal: G"
+refuse "no target" --values "$WORK/v-notarget.txt"
+values "$WORK/v-empty.txt" "target: X" "focus: F" "goal:   "
+refuse "empty goal" --values "$WORK/v-empty.txt"
+values "$WORK/v-unknown.txt" "target: X" "focus: F" "goal: G" "colour: red"
+refuse "unknown field" --values "$WORK/v-unknown.txt"
+values "$WORK/v-good.txt" "target: X" "focus: F" "goal: G"
+refuse "missing values file" --values "$WORK/none.txt"
+refuse "no --values" --now 2026-11-03T08:00:00Z
+refuse "old flags" --title T --target X --focus F --goal G
+refuse "old flags beside a values file" --values "$WORK/v-good.txt" --title T
+sed -i.bak '/^focus:/d' "$YAML" && rm -f "$YAML.bak"
+cp "$YAML" "$WORK/bad-yaml.recorded"
+refuse "cycle.yaml without a focus line" --values "$WORK/v-good.txt"
 
 begin_test "update and keep refuse without a record"
 cycle norec
@@ -312,7 +371,8 @@ run keep "$CYCLE_DIR"
 assert_eq "keep exits 1" "1" "$CODE"
 assert_eq "keep prints nothing" "" "$OUT"
 assert_eq "keep says why on stderr" "1" "$(printf '%s\n' "$ERR" | wc -l | tr -d ' ')"
-run update "$CYCLE_DIR" --title T --target X --focus F --goal G
+values "$WORK/v-good.txt" "target: X" "focus: F" "goal: G"
+run update "$CYCLE_DIR" --values "$WORK/v-good.txt"
 assert_eq "update exits 1" "1" "$CODE"
 assert_eq "update prints nothing" "" "$OUT"
 assert_eq "yaml byte-identical" "" "$(cmp "$BEFORE_YAML" "$YAML" 2>&1)"

@@ -76,15 +76,19 @@ def parse_blocks(text: str) -> List[Block]:
 
 
 def read_key(yaml_text: str, key: str) -> str:
-    """A flat top-level key written as a one-line scalar, quotes removed."""
+    """A flat top-level key written as a one-line scalar, decoded like the shell
+    read_key: '...' loses its quotes and reads each '' as ', "..." loses its
+    quotes with the inside verbatim, anything else is returned as written."""
     match = re.search(r'^%s:[ \t]*(.*?)[ \t\r]*$' % re.escape(key), yaml_text, re.MULTILINE)
     if not match:
         return ''
     value = match.group(1)
-    quoted = re.match(r"^'(.*)'$", value)
-    if quoted:
-        value = quoted.group(1)
-    return value.replace("''", "'")
+    if len(value) >= 2:
+        if value[0] == "'" and value[-1] == "'":
+            return value[1:-1].replace("''", "'")
+        if value[0] == '"' and value[-1] == '"':
+            return value[1:-1]
+    return value
 
 
 def slug(key: str) -> str:

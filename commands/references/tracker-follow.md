@@ -63,9 +63,9 @@ Answer a goes to `## Update`, b to `## Keep`, c to `## Stop`. Other words that p
 
 ## Update
 
-Read the cycle's current `title`, `target`, `focus` and `goals` from `cycle.yaml`, and the newest issue copy under the cycle's `context/` folder. Draft from the issue's own words, never invented:
+Read the cycle's current `title`, `target`, `focus` and `goals` from `cycle.yaml` (a single-quoted value reads with each `''` as one `'`), and the newest issue copy under the cycle's `context/` folder. Draft from the issue's own words, never invented:
 
-- title: the newest copy's title verbatim, as tracker-intake.md's `## Into Step 1` names a cycle;
+- title: the newest copy's title verbatim, as tracker-intake.md's `## Into Step 1` names a cycle, shown in the `+ title:` line with the cycle's `Cycle NN: ` label in front, as the cycle keeps it;
 - target and goals: quoted or lightly condensed from the description, at least one goal;
 - focus: one line, drawn from the same words.
 
@@ -88,10 +88,11 @@ Then exactly these two lines:
 
 `Say yes to save, or tell me what to change.`
 
-A correction redraws only the field the user named, shows the diff fence again and asks the save question again. Run `update` only after a yes:
+A correction redraws only the field the user named, shows the diff fence again and asks the save question again. Run `update` only after a yes. Ticket text never goes into a typed shell command: write the values with the Write tool to `${CRAFT_PROJECT_ROOT:-.}/.craft/.intake/cycle-values.txt`, one `target:` line, one `focus:` line, one `goal:` line per goal, and a `title:` line only when the user corrected the title (otherwise the update takes the title from the issue copy and keeps the cycle's label). Each line is the field name, `: `, then the text exactly as it should read, with no quotes or escapes added. Then run the update and delete the file:
 
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/follow-issue.py" update <cycle-dir> --title "<title>" --target "<target>" --focus "<focus>" --goal "<goal>" [--goal "<goal>" ...]
+python3 "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/follow-issue.py" update <cycle-dir> --values "${CRAFT_PROJECT_ROOT:-.}/.craft/.intake/cycle-values.txt"
+rm -f "${CRAFT_PROJECT_ROOT:-.}/.craft/.intake/cycle-values.txt"
 ```
 
 Print update's `say`, then go to `## Continue`. If it exits non-zero, print its stderr line and stop: the cycle is unchanged and the card returns at the next guarded step.

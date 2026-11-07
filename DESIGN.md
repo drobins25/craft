@@ -451,11 +451,11 @@ Key fields:
 
 ```yaml
 name: cycle-slug
-title: "Cycle NN: Display Title"
+title: 'Cycle NN: Display Title'
 status: planning | ready | active | complete
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
-target: One-line description of what ships
+target: 'One-line description of what ships'
 focus: Primary focus area
 source_concept: [planning/concept-a.md, planning/concept-b.md]   # may be empty []
 
@@ -463,6 +463,8 @@ goals:
   - Outcome 1
   - Outcome 2
 ```
+
+Craft's scripts write `title` and `target` (`create-cycle.sh`), and `focus` and `goals` once they hold ticket text (`cycle_values.py`), as one single-quoted line each with every `'` doubled. Older double-quoted or plain values still read.
 
 **`source_concept`** - YAML flow list of planning doc paths (relative to project root) this cycle is sourced from. Empty list `[]` means the cycle is freeform (no planning source). When populated, cycle-design routes story-creation moments to the From planning protocol (`commands/references/story-from-planning.md`) so each planning-extracted story's spark draws from the planning content. Stories added during the add-a-separate-story moment within a planning-sourced cycle remain freeform and get no `source_concept` of their own. Captured at cycle creation via `create-cycle.sh`'s 5th positional arg, gated behind the Step 1 verbatim-quote rule + AskUserQuestion safety gate.
 

@@ -189,5 +189,41 @@ class TestRead(unittest.TestCase):
         self.assertEqual(body, "")
 
 
+AWKWARD = [
+    '"', "'", "\\", "#", "x # y", "a: b", "[x]", "null", "42", "2026-11-06",
+    "$(touch pwned)", "`", "~", "a\tb", "''", "|&/", "%s", "- lead", " lead",
+    'Cycle 01: Login fails: "Remember me" box ignored #SSO',
+]
+
+
+class TestSingleQuotedScalar(unittest.TestCase):
+    def test_single_quoted_scalar_undoubles_quotes(self):
+        self.assertEqual(frontmatter._parse_scalar("'it''s'"), "it's")
+        self.assertEqual(frontmatter._parse_scalar("''''"), "'")
+        self.assertEqual(frontmatter._parse_scalar("''"), "")
+
+    def test_awkward_set_parses_exact(self):
+        for value in AWKWARD:
+            line = "target: '%s'" % value.replace("'", "''")
+            fields = frontmatter.parse_mapping([line, "status: active"])
+            self.assertEqual(fields["target"], value, value)
+            self.assertEqual(fields["status"], "active")
+
+    def test_trailing_comment_after_single_quoted_value_is_dropped(self):
+        self.assertEqual(frontmatter._parse_scalar("'a''b' # note"), "a'b")
+
+    def test_unterminated_single_quote_stays_verbatim(self):
+        self.assertEqual(frontmatter._parse_scalar("'abc"), "'abc")
+
+    def test_double_quoted_scalar_unchanged(self):
+        self.assertEqual(frontmatter._parse_scalar('"Foo" # c'), "Foo")
+        self.assertEqual(frontmatter._parse_scalar('"it\'s"'), "it's")
+        self.assertEqual(frontmatter._parse_scalar("Plain # c"), "Plain")
+
+    def test_single_quoted_items_in_a_flow_list(self):
+        fields = frontmatter.parse_mapping(["paths: ['it''s', 'b']"])
+        self.assertEqual(fields["paths"], ["it's", "b"])
+
+
 if __name__ == "__main__":
     unittest.main()

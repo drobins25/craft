@@ -38,6 +38,7 @@ mtime_of() {
 # Resolve project root for state checks
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/find-workshop.sh" 2>/dev/null || exit 0
+source "$SCRIPT_DIR/read-key.sh"
 
 if [ -z "$PROJECT_ROOT" ] || [ ! -d "${PROJECT_ROOT}.craft" ]; then
   exit 0
@@ -49,9 +50,16 @@ CYCLE_TITLE=""; ACTIVE_CYCLE=""; CURRENT_STORY=""; CURRENT_CHUNK=""; TOTAL_CHUNK
 CYCLE_STATE_FILE="${PROJECT_ROOT}.craft/cycles/${ACTIVE_CYCLE}/.state"
 [ -n "$ACTIVE_CYCLE" ] && [ -f "$CYCLE_STATE_FILE" ] && source "$CYCLE_STATE_FILE"
 if [ -n "$ACTIVE_CYCLE" ] && [ -f "${PROJECT_ROOT}.craft/cycles/${ACTIVE_CYCLE}/cycle.yaml" ]; then
-  CYCLE_TITLE=$(grep "^title:" "${PROJECT_ROOT}.craft/cycles/${ACTIVE_CYCLE}/cycle.yaml" 2>/dev/null | sed 's/title: *//' | tr -d '"')
+  CYCLE_TITLE=$(read_key "${PROJECT_ROOT}.craft/cycles/${ACTIVE_CYCLE}/cycle.yaml" title)
 fi
 [ -z "$CYCLE_TITLE" ] && CYCLE_TITLE="$ACTIVE_CYCLE"
+# The title only ever goes inside the hand-built JSON below, so it is escaped
+# here once: a quote, a backslash or a control character would otherwise break
+# the message a hook must print as valid JSON.
+CYCLE_TITLE=$(printf '%s' "$CYCLE_TITLE" | python3 -c '
+import json, sys
+sys.stdout.write(json.dumps(sys.stdin.read(), ensure_ascii=False)[1:-1])
+')
 
 # Progress dial: quarter-rounded COMPLETED chunks (CURRENT_CHUNK is the one in
 # progress, so completed = CURRENT_CHUNK - 1). ◔ floor while work is in motion -

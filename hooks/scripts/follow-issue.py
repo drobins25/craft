@@ -5,8 +5,7 @@ Usage: follow-issue.py check <cycle-dir> (--issue <staged-issue-file> --tool <te
                                           | --unreadable <no-tools|read-failed|not-found>)
                                          [--now <YYYY-MM-DDTHH:MM:SSZ>]
        follow-issue.py keep <cycle-dir>
-       follow-issue.py update <cycle-dir> --title <t> --target <t> --focus <t>
-                              --goal <g> [--goal <g> ...] [--now <time>]
+       follow-issue.py update <cycle-dir> --values <file> [--now <time>]
 
 check prints exactly ten lines, in order:
   verdict=<none|current|changed|unreadable>, key=, cycle=, old_title=,
@@ -21,7 +20,12 @@ keep and update answer the card check showed. Both need the `issue_changed`
 line, mark the README's issue rows (the copy the line names is current, the
 rest superseded), and clear the line. update also replaces the cycle's title,
 target, focus, updated date and goals block with targeted line edits; no other
-cycle.yaml line is touched. Issue copies are never opened for writing.
+cycle.yaml line is touched. The target, focus and goals come from the values
+file (see cycle_values.py, which does the writing and quotes every value the
+same way). It must carry target, focus and at least one goal. The title is the
+values file's `title:` when it has one, else the title of the issue copy the
+recorded change names, with the cycle's `Cycle NN: ` label kept. Issue copies
+are never opened for writing.
 
 Exit 1, with one line on stderr and nothing written, on bad arguments, a
 missing cycle.yaml or README table, or an input that cannot be read.
@@ -35,6 +39,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from annotate_write import write_atomic  # noqa: E402
+import cycle_values  # noqa: E402
 from tracker_comments import (  # noqa: E402
     newest_stamp, next_stamp, read_key, slug, stamp_of, stamp_time)
 from tracker_issue import (  # noqa: E402
@@ -274,42 +279,40 @@ def replace_line(lines, name, new_text):
     raise FollowError('cycle.yaml has no %s: line to update' % name)
 
 
-def replace_goals(lines, goals):
-    for i, line in enumerate(lines):
-        if line.startswith('goals:'):
-            end = i + 1
-            while end < len(lines) and lines[end].startswith('  '):
-                end += 1
-            head = line[len(line.rstrip('\r\n')):] or '\n'
-            tail = lines[end - 1][len(lines[end - 1].rstrip('\r\n')):] if end > i + 1 else head
-            block = ['  - %s%s' % (goal, head) for goal in goals]
-            block[-1] = block[-1][:-len(head)] + tail
-            lines[i + 1:end] = block
-            return
-    raise FollowError('cycle.yaml has no goals: line to update')
+def recorded_title(cycle, stamp):
+    """The title of the issue copy whose stamp is the recorded change."""
+    for path in issue_copies(cycle.context, cycle.key):
+        if stamp_of(os.path.basename(path)) == stamp:
+            title = one_line(issue_text(read_text(path))[0])
+            if not title:
+                raise FollowError('the issue copy %s has no title' % os.path.basename(path))
+            return title
+    raise FollowError('no issue copy carries the recorded stamp %s' % stamp)
 
 
 def update(args):
-    cycle, stamp, options = open_cycle_with_record(
-        args, ('--title', '--target', '--focus', '--goal', '--now'), repeated=('--goal',))
-    values = {}
-    for name in ('--title', '--target', '--focus'):
-        values[name] = one_line(options.get(name, ''))
-        if not values[name]:
-            raise FollowError('update needs a non-empty %s' % name)
-    goals = [one_line(goal) for goal in options['--goal']]
-    if not goals or not all(goals):
-        raise FollowError('update needs at least one goal, and none may be empty')
+    cycle, stamp, options = open_cycle_with_record(args, ('--values', '--now'))
+    if '--values' not in options:
+        raise FollowError('update needs --values <file>')
+    try:
+        values = cycle_values.read_values(options['--values'])
+        cycle_values.check(options['--values'], ['target', 'focus', 'goal'])
+    except cycle_values.ValuesError as err:
+        raise FollowError(err)
+    values = {name: [one_line(v) for v in text] if isinstance(text, list) else one_line(text)
+              for name, text in values.items()}
+    if not values.get('title'):
+        values['title'] = recorded_title(cycle, stamp)
     now = parse_now(options['--now']) if '--now' in options else \
         datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 
     def edit(yaml_text):
-        lines = yaml_text.splitlines(True)
-        replace_line(lines, 'title', 'title: "%s"' % values['--title'])
-        replace_line(lines, 'target', 'target: %s' % values['--target'])
-        replace_line(lines, 'focus', 'focus: %s' % values['--focus'])
+        try:
+            new_yaml = cycle_values.apply(yaml_text, values)
+        except cycle_values.ValuesError as err:
+            raise FollowError(err)
+        lines = re.findall(r'[^\n]*\n|[^\n]+', new_yaml)  # \n only: a title may hold other line separators
         replace_line(lines, 'updated', 'updated: %s' % now.strftime('%Y-%m-%d'))
-        replace_goals(lines, goals)
         return ''.join(lines)
 
     settle(cycle, stamp, edit)

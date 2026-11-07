@@ -6,7 +6,9 @@
 #
 # Output: key=value pairs for the most recent cycle
 #   LATEST_CYCLE=45-hero-card-share
-#   CYCLE_TITLE=Cycle 45: Share + Signature Moments
+#   CYCLE_TITLE="Cycle 45: Share + Signature Moments"
+#     (the title is printed verbatim, so it may itself hold quotes: the value
+#      runs from the first " to the last " on the line)
 #   CYCLE_STATUS=planning
 #   STORIES_TOTAL=2
 #   STORIES_READY=2
@@ -16,6 +18,9 @@
 # If no cycles exist (or none match --status), outputs LATEST_CYCLE=""
 
 set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/read-key.sh"
 
 PROJECT="."
 WANT_STATUS=""
@@ -68,7 +73,7 @@ echo "LATEST_CYCLE=\"$LATEST\""
 
 # Read cycle.yaml for title and status
 if [ -f "$CYCLE_YAML" ]; then
-  TITLE=$(grep "^title:" "$CYCLE_YAML" | head -1 | sed 's/^title: *//' | sed 's/^"//;s/"$//')
+  TITLE=$(read_key "$CYCLE_YAML" title)
   STATUS=$(grep "^status:" "$CYCLE_YAML" | head -1 | awk '{print $2}')
   echo "CYCLE_TITLE=\"$TITLE\""
   echo "CYCLE_STATUS=\"$STATUS\""

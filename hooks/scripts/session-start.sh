@@ -5,6 +5,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/read-key.sh"
 
 # Resolve project root (handles monorepo with multiple .craft/ dirs)
 # Sourcing returns 1 when no project is set up, but the functions it defines
@@ -135,7 +136,7 @@ fi
 if [ -n "$ACTIVE_CYCLE" ]; then
   cycle_title=""
   if [ -f "${PROJECT_ROOT}.craft/cycles/$ACTIVE_CYCLE/cycle.yaml" ]; then
-    cycle_title=$(grep "^title:" "${PROJECT_ROOT}.craft/cycles/$ACTIVE_CYCLE/cycle.yaml" | sed 's/title: *//' | tr -d '"')
+    cycle_title=$(read_key "${PROJECT_ROOT}.craft/cycles/$ACTIVE_CYCLE/cycle.yaml" title)
   fi
   cycle_display="${cycle_title:-$ACTIVE_CYCLE}"
   context="${project_prefix}Active cycle: $cycle_display"

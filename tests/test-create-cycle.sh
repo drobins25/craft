@@ -172,11 +172,11 @@ CLAUDE_PLUGIN_ROOT="$PLUGIN_ROOT" bash "$CREATE_CYCLE_SCRIPT" "auth" "Auth" "Log
 CYCLE_YAML="$TEST_DIR/.craft/cycles/1-auth/cycle.yaml"
 TITLE_LINE=$(grep "^title:" "$CYCLE_YAML")
 
-if echo "$TITLE_LINE" | grep -qE '^title: ".*"$'; then
+if echo "$TITLE_LINE" | grep -qE "^title: '.*'\$"; then
   echo "  PASS: title is quoted"
   PASS=$((PASS + 1))
 else
-  echo "  FAIL: title is NOT quoted — colon will break YAML parsing"
+  echo "  FAIL: title is NOT single-quoted - colon will break YAML parsing"
   echo "    actual: $TITLE_LINE"
   FAIL=$((FAIL + 1))
 fi
@@ -337,6 +337,148 @@ reject_tracker "Newline in issue rejected" "DRO-21
 x" "plan" "" ""
 reject_tracker "Newline in author rejected" "DRO-21" "plan" "Da
 rin" ""
+
+# --- Awkward text and the --values path ---
+
+READ_KEY_SH="$SCRIPTS_DIR/read-key.sh"
+DASH_ROOT="$SCRIPT_DIR/../scripts/dashboard"
+TAB=$(printf '\t')
+BT='`'
+
+strict_get() { # strict_get <file> <key>
+  python3 -c '
+import sys, yaml
+sys.stdout.write(str(yaml.safe_load(open(sys.argv[1], encoding="utf-8"))[sys.argv[2]]))
+' "$1" "$2"
+}
+py_read_key() {
+  python3 -c '
+import sys
+sys.path.insert(0, sys.argv[1])
+import tracker_comments
+sys.stdout.write(tracker_comments.read_key(open(sys.argv[2], encoding="utf-8").read(), sys.argv[3]))
+' "$SCRIPTS_DIR" "$1" "$2"
+}
+sh_read_key() {
+  /bin/bash -c 'source "$1"; read_key "$2" "$3"' _ "$READ_KEY_SH" "$1" "$2"
+}
+dash_get() {
+  python3 -c '
+import sys
+sys.path.insert(0, sys.argv[1])
+from src import frontmatter
+fields = frontmatter.parse_mapping(open(sys.argv[2], encoding="utf-8").read().split("\n"))
+sys.stdout.write(fields[sys.argv[3]])
+' "$DASH_ROOT" "$1" "$2"
+}
+# assert_all_readers <label> <yaml> <key> <expected>
+assert_all_readers() {
+  assert_eq "$1 shell $3" "$4" "$(sh_read_key "$2" "$3")"
+  assert_eq "$1 python $3" "$4" "$(py_read_key "$2" "$3")"
+  assert_eq "$1 strict $3" "$4" "$(strict_get "$2" "$3")"
+  assert_eq "$1 dashboard $3" "$4" "$(dash_get "$2" "$3")"
+}
+
+AWKWARD=(
+  '"' "'" '\' '#' 'x # y' 'a: b' '[x]' 'null' '42' '2026-11-06'
+  '$(touch pwned)' "$BT" '~' "a${TAB}b" "''" '|&/' 'a|b&c\d/e' '%s' '- lead'
+)
+
+begin_test "awkward positional title and target survive the template"
+TEST_DIR=$(create_minimal_craft)
+n=0
+for v in "${AWKWARD[@]}"; do
+  n=$((n + 1))
+  run_create "c$n" "$v" "$v" "$TEST_DIR" >/dev/null
+  assert_eq "[$v] exits 0" "0" "$TC_EXIT"
+  Y=$(ls -d "$TEST_DIR"/.craft/cycles/${n}-c*/ | head -1)cycle.yaml
+  assert_all_readers "[$v]" "$Y" title "Cycle $(printf '%02d' $n): $v"
+  assert_all_readers "[$v]" "$Y" target "$v"
+  assert_eq "[$v] focus stays TBD" "TBD" "$(sh_read_key "$Y" focus)"
+done
+run_create nl "line one
+line two" "t1
+t2" "$TEST_DIR" >/dev/null
+Y=$(ls -d "$TEST_DIR"/.craft/cycles/*-nl/ | head -1)cycle.yaml
+assert_all_readers "[newline]" "$Y" title "Cycle $(printf '%02d' $((n + 1))): line one line two"
+assert_all_readers "[newline]" "$Y" target "t1 t2"
+assert_eq "no ticket text was run as a command" "no" "$([ -e pwned ] && echo yes || echo no)"
+cleanup_test_dir
+echo ""
+
+begin_test "awkward title and target survive the no-template fallback"
+TEST_DIR=$(create_minimal_craft)
+EMPTY_PLUGIN=$(mktemp -d)
+n=0
+for v in "${AWKWARD[@]}"; do
+  n=$((n + 1))
+  set +e
+  CLAUDE_PLUGIN_ROOT="$EMPTY_PLUGIN" bash "$CREATE_CYCLE_SCRIPT" "f$n" "$v" "$v" "$TEST_DIR" >/dev/null 2>&1
+  TC_EXIT=$?
+  set -e
+  assert_eq "[$v] exits 0" "0" "$TC_EXIT"
+  Y=$(ls -d "$TEST_DIR"/.craft/cycles/${n}-f*/ | head -1)cycle.yaml
+  assert_all_readers "[$v]" "$Y" title "Cycle $(printf '%02d' $n): $v"
+  assert_all_readers "[$v]" "$Y" target "$v"
+done
+rm -rf "$EMPTY_PLUGIN"
+cleanup_test_dir
+echo ""
+
+begin_test "--values sets title and target with the label"
+TEST_DIR=$(create_minimal_craft)
+n=0
+for v in "${AWKWARD[@]}"; do
+  n=$((n + 1))
+  printf 'title: %s\ntarget: %s\n' "$v" "$v" > "$TEST_DIR/values.txt"
+  run_create --values "$TEST_DIR/values.txt" "v$n" "" "" "$TEST_DIR" >/dev/null
+  assert_eq "[$v] exits 0" "0" "$TC_EXIT"
+  Y=$(ls -d "$TEST_DIR"/.craft/cycles/${n}-v*/ | head -1)cycle.yaml
+  want="$v"
+  assert_all_readers "[$v]" "$Y" title "Cycle $(printf '%02d' $n): $want"
+  assert_all_readers "[$v]" "$Y" target "$want"
+done
+cleanup_test_dir
+echo ""
+
+begin_test "--values with tracker args keeps the tracker lines and a title-only file keeps the default target"
+TEST_DIR=$(create_minimal_craft)
+printf 'title: Login fails: "Remember me" ignored\n' > "$TEST_DIR/values.txt"
+run_create --values "$TEST_DIR/values.txt" auth "" "" "$TEST_DIR" "" "DRO-21" "plan" "" "" >/dev/null
+assert_eq "exits 0" "0" "$TC_EXIT"
+Y="$TEST_DIR/.craft/cycles/1-auth/cycle.yaml"
+assert_all_readers "" "$Y" title 'Cycle 01: Login fails: "Remember me" ignored'
+assert_all_readers "" "$Y" target "TBD"
+assert_eq "source_issue present" "DRO-21" "$(sh_read_key "$Y" source_issue)"
+cleanup_test_dir
+echo ""
+
+begin_test "--values with a non-empty positional title or target refuses, nothing created"
+TEST_DIR=$(create_minimal_craft)
+printf 'title: T\n' > "$TEST_DIR/values.txt"
+run_create --values "$TEST_DIR/values.txt" auth "Title" "" "$TEST_DIR" >/dev/null
+assert_eq "title: exits 1" "1" "$TC_EXIT"
+assert_contains "title: Error line" "Error:" "$TC_OUT"
+run_create --values "$TEST_DIR/values.txt" auth "" "Target" "$TEST_DIR" >/dev/null
+assert_eq "target: exits 1" "1" "$TC_EXIT"
+assert_eq "no cycle dir created" "0" "$(ls -d "$TEST_DIR"/.craft/cycles/*/ 2>/dev/null | wc -l | tr -d ' ')"
+cleanup_test_dir
+echo ""
+
+begin_test "a bad values file leaves no directory"
+TEST_DIR=$(create_minimal_craft)
+printf 'target: only a target\n' > "$TEST_DIR/no-title.txt"
+printf 'title T without separator\n' > "$TEST_DIR/bad.txt"
+run_create --values "$TEST_DIR/no-title.txt" auth "" "" "$TEST_DIR" >/dev/null
+assert_eq "no title: exits 1" "1" "$TC_EXIT"
+assert_contains "no title: says why" "no title" "$TC_OUT"
+run_create --values "$TEST_DIR/bad.txt" auth "" "" "$TEST_DIR" >/dev/null
+assert_eq "malformed: exits 1" "1" "$TC_EXIT"
+run_create --values "$TEST_DIR/missing.txt" auth "" "" "$TEST_DIR" >/dev/null
+assert_eq "missing file: exits 1" "1" "$TC_EXIT"
+assert_eq "no cycle dir created" "0" "$(ls -d "$TEST_DIR"/.craft/cycles/*/ 2>/dev/null | wc -l | tr -d ' ')"
+cleanup_test_dir
+echo ""
 
 # --- Summary ---
 finish_tests
