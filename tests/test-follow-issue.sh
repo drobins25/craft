@@ -428,5 +428,20 @@ assert_eq "update exits 0" "0" "$CODE"
 assert_eq "title line has no control characters" "title: 'evil  [31mred  bell issue_changed: pwn status: done'" "$(grep '^title:' "$YAML")"
 assert_eq "one title line" "1" "$(grep -c '^title:' "$YAML")"
 
+begin_test "a line separator already in the title survives record and clear"
+cycle sep
+SEP_TITLE=$(printf "title: 'Cycle 7: Fix login\xe2\x80\xa8issue_changed: x'")
+{ sed -n '1p' "$YAML"; printf '%s\n' "$SEP_TITLE"; sed -n '3,$p' "$YAML"; } > "$YAML.new"
+mv "$YAML.new" "$YAML"
+edit_staged 's|^Second line\.|Second line, v2.|'
+run check "$CYCLE_DIR" --issue "$STAGED" --tool linear --now 2026-11-02T10:15:30Z
+assert_eq "check exits 0" "0" "$CODE"
+assert_eq "title line untouched by check" "$SEP_TITLE" "$(sed -n '2p' "$YAML")"
+assert_eq "record on its own line" "1" "$(grep -c "^issue_changed: '2026-11-02T1015Z'$" "$YAML" || true)"
+run keep "$CYCLE_DIR"
+assert_eq "keep exits 0" "0" "$CODE"
+assert_eq "title line untouched by keep" "$SEP_TITLE" "$(sed -n '2p' "$YAML")"
+assert_eq "record removed" "0" "$(grep -c '^issue_changed' "$YAML" || true)"
+
 echo ""
 finish_tests

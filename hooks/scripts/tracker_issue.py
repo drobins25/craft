@@ -13,6 +13,8 @@ updates the cycle to the new text or keeps it as it is.
 import glob
 import os
 import re
+
+from tracker_comments import split_lines
 import sys
 from typing import List, Optional, Tuple
 
@@ -146,7 +148,7 @@ def _ending(line: str) -> str:
 
 def _with_change(yaml_text: str, stamp: str) -> str:
     """The yaml carrying exactly one issue_changed line, other lines untouched."""
-    lines = yaml_text.splitlines(True)
+    lines = split_lines(yaml_text)
     new_value = "%s: '%s'" % (CHANGE_KEY, stamp)
     for i, line in enumerate(lines):
         if line.startswith(CHANGE_KEY + ':'):
@@ -165,7 +167,7 @@ def _with_change(yaml_text: str, stamp: str) -> str:
 
 
 def _without_change(yaml_text: str) -> str:
-    return ''.join(line for line in yaml_text.splitlines(True)
+    return ''.join(line for line in split_lines(yaml_text)
                    if not line.startswith(CHANGE_KEY + ':'))
 
 

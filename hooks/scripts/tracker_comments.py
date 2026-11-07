@@ -91,6 +91,12 @@ def read_key(yaml_text: str, key: str) -> str:
     return value
 
 
+def split_lines(text: str) -> List[str]:
+    """Lines with their endings; splits only on \\n, never on the other
+    separators str.splitlines knows, so a value holding one stays one line."""
+    return re.findall(r'[^\n]*\n|[^\n]+', text)
+
+
 def slug(key: str) -> str:
     """The key lowercased, each run of characters outside a-z0-9 one dash."""
     return re.sub(r'[^a-z0-9]+', '-', key.lower())
