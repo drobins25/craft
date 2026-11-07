@@ -293,6 +293,38 @@ run_writer check "$TMP/no-such-values.txt"
 assert_eq "missing file exits 1" "1" "$RC"
 echo ""
 
+begin_test "a goals list written without indentation is replaced whole"
+D="$TMP/flatgoals"
+mkdir -p "$D"
+printf 'name: demo\ntitle: x\ngoals:\n- first\n-\n- second\nnotes: n\n' > "$D/cycle.yaml"
+printf 'goal: NEW\n' > "$TMP/flatgoals.txt"
+run_writer write "$D" "$TMP/flatgoals.txt"
+assert_eq "flat goals write exits 0" "0" "$RC"
+assert_eq "old items gone" "name: demo|title: x|goals:|  - 'NEW'|notes: n" "$(tr '\n' '|' < "$D/cycle.yaml" | sed 's/|$//')"
+if strict_json "$D/cycle.yaml" >/dev/null 2>&1 || [ $? -eq 127 ]; then
+  assert_eq "strict reader loads flat goals" "loads" "loads"
+else
+  assert_eq "strict reader loads flat goals" "loads" "refused"
+fi
+echo ""
+
+begin_test "control characters in a value become spaces"
+D="$TMP/ctrl"
+mkdir -p "$D"
+printf "name: demo\ntitle: 'Cycle 01: old'\ngoals:\n  - TBD\n" > "$D/cycle.yaml"
+printf 'title: a\001c Red\033[31m ALERT\302\205end\nfocus: tab\tkept\n' > "$TMP/ctrl.txt"
+printf 'focus: TBD\n' >> "$D/cycle.yaml"
+run_writer write "$D" "$TMP/ctrl.txt"
+assert_eq "control write exits 0" "0" "$RC"
+assert_eq "shell reader gets plain text" "Cycle 01: a c Red [31m ALERT end" "$(sh_read_key "$D/cycle.yaml" title)"
+assert_eq "tab is kept" "tab${TAB}kept" "$(sh_read_key "$D/cycle.yaml" focus)"
+if strict_json "$D/cycle.yaml" >/dev/null 2>&1 || [ $? -eq 127 ]; then
+  assert_eq "strict reader loads control text" "loads" "loads"
+else
+  assert_eq "strict reader loads control text" "loads" "refused"
+fi
+echo ""
+
 begin_test "cycle-design Step 6b writes focus and goals through the script"
 STEP=$(awk '/^\*\*6b\./{f=1} /^\*\*6d\./{f=0} f' "$SCRIPT_DIR/../commands/references/cycle-design/default-mode.md")
 case "$STEP" in *'cycle_values.py'*) assert_eq "names the writer" "yes" "yes" ;; *) assert_eq "names the writer" "yes" "no" ;; esac

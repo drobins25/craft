@@ -47,6 +47,11 @@ def quoted(value: str) -> str:
     return "'" + value.replace("'", "''") + "'"
 
 
+# Characters a YAML file may not hold raw and a terminal would act on: C0 controls
+# other than tab, DEL and the C1 range. They read as a space, like a line break.
+_CONTROL = re.compile(r'[\x00-\x08\x0b-\x1f\x7f-\x9f]')
+
+
 def read_values(path: str) -> Values:
     """The fields of a values file; goals come back as a list under `goal`."""
     try:
@@ -67,7 +72,7 @@ def read_values(path: str) -> Values:
             raise ValuesError('values file line %d has no "<field>: <text>"' % number)
         if field not in FIELDS:
             raise ValuesError('values file line %d names unknown field "%s"' % (number, field))
-        content = rest.strip()
+        content = _CONTROL.sub(' ', rest).strip()
         if not content:
             raise ValuesError('values file line %d: %s has no text' % (number, field))
         if field == 'goal':
@@ -92,15 +97,17 @@ def _ending(line: str) -> str:
     return line[len(line.rstrip('\r\n')):]
 
 
-def _value_end(lines: List[str], start: int) -> int:
+def _value_end(lines: List[str], start: int, sequence: bool = False) -> int:
     """Index just past the key line at start and its indented continuation.
 
-    Blank lines count only when an indented line follows them."""
+    With sequence, a `- ` item at column 0 also continues the value, the form
+    YAML allows for a list under a key. Blank lines count only when a
+    continuation line follows them."""
     end = start + 1
     probe = start + 1
     while probe < len(lines):
         line = lines[probe]
-        if line[:1] in (' ', '\t'):
+        if line[:1] in (' ', '\t') or (sequence and (line.startswith('- ') or line.rstrip('\r\n') == '-')):
             end = probe + 1
         elif line.strip():
             break
@@ -140,7 +147,7 @@ def apply(yaml_text: str, values: Values) -> str:
         if isinstance(goals, str):
             goals = [goals]
         start = _find(lines, 'goals')
-        end = _value_end(lines, start)
+        end = _value_end(lines, start, sequence=True)
         head = _ending(lines[start]) or '\n'
         tail = _ending(lines[end - 1]) if end > start + 1 else head
         block = ['  - %s%s' % (quoted(goal), head) for goal in goals]
