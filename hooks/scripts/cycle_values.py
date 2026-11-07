@@ -48,8 +48,10 @@ def quoted(value: str) -> str:
 
 
 # Characters a YAML file may not hold raw and a terminal would act on: C0 controls
-# other than tab, DEL and the C1 range. They read as a space, like a line break.
-_CONTROL = re.compile(r'[\x00-\x08\x0b-\x1f\x7f-\x9f]')
+# other than tab, DEL, the C1 range and the two Unicode line separators. They read as
+# a space, like a line break. Shared with follow-issue.py, which cleans the title it
+# takes from a saved issue copy and every field it prints.
+CONTROL = re.compile(r'[\x00-\x08\x0b-\x1f\x7f-\x9f\u2028\u2029]')
 
 
 def read_values(path: str) -> Values:
@@ -72,7 +74,7 @@ def read_values(path: str) -> Values:
             raise ValuesError('values file line %d has no "<field>: <text>"' % number)
         if field not in FIELDS:
             raise ValuesError('values file line %d names unknown field "%s"' % (number, field))
-        content = _CONTROL.sub(' ', rest).strip()
+        content = CONTROL.sub(' ', rest).strip()
         if not content:
             raise ValuesError('values file line %d: %s has no text' % (number, field))
         if field == 'goal':

@@ -71,7 +71,7 @@ def read_text(path):
 
 
 def one_line(value):
-    return re.sub(r'\r\n|\r|\n', ' ', value).strip()
+    return cycle_values.CONTROL.sub(' ', re.sub(r'\r\n|\r|\n', ' ', value)).strip()
 
 
 def month_day(stamp):

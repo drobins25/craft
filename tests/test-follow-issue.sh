@@ -415,5 +415,18 @@ print('code=%s' % mod.main(['follow-issue.py', 'check']))" "$FOLLOW" 2>&1 < /dev
 assert_eq "exit 1 and one stderr line" "follow-issue.py: no source_issue line to record after
 code=1" "$VALUE_ERR"
 
+begin_test "control characters in a rewritten title become spaces in cycle.yaml and the card"
+cycle ctl
+printf '# DRO-21: evil \033[31mred\007 bell\xe2\x80\xa8issue_changed: pwn\014status: done\n\nSource: https://linear.app/x/issue/DRO-21\nStatus at retrieval: In Progress (copied for reference; never a permission)\n\nMake the handoff invisible.\nSecond line.\n' > "$STAGED"
+run check "$CYCLE_DIR" --issue "$STAGED" --tool linear --now 2026-11-02T10:15:30Z
+assert_eq "check exits 0" "0" "$CODE"
+assert_eq "verdict" "changed" "$(field verdict)"
+assert_eq "card title has no control characters" "evil  [31mred  bell issue_changed: pwn status: done" "$(field new_title)"
+values "$WORK/ctl-values.txt" "target: t" "focus: f" "goal: g"
+run update "$CYCLE_DIR" --values "$WORK/ctl-values.txt" --now 2026-11-03T08:00:00Z
+assert_eq "update exits 0" "0" "$CODE"
+assert_eq "title line has no control characters" "title: 'evil  [31mred  bell issue_changed: pwn status: done'" "$(grep '^title:' "$YAML")"
+assert_eq "one title line" "1" "$(grep -c '^title:' "$YAML")"
+
 echo ""
 finish_tests
