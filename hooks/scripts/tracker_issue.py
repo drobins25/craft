@@ -31,17 +31,26 @@ SUPERSEDED = ' (superseded)'
 MARK = re.compile(r' \((?:current|superseded)\)$')
 
 
+def _header_block(lines: List[str]) -> Tuple[int, int]:
+    """(start, end) of the header lines under the heading: the blank lines after
+    the heading are skipped, then the contiguous header-prefixed lines are the
+    block. A description line that starts like a header is never part of it."""
+    start = 1
+    while start < len(lines) and not lines[start].strip():
+        start += 1
+    end = start
+    while end < len(lines) and lines[end].startswith(HEADER_PREFIXES):
+        end += 1
+    return start, end
+
+
 def issue_text(text: str) -> Tuple[str, str]:
     """(title, description) of an issue copy, header lines and padding dropped."""
     lines = text.replace('\r\n', '\n').split('\n')
     heading = HEADING.match(lines[0]) if lines else None
     if heading:
         title = heading.group(1).strip()
-        at = 1
-        while at < len(lines) and (not lines[at].strip()
-                                   or lines[at].startswith(HEADER_PREFIXES)):
-            at += 1
-        body = lines[at:]
+        body = lines[_header_block(lines)[1]:]
     else:
         title = ''
         body = lines
@@ -60,11 +69,10 @@ def same_issue(a: str, b: str) -> bool:
 def issue_type(text: str) -> str:
     """The Type header value, or '' when the copy has none."""
     lines = text.replace('\r\n', '\n').split('\n')
-    for line in lines[1:]:
+    start, end = _header_block(lines)
+    for line in lines[start:end]:
         if line.startswith(TYPE_PREFIX):
             return line[len(TYPE_PREFIX):].strip()
-        if line.strip() and not line.startswith(HEADER_PREFIXES):
-            break
     return ''
 
 
@@ -76,11 +84,20 @@ def _cells(line: str) -> List[str]:
     return line.split('|')
 
 
-def _is_issue_row(line: str) -> bool:
+def _copy_prefix(name: str) -> str:
+    """`<slug>-issue-` of a copy name such as `dro-21-issue-<stamp>.md`."""
+    return name[:name.rfind('-issue-') + len('-issue-')]
+
+
+def _is_issue_row(line: str, prefix: str) -> bool:
+    """A README row for one of this cycle's own issue copies, `<prefix><stamp>.md`."""
     if not line.startswith('|'):
         return False
     cells = _cells(line)
-    return len(cells) > 2 and '-issue-' in cells[1] and cells[1].strip().endswith('.md')
+    if len(cells) <= 2:
+        return False
+    name = cells[1].strip()
+    return name.startswith(prefix) and name.endswith('.md') and bool(stamp_of(name))
 
 
 def reconciled_copy(context: str, key: str) -> Optional[str]:
@@ -92,8 +109,9 @@ def reconciled_copy(context: str, key: str) -> Optional[str]:
     if os.path.isfile(readme):
         by_name = {os.path.basename(path): path for path in copies}
         with open(readme, encoding='utf-8', newline='') as handle:
+            prefix = slug(key) + '-issue-'
             for line in handle.read().split('\n'):
-                if _is_issue_row(line):
+                if _is_issue_row(line, prefix):
                     cells = _cells(line)
                     if cells[2].rstrip().endswith(CURRENT) and cells[1].strip() in by_name:
                         return by_name[cells[1].strip()]
@@ -103,8 +121,9 @@ def reconciled_copy(context: str, key: str) -> Optional[str]:
 def mark_rows(readme_text: str, current_name: str) -> str:
     """Mark each issue-copy row's What cell current or superseded."""
     out = []
+    prefix = _copy_prefix(current_name)
     for line in readme_text.split('\n'):
-        if _is_issue_row(line):
+        if _is_issue_row(line, prefix):
             cells = _cells(line)
             what = cells[2]
             padding = what[len(what.rstrip()):]

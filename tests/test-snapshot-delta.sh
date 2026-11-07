@@ -408,5 +408,37 @@ assert_eq "mark moves, no stacking" "2" "$(grep -c '(current)\|(superseded)' "$W
 assert_eq "second copy now current" "1" "$(grep -c 'Issue text changed since 2026-10-31T1840Z (current) |' "$WORK/marks-2.md")"
 assert_eq "first copy now superseded" "1" "$(grep -c 'Issue title, status and description (superseded) |' "$WORK/marks-2.md")"
 
+begin_test "a description line that looks like a header is still compared"
+OUT=$(python3 -c "
+import sys
+sys.path.insert(0, '$SCRIPTS_DIR')
+from tracker_issue import same_issue, issue_text, issue_type
+head = '# IOQ-234: Login fails\n\nSource: https://x.atlassian.net/browse/IOQ-234\nStatus at retrieval: In Progress (copied for reference; never a permission)\nType: Bug\n\n'
+old = head + 'Type: regression\nSteps: tick Remember me.\n'
+new = head + 'Type: feature request\nSteps: tick Remember me.\n'
+untyped = '# IOQ-9: Login\n\nSource: u\nStatus at retrieval: Open (copied for reference; never a permission)\n\nType: regression\nsteps\n'
+print('same=%s' % same_issue(old, new))
+print('desc=%s' % issue_text(old)[1].split(chr(10))[0])
+print('type=%s' % issue_type(old))
+print('untyped=%s' % issue_type(untyped))
+print('header_only=%s' % same_issue(head + 'x\n', head.replace('Type: Bug', 'Type: Story') + 'x\n'))")
+assert_eq "an edit to a header-looking first line is a change" "same=False" "$(printf '%s\n' "$OUT" | sed -n 1p)"
+assert_eq "the description keeps its header-looking first line" "desc=Type: regression" "$(printf '%s\n' "$OUT" | sed -n 2p)"
+assert_eq "the type comes from the header" "type=Bug" "$(printf '%s\n' "$OUT" | sed -n 3p)"
+assert_eq "a copy with no Type header has no type" "untyped=" "$(printf '%s\n' "$OUT" | sed -n 4p)"
+assert_eq "a header-only change is still no change" "header_only=True" "$(printf '%s\n' "$OUT" | sed -n 5p)"
+
+begin_test "marks leave a user's own -issue- file alone"
+cat > "$WORK/marks-own.md" <<'FIX'
+| File | What | Retrieved | Tool |
+|---|---|---|---|
+| dro-21-issue-2026-10-31T1840Z.md | Issue title, status and description | 2026-10-31T18:40:12Z | linear |
+| login-issue-notes.md | My notes on login | 2026-11-01T09:00:00Z | me |
+| dro-21-issue-2026-11-02T1015Z.md | Issue text changed since 2026-10-31T1840Z | 2026-11-02T10:15:30Z | linear |
+FIX
+marks "$WORK/marks-own.md" dro-21-issue-2026-11-02T1015Z.md > "$WORK/marks-own-1.md"
+assert_eq "own notes row untouched" "1" "$(grep -c '^| login-issue-notes.md | My notes on login | ' "$WORK/marks-own-1.md")"
+assert_eq "both copies marked" "2" "$(grep -c '(current)\|(superseded)' "$WORK/marks-own-1.md")"
+
 echo ""
 finish_tests
