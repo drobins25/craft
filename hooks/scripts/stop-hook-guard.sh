@@ -56,10 +56,16 @@ fi
 # The title only ever goes inside the hand-built JSON below, so it is escaped
 # here once: a quote, a backslash or a control character would otherwise break
 # the message a hook must print as valid JSON.
-CYCLE_TITLE=$(printf '%s' "$CYCLE_TITLE" | python3 -c '
+json_text() { # stdin, less one trailing newline -> escaped for the inside of a JSON string
+  python3 -c '
 import json, sys
-sys.stdout.write(json.dumps(sys.stdin.read(), ensure_ascii=False)[1:-1])
-')
+text = sys.stdin.read()
+if text.endswith("\n"):
+    text = text[:-1]
+sys.stdout.write(json.dumps(text, ensure_ascii=False)[1:-1])
+'
+}
+CYCLE_TITLE=$(printf '%s' "$CYCLE_TITLE" | json_text)
 
 # Progress dial: quarter-rounded COMPLETED chunks (CURRENT_CHUNK is the one in
 # progress, so completed = CURRENT_CHUNK - 1). ◔ floor while work is in motion -
@@ -114,8 +120,8 @@ BREADCRUMB="${PROJECT_ROOT}.craft/.continuation"
 if [ -f "$BREADCRUMB" ]; then
   CRUMB_AGE=$(($(date +%s) - $(mtime_of "$BREADCRUMB")))
   if [ "$CRUMB_AGE" -lt 1800 ]; then
-    ACTION=$(grep '^ACTION:' "$BREADCRUMB" | sed 's/^ACTION: //' | tr -d '"')
-    SKILL=$(grep '^SKILL:' "$BREADCRUMB" | sed 's/^SKILL: //')
+    ACTION=$(grep '^ACTION:' "$BREADCRUMB" | sed 's/^ACTION: //' | tr -d '"' | json_text)
+    SKILL=$(grep '^SKILL:' "$BREADCRUMB" | sed 's/^SKILL: //' | json_text)
     ARGS=$(grep '^ARGS:' "$BREADCRUMB" | sed 's/^ARGS: //')
     rm -f "$BREADCRUMB"
     if [ -n "$SKILL" ]; then
