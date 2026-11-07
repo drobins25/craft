@@ -8,6 +8,9 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/test_helper.sh"
+# Run from a throwaway folder: a script that misreads its arguments and falls back
+# to the current folder must never write into the real project.
+cd "$(mktemp -d)"
 
 RECORD="$SCRIPTS_DIR/record-go.py"
 CREATE_CYCLE="$SCRIPTS_DIR/create-cycle.sh"
