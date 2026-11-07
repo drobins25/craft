@@ -13,15 +13,13 @@ updates the cycle to the new text or keeps it as it is.
 import glob
 import os
 import re
-
-from tracker_comments import split_lines
 import sys
 from typing import List, Optional, Tuple
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from annotate_write import write_atomic  # noqa: E402
-from tracker_comments import read_key, slug, stamp_of  # noqa: E402
+from tracker_comments import read_key, slug, split_lines, stamp_of  # noqa: E402
 
 HEADING = re.compile(r'^# [^\s:]+: (.*)$')
 HEADER_PREFIXES = ('Source:', 'Status at retrieval:', 'Type:')

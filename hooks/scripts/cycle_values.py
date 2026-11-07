@@ -29,7 +29,7 @@ from typing import Dict, List, Union
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from annotate_write import write_atomic  # noqa: E402
-from tracker_comments import read_key  # noqa: E402
+from tracker_comments import read_key, split_lines  # noqa: E402
 
 Values = Dict[str, Union[str, List[str]]]
 
@@ -52,6 +52,12 @@ def quoted(value: str) -> str:
 # a space, like a line break. Shared with follow-issue.py, which cleans the title it
 # takes from a saved issue copy and every field it prints.
 CONTROL = re.compile(r'[\x00-\x08\x0b-\x1f\x7f-\x9f\u2028\u2029]')
+
+
+def one_line(value: str) -> str:
+    """A title, target, focus or goal as one line: every line break and control
+    character becomes a space, and the ends are trimmed."""
+    return CONTROL.sub(' ', re.sub(r'\r\n|\r|\n', ' ', value)).strip()
 
 
 def read_values(path: str) -> Values:
@@ -88,11 +94,6 @@ def read_values(path: str) -> Values:
     if not values:
         raise ValuesError('values file %s holds no fields' % path)
     return values
-
-
-def _split_lines(text: str) -> List[str]:
-    """Lines with their endings; splits only on \\n, never on other separators."""
-    return re.findall(r'[^\n]*\n|[^\n]+', text)
 
 
 def _ending(line: str) -> str:
@@ -133,7 +134,7 @@ def _labeled_title(yaml_text: str, text: str) -> str:
 
 def apply(yaml_text: str, values: Values) -> str:
     """yaml_text with each present field replaced; raises before changing anything."""
-    lines = _split_lines(yaml_text)
+    lines = split_lines(yaml_text)
     for field in SINGLE_FIELDS:
         if field not in values:
             continue
@@ -176,13 +177,17 @@ def write(cycle_dir: str, values_path: str) -> None:
         raise ValuesError('cannot write %s: %s' % (path, err.strerror or err))
 
 
-def check(values_path: str, needs: List[str]) -> None:
-    values = read_values(values_path)
+def check_values(values: Values, needs: List[str]) -> None:
+    """Raise unless every needed field is present in already-read values."""
     for field in needs:
         if field not in FIELDS:
             raise ValuesError('--need names unknown field "%s"' % field)
         if field not in values:
             raise ValuesError('values file has no %s' % field)
+
+
+def check(values_path: str, needs: List[str]) -> None:
+    check_values(read_values(values_path), needs)
 
 
 def main(argv: List[str]) -> int:
@@ -199,9 +204,12 @@ def main(argv: List[str]) -> int:
             check(args[1], needs)
         elif len(args) == 3 and args[0] == 'write':
             write(args[1], args[2])
+        elif len(args) == 1 and args[0] == 'clean':
+            text = sys.stdin.buffer.read().decode('utf-8', errors='replace')
+            sys.stdout.buffer.write(one_line(text).encode('utf-8'))
         else:
             raise ValuesError('Usage: cycle_values.py check <values-file> [--need <field>]... '
-                              '| write <cycle-dir> <values-file>')
+                              '| write <cycle-dir> <values-file> | clean (stdin to stdout)')
     except ValuesError as err:
         sys.stderr.write('cycle_values.py: %s\n' % err)
         return 1

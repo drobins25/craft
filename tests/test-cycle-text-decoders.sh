@@ -27,24 +27,6 @@ AWKWARD=(
   'Cycle 01: Login fails: "Remember me" box ignored #SSO'
 )
 
-# Strict YAML reader: PyYAML safe_load, else Ruby Psych with Date permitted.
-# Prints each key's value for a flat file, one value per line is unsafe for tabs,
-# so the reader prints JSON and the caller picks a key.
-strict_json() {
-  local file="$1"
-  if python3 -c 'import yaml' 2>/dev/null; then
-    python3 -c 'import json,sys,yaml; print(json.dumps(yaml.safe_load(open(sys.argv[1], encoding="utf-8")), default=str))' "$file"
-  elif command -v ruby >/dev/null 2>&1; then
-    ruby -ryaml -rjson -rdate -e 'puts JSON.generate(YAML.safe_load(File.read(ARGV[0]), permitted_classes: [Date]))' "$file"
-  else
-    return 127
-  fi
-}
-
-strict_get() { # strict_get <file> <key>
-  strict_json "$1" | python3 -c 'import json,sys; sys.stdout.write(str(json.load(sys.stdin)[sys.argv[1]]))' "$2"
-}
-
 py_read_key() { # py_read_key <file> <key>
   python3 -c '
 import sys

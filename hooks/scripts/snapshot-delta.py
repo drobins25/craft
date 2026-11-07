@@ -42,12 +42,10 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from annotate_write import write_atomic  # noqa: E402
+import tracker_comments  # noqa: E402
 from tracker_comments import (  # noqa: E402
-    newest_stamp, next_stamp, parse_blocks, read_key, slug, stamp_time)
+    NOW_FORMAT, month_day, newest_stamp, next_stamp, parse_blocks, read_key, slug)
 from tracker_issue import issue_copies, record_change, same_issue  # noqa: E402
-
-MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-NOW_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
 
 
 class RefreshError(Exception):
@@ -83,7 +81,7 @@ def parse_args(argv):
     now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     if '--now' in options:
         try:
-            now = datetime.datetime.strptime(options['--now'], NOW_FORMAT)
+            now = tracker_comments.parse_now(options['--now'])
         except ValueError:
             raise RefreshError('--now must look like 2026-10-31T18:40:00Z')
     return positional[0], positional[1], options.get('--issue'), options['--tool'], now
@@ -109,11 +107,6 @@ def new_blocks(staged, earlier):
         elif (block.kind, block.author, block.ts_raw) not in copied:
             fresh.append(block)
     return fresh
-
-
-def month_day(stamp):
-    when = stamp_time(stamp)
-    return '%s %d' % (MONTHS[when.month - 1], when.day)
 
 
 def comments_text(key, previous, fresh, first_number):

@@ -24,6 +24,8 @@ TIME = re.compile(
     r'(?:\.[0-9]+)?(Z|[+-][0-9]{2}:?[0-9]{2})$')
 STAMP_FORMAT = '%Y-%m-%dT%H%MZ'
 STAMP_IN_NAME = re.compile(r'([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{4}Z)\.md$')
+NOW_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
+MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 
 class Block(NamedTuple):
@@ -110,6 +112,17 @@ def stamp_of(name: str) -> Optional[str]:
 
 def stamp_time(stamp: str) -> datetime.datetime:
     return datetime.datetime.strptime(stamp, STAMP_FORMAT)
+
+
+def month_day(stamp: str) -> str:
+    """A stamp as the user reads it in a card: `Nov 1`."""
+    when = stamp_time(stamp)
+    return '%s %d' % (MONTHS[when.month - 1], when.day)
+
+
+def parse_now(value: str) -> datetime.datetime:
+    """A `--now` value such as 2026-10-31T18:40:00Z; raises ValueError otherwise."""
+    return datetime.datetime.strptime(value, NOW_FORMAT)
 
 
 def newest_stamp(context_dir: str) -> Optional[str]:

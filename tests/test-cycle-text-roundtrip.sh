@@ -66,12 +66,6 @@ GOALS2B=(
   "a: b"
 )
 
-strict_json() {
-  python3 -c 'import json,sys,yaml; print(json.dumps(yaml.safe_load(open(sys.argv[1], encoding="utf-8")), default=str))' "$1"
-}
-strict_get() { # strict_get <file> <key>
-  strict_json "$1" | python3 -c 'import json,sys; sys.stdout.write(str(json.load(sys.stdin)[sys.argv[1]]))' "$2"
-}
 strict_goals() { # one goal per line
   strict_json "$1" | python3 -c 'import json,sys; sys.stdout.write("\n".join(json.load(sys.stdin)["goals"]))'
 }
