@@ -100,6 +100,13 @@ def _is_issue_row(line: str, prefix: str) -> bool:
     return name.startswith(prefix) and name.endswith('.md') and bool(stamp_of(name))
 
 
+def has_issue_row(readme_text: str, name: str) -> bool:
+    """Whether the README table has a row for the issue copy `name`."""
+    prefix = _copy_prefix(name)
+    return any(_is_issue_row(line, prefix) and _cells(line)[1].strip() == name
+               for line in readme_text.split('\n'))
+
+
 def reconciled_copy(context: str, key: str) -> Optional[str]:
     """The copy the cycle is reconciled with: the one marked current, else the oldest."""
     copies = issue_copies(context, key)

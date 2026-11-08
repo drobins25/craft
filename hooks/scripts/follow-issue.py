@@ -44,8 +44,8 @@ import tracker_comments  # noqa: E402
 from tracker_comments import (  # noqa: E402
     NOW_FORMAT, month_day, newest_stamp, next_stamp, read_key, slug, split_lines, stamp_of)
 from tracker_issue import (  # noqa: E402
-    CHANGE_KEY, issue_copies, issue_text, issue_type, mark_rows, reconciled_copy,
-    record_change, same_issue)
+    CHANGE_KEY, has_issue_row, issue_copies, issue_text, issue_type, mark_rows,
+    reconciled_copy, record_change, same_issue)
 
 PASTE_TOOL = 'pasted into the session'
 FIELDS = ('verdict', 'key', 'cycle', 'old_title', 'new_title', 'changed_lines',
@@ -237,6 +237,8 @@ def settle(cycle, stamp, edit=None):
                  if stamp_of(os.path.basename(p)) == stamp), None)
     if name is None:
         raise FollowError('no issue copy carries the recorded stamp %s' % stamp)
+    if not has_issue_row(readme, name):
+        raise FollowError('context/README.md has no row for %s, so the cycle cannot follow it' % name)
     marked = mark_rows(readme, name)
     new_yaml = edit(cycle.yaml) if edit else None
     if marked != readme:

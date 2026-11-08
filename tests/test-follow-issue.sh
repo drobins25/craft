@@ -462,5 +462,26 @@ assert_contains "one line says the record was cleared" "cleared" "$ERR"
 assert_eq "record removed" "0" "$(grep -c '^issue_changed' "$YAML" || true)"
 assert_eq "yaml is back to the original" "" "$(cmp "$BEFORE_YAML" "$YAML" 2>&1)"
 
+begin_test "keep and update refuse when the recorded copy has no README row"
+cycle norow
+sed 's|^Second line\.|Second line, v2.|' "$CTX/$FIRST" > "$CTX/dro-21-issue-2026-11-01T0900Z.md"
+cp "$CTX/dro-21-issue-2026-11-01T0900Z.md" "$STAGED"
+run check "$CYCLE_DIR" --issue "$STAGED" --tool linear --now 2026-11-02T10:15:30Z
+assert_eq "check records the change" "changed" "$(field verdict)"
+cp "$YAML" "$WORK/norow-yaml.recorded"
+cp "$CTX/README.md" "$WORK/norow-readme.recorded"
+run keep "$CYCLE_DIR"
+assert_eq "keep exits 1" "1" "$CODE"
+assert_contains "keep names the copy without a row" "dro-21-issue-2026-11-01T0900Z.md" "$ERR"
+assert_eq "keep prints no say" "" "$OUT"
+assert_eq "keep left cycle.yaml alone" "" "$(cmp "$WORK/norow-yaml.recorded" "$YAML" 2>&1)"
+assert_eq "keep left the README alone" "" "$(cmp "$WORK/norow-readme.recorded" "$CTX/README.md" 2>&1)"
+values "$WORK/norow-values.txt" "target: t" "focus: f" "goal: g"
+run update "$CYCLE_DIR" --values "$WORK/norow-values.txt" --now 2026-11-03T08:00:00Z
+assert_eq "update exits 1" "1" "$CODE"
+assert_contains "update names the copy without a row" "dro-21-issue-2026-11-01T0900Z.md" "$ERR"
+assert_eq "update left cycle.yaml alone" "" "$(cmp "$WORK/norow-yaml.recorded" "$YAML" 2>&1)"
+assert_eq "update left the README alone" "" "$(cmp "$WORK/norow-readme.recorded" "$CTX/README.md" 2>&1)"
+
 echo ""
 finish_tests
