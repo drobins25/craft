@@ -133,7 +133,7 @@ readers() {
   out=$(cat "$p"/.craft/.exports/pre-compact-*.md 2>/dev/null)
   check_line "$label export-progress" "$out" "## Cycle State: $t"
   out=$(bash "$SCRIPTS_DIR/get-latest-cycle.sh" "$p" 2>/dev/null)
-  check_line "$label get-latest-cycle" "$out" "CYCLE_TITLE=\"$t\""
+  check_line "$label get-latest-cycle" "$out" "CYCLE_TITLE=$t"
 
   printf 'ACTIVE_CYCLE="%s"\nPLANNING_CYCLE=""\nCURRENT_STORY="s"\n' "$c" > "$p/.craft/.global-state"
   rm -f "/tmp/craft-stop-suggested-$(stop_marker_for "$(cd "$p" && pwd -P)")"

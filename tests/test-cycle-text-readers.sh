@@ -88,7 +88,7 @@ run_readers() {
   check_line "export-progress shows it" "$out" "## Cycle State: $t"
   # get-latest-cycle
   out=$(bash "$SCRIPTS_DIR/get-latest-cycle.sh" "$p" 2>/dev/null)
-  check_line "get-latest-cycle prints it verbatim" "$out" "CYCLE_TITLE=\"$t\""
+  check_line "get-latest-cycle prints it verbatim" "$out" "CYCLE_TITLE=$t"
   # complete-cycle (active cycle)
   out=$(bash "$SCRIPTS_DIR/complete-cycle.sh" "$p/.craft/cycles/1-c" 2>/dev/null) || true
   check_line "complete-cycle shows it" "$out" "Cycle completed: $t"
@@ -169,7 +169,7 @@ echo ""
 begin_test "get-latest-cycle prints an inner-quote title verbatim"
 p=$(mk_project "'Cycle 01: Login fails: \"Remember me\" box'" active)
 out=$(bash "$SCRIPTS_DIR/get-latest-cycle.sh" "$p" 2>/dev/null)
-check_line "CYCLE_TITLE line" "$out" 'CYCLE_TITLE="Cycle 01: Login fails: "Remember me" box"'
+check_line "CYCLE_TITLE line" "$out" 'CYCLE_TITLE=Cycle 01: Login fails: "Remember me" box'
 echo ""
 
 # find_private_readers <dir>: files under dir that name cycle.yaml and grep a
