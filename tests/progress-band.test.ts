@@ -83,7 +83,7 @@ function seedProject(files: Files, root: string, cycleState: { story: string; ch
 function setCycleState(files: Files, root: string, s: { story: string; chunk?: number }) {
   files.set(
     `${root}/.craft/cycles/c/.state`,
-    `CYCLE_NAME="c"\nCURRENT_STORY="${s.story}"\nCURRENT_CHUNK="${s.chunk ?? 1}"\nTOTAL_CHUNKS="3"\n`,
+    `CYCLE_NAME="c"\nCURRENT_STORY="${s.story}"\nCURRENT_CHUNK="${s.chunk ?? (s.story ? 1 : 0)}"\nTOTAL_CHUNKS="${s.story ? 3 : 0}"\n`,
   )
 }
 
@@ -171,7 +171,9 @@ test('/craft-progress hides, then shows', async ($, on) => {
   expect(second.text).toBe('Craft progress shown.')
 })
 
-test('hidden is not remembered across sessions', async ($, on) => {
+// The hidden flag lives in session state with no store behind it (the wiring test
+// pins the absence of $.store), so a fresh session can only start shown.
+test('a fresh session starts with the band shown', async ($, on) => {
   stubEngine(on)
   await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
 
@@ -249,7 +251,7 @@ test('chunk passes: ball 1 filled, ring 2 green, chunk 2 of 3', async ($, on) =>
 
 test('story complete: complete, all balls filled, all 3 chunks done', async ($, on) => {
   const files: Files = new Map()
-  seedProject(files, ROOT, { story: 's', chunk: 3 })
+  seedProject(files, ROOT, { story: 's', chunk: 4 })
   files.set(`${CYCLE}/stories/s.md`, storyFile({ status: 'complete', complete: 3 }))
   await open($, on, files)
 
@@ -257,11 +259,12 @@ test('story complete: complete, all balls filled, all 3 chunks done', async ($, 
 
   expect(texts(drawn)).toEqual(['Story 5 ', 'complete', ' · First title', '●', '●', '●', ' all 3 chunks done'])
   expect(drawn[1]?.color).toBe('success')
+  expect(drawn.slice(3, 6).map(d => d.color)).toEqual(['success', 'success', 'success'])
 })
 
 test('complete row holds after the current story clears', async ($, on) => {
   const files: Files = new Map()
-  seedProject(files, ROOT, { story: 's', chunk: 3 })
+  seedProject(files, ROOT, { story: 's', chunk: 4 })
   files.set(`${CYCLE}/stories/s.md`, storyFile({ status: 'complete', complete: 3 }))
   const { clock } = await open($, on, files)
   const before = texts(await draw($))
@@ -275,7 +278,7 @@ test('complete row holds after the current story clears', async ($, on) => {
 
 test('next story replaces the held row', async ($, on) => {
   const files: Files = new Map()
-  seedProject(files, ROOT, { story: 's', chunk: 3 })
+  seedProject(files, ROOT, { story: 's', chunk: 4 })
   files.set(`${CYCLE}/stories/s.md`, storyFile({ status: 'complete', complete: 3 }))
   const { clock } = await open($, on, files)
 
@@ -290,7 +293,7 @@ test('next story replaces the held row', async ($, on) => {
 
 test('held row drops when the held file is no longer complete', async ($, on) => {
   const files: Files = new Map()
-  seedProject(files, ROOT, { story: 's', chunk: 3 })
+  seedProject(files, ROOT, { story: 's', chunk: 4 })
   files.set(`${CYCLE}/stories/s.md`, storyFile({ status: 'complete', complete: 3 }))
   const { clock } = await open($, on, files)
   setCycleState(files, ROOT, { story: '' })
@@ -306,7 +309,7 @@ test('held row drops when the held file is no longer complete', async ($, on) =>
 
 test('held row drops when the held file is unreadable', async ($, on) => {
   const files: Files = new Map()
-  seedProject(files, ROOT, { story: 's', chunk: 3 })
+  seedProject(files, ROOT, { story: 's', chunk: 4 })
   files.set(`${CYCLE}/stories/s.md`, storyFile({ status: 'complete', complete: 3 }))
   const { clock } = await open($, on, files)
   expect(texts(await draw($))[1]).toBe('complete')
@@ -424,6 +427,39 @@ test('the walk-up finds the nearest project when no setting names one', async ($
   await open($, on, files, { sessionRoot: '/work/q/deep/er', env: { CRAFT_PROJECT_ROOT: '/nowhere' } })
 
   expect(texts(await draw($))[2]).toBe(' · From the walk')
+})
+
+test('active cycle with no cycle state file: nothing drawn', async ($, on) => {
+  const files: Files = new Map()
+  files.set(`${ROOT}/.craft/.global-state`, 'ACTIVE_CYCLE="c"\nCURRENT_STORY=""\n')
+  files.set(`${CYCLE}/stories/s.md`, storyFile())
+  await open($, on, files)
+
+  expect(texts(await draw($))).toEqual(ENGINE)
+})
+
+test('the ball count is capped so a bad chunks_total cannot flood the band', async ($, on) => {
+  const files: Files = new Map()
+  seedProject(files, ROOT, { story: 's' })
+  files.set(`${CYCLE}/stories/s.md`, storyFile({ total: 1000000 }))
+  await open($, on, files)
+
+  const drawn = texts(await draw($))
+
+  expect(drawn).toHaveLength(3 + 99 + 1)
+  expect(drawn[drawn.length - 1]).toBe(' chunk 1 of 99')
+})
+
+test('control characters in a title never reach the drawn text', async ($, on) => {
+  const files: Files = new Map()
+  seedProject(files, ROOT, { story: 's' })
+  files.set(`${CYCLE}/stories/s.md`, storyFile({ title: 'Safe\u001b]0;pwned\u0007 title' }))
+  await open($, on, files)
+
+  const drawn = texts(await draw($))
+
+  expect(drawn[2]).toBe(' · Safe]0;pwned title')
+  expect(drawn.join('')).not.toMatch(/[\u0000-\u001f\u007f]/)
 })
 
 function seedMonorepo(files: Files, activeSubs: string[]) {

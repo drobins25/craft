@@ -9,6 +9,7 @@
 #   5. the module carries no planning citation and no absolute home path
 #   6. the module draws the band above the prompt, with props every build from 2.1.287 draws,
 #      and reads the project-root setting by a literal name
+#   7. the README names the 2.1.287 requirement once and keeps its 2.1+ badge
 
 set -euo pipefail
 
