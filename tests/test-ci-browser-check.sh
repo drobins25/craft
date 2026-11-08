@@ -14,7 +14,7 @@ HARNESS="$ROOT/scripts/ci/browser-check.sh"
 
 PASS_COUNT=0; FAIL_COUNT=0; TOTAL=0
 pass() { PASS_COUNT=$((PASS_COUNT+1)); TOTAL=$((TOTAL+1)); echo "  PASS: $1"; }
-fail() { FAIL_COUNT=$((FAIL_COUNT+1)); TOTAL=$((TOTAL+1)); echo "  FAIL: $1"; [ -n "${2:-}" ] && echo "    Detail: $2"; }
+fail() { FAIL_COUNT=$((FAIL_COUNT+1)); TOTAL=$((TOTAL+1)); echo "  FAIL: $1"; [ -n "${2:-}" ] && echo "    Detail: $2"; return 0; }
 
 echo "=== test-ci-browser-check.sh ==="
 echo ""
