@@ -2,6 +2,10 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.16.0 - 2026-11-07
+
+- Added a progress band above the prompt while craft builds a story: one ball per chunk, a green ring on the chunk being built that fills once it passes, with the story's name and status on the line above. Type `/craft-progress` to hide or show it for the session. It needs Claude Code 2.1.287 or later; on older versions it simply doesn't appear.
+
 ## 2.15.4 - 2026-11-07
 
 - Changed cycles made from a tracker issue so they follow the issue when you rewrite it. Before writing or planning a story, craft shows what changed in the ticket and offers to update the cycle from it, keep the cycle as it is, or stop. If the ticket can't be reached, craft says so instead of carrying on silently.

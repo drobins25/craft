@@ -98,6 +98,7 @@ plugins/craft/
 │   └── test-fix/              ← Triage failing tests, fix the right thing
 ├── hooks/
 │   ├── hooks.json             ← Hook event definitions
+│   ├── register.tsx           ← Hooks module (Claude Code 2.1.287+): the progress band and `/craft-progress`
 │   └── scripts/               ← 45+ bash/python hook scripts
 │       ├── annotate-run.sh        ← Single entry seam for the annotation channel (arm / listen / ready / status / wait / clear / announce / begin / watch / sheet / apply / stamp / kind / loader / bake / strip / ensure / send / review-clear / sweep / disarm / style; arm --background prepares the session, listen execs the listener so it can run as a Claude Code background command, ready waits for its port, and plain arm keeps the detached launch; style prints a read-only computed-style lookup for evaluate_script)
 │       ├── devtools-launch.cjs    ← Browser server launcher: pinned chrome-devtools-mcp, statistics off, shared profile or isolated window decided at the first browser call
@@ -106,6 +107,9 @@ plugins/craft/
 │       ├── annotate-root.sh       ← Shared folder lookup for the three annotate scripts: --root, then CRAFT_PROJECT_ROOT or the set-up project, then the nearest folder above the current one that already holds the named session or record, so a session armed in a project that never ran init is found without repeating --root; never picks where a new session is made, and commands that name none never walk
 │       ├── annotate-external-gate.sh ← External-page pin boundary: holds tool calls outside a closed allowlist while an annotate session is on a page outside the project (PreToolUse), lifted for one turn by a typed message (UserPromptSubmit)
 │       └── annotate-channel.py    ← Per-session capture listener (dynamic port, serves the overlay at /overlay.js, replace-the-set / tombstone, history.jsonl ledger, CORS, per-session token and Host check on every route, socket timeout, SSE stream, client registry)
+├── types/
+│   └── index.d.ts             ← The band's `$.state` contract, named by plugin.json `types`
+├── tsconfig.json              ← Local type-checking against the engine-written `.claude-plugin/types/`
 ├── templates/                 ← File templates for craft init and scaffolding
 │   ├── craft/                 ← .craft/ directory templates
 │   │   ├── design/            ← tokens.yaml, components.md, locked.md
@@ -288,6 +292,15 @@ All hooks defined in `hooks/hooks.json`. Scripts in `hooks/scripts/`.
 
 ### Stop
 - **`stop-hook-guard.sh`** - Guards against unclean session stops, ensures state consistency
+
+### Hooks module
+`hooks/register.tsx`, listed under `modules` in `hooks/hooks.json`, runs on Claude Code 2.1.287 and later; older versions skip it and the rest of craft is unaffected. It draws the build progress band and registers one command.
+
+- **`session.start`** - Reads craft's state and starts a three-second refresh; a non-interactive run (`-p` or the SDK) has nothing to draw on, so it reads nothing and starts no timer
+- **`command.run` for `craft-progress`** - Hides or shows the band for the session
+- **`ui.render` for `AbovePrompt`** - Draws one ball per chunk of the story being built (a green ring on the chunk in progress, a filled green ball once it passes) with the story's name and status above; it yields to a question card
+
+It reads `.craft/.global-state`, the active cycle's `.state` and the current story file, and writes nothing of craft's: the hidden flag and the snapshot live only in session memory. Its value shapes are typed in `types/index.d.ts`.
 
 ### Utility Scripts (called by hooks or commands)
 | Script | Purpose |
