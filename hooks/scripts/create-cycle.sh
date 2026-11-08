@@ -1,6 +1,6 @@
 #!/bin/bash
 # Create-cycle: Create a new cycle directory and files
-# Usage: create-cycle.sh <cycle-name> [cycle-title] [cycle-target] [project-root] [source-concepts]
+# Usage: create-cycle.sh [--values <file>] <cycle-name> [cycle-title] [cycle-target] [project-root] [source-concepts]
 #                        [source-issue] [authorized-stage] [go-author] [go-date]
 #   source-concepts: optional comma-separated planning doc paths (e.g.,
 #                    "planning/04-company-onboarding.md" or
@@ -17,6 +17,13 @@
 #   go-author, go-date: the tracker's record of the Go that granted the stage;
 #                    need a stage; required for both build stages, optional
 #                    for plan.
+#   --values <file>: the first two arguments; the title (and optionally the
+#                    target) come from a values file written with the Write
+#                    tool (see cycle_values.py), so ticket text is never typed
+#                    into a shell command. Then cycle-title and cycle-target
+#                    must be empty. The title keeps its "Cycle NN: " label.
+#
+# title and target are written as one-line single-quoted values, each ' doubled.
 
 set -e
 
@@ -26,6 +33,20 @@ PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(dirname $(dirname $(dirname "$0")))}"
 TEMPLATES_DIR="$PLUGIN_ROOT/templates"
 
 # Arguments
+VALUES_FILE=""
+if [ "$1" = "--values" ]; then
+  if [ -z "$2" ]; then
+    echo "Error: --values needs a file"
+    exit 1
+  fi
+  VALUES_FILE="$2"
+  shift 2
+  if [ -n "$2" ] || [ -n "$3" ]; then
+    echo "Error: with --values, the title and target come from the file; pass them empty"
+    exit 1
+  fi
+fi
+
 CYCLE_NAME="$1"
 CYCLE_TITLE="${2:-$CYCLE_NAME}"
 CYCLE_TARGET="${3:-TBD}"
@@ -47,6 +68,14 @@ if [ -z "$CYCLE_NAME" ]; then
   echo "Usage: create-cycle.sh <cycle-name> [cycle-title] [cycle-target] [project-root] [source-concepts] [source-issue] [authorized-stage] [go-author] [go-date]"
   exit 1
 fi
+
+yaml_quote() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/''/g")"; }
+
+# A title or target is one line, cleaned by the same rule the values file gets:
+# each line break or control character becomes one space.
+one_line() { printf '%s' "$1" | python3 "$SCRIPT_DIR/cycle_values.py" clean; }
+CYCLE_TITLE=$(one_line "$CYCLE_TITLE")
+CYCLE_TARGET=$(one_line "$CYCLE_TARGET")
 
 # Build source_concept YAML value (flow list with single-quoted items)
 # Empty -> "[]"; comma-separated paths -> "['path1', 'path2']"
@@ -103,6 +132,13 @@ else
   esac
 fi
 
+# A bad values file must leave no directory behind either.
+if [ -n "$VALUES_FILE" ]; then
+  if ! values_error=$(python3 "$SCRIPT_DIR/cycle_values.py" check "$VALUES_FILE" --need title 2>&1); then
+    tracker_error "${values_error#cycle_values.py: }"
+  fi
+fi
+
 # Ensure .craft exists
 if [ ! -d "${PROJECT_ROOT}/.craft" ]; then
   echo "Error: .craft directory not found at ${PROJECT_ROOT}. Run /craft:init first."
@@ -123,44 +159,45 @@ mkdir -p "$cycle_dir/stories"
 # Get current date
 DATE=$(date +%Y-%m-%d)
 
-# Escape sed special characters (& and \) in variables used in replacement strings
-escape_sed() { printf '%s' "$1" | sed 's/[&\\]/\\&/g'; }
-CYCLE_NAME_ESC=$(escape_sed "$CYCLE_NAME")
-CYCLE_TITLE_ESC=$(escape_sed "$CYCLE_TITLE")
-CYCLE_TARGET_ESC=$(escape_sed "$CYCLE_TARGET")
-SOURCE_CONCEPT_YAML_ESC=$(escape_sed "$SOURCE_CONCEPT_YAML")
+# Placeholders are filled by awk reading the values from the environment, so
+# no value (title, target, a path in source_concept) is ever part of a program
+# text and backslashes, & and | stay literal. Each template line carries one
+# placeholder; replaced text is never scanned again.
+CYCLE_TITLE_YAML=$(yaml_quote "$CYCLE_TITLE")
+CYCLE_TARGET_YAML=$(yaml_quote "$CYCLE_TARGET")
 
 # Create cycle.yaml from template
 if [ -f "$TEMPLATES_DIR/cycle.yaml" ]; then
-  sed -e "s|{{CYCLE_NAME}}|$CYCLE_NAME_ESC|g" \
-      -e "s|{{CYCLE_TITLE}}|$CYCLE_TITLE_ESC|g" \
-      -e "s|{{DATE}}|$DATE|g" \
-      -e "s|{{CYCLE_TARGET}}|$CYCLE_TARGET_ESC|g" \
-      -e "s|{{CYCLE_FOCUS}}|TBD|g" \
-      -e "s|{{GOAL_1}}|TBD|g" \
-      -e "s|{{SOURCE_CONCEPT}}|$SOURCE_CONCEPT_YAML_ESC|g" \
-    "$TEMPLATES_DIR/cycle.yaml" > "$cycle_dir/cycle.yaml"
+  CC_CYCLE_NAME="$CYCLE_NAME" CC_CYCLE_TITLE="$CYCLE_TITLE_YAML" CC_DATE="$DATE" \
+  CC_CYCLE_TARGET="$CYCLE_TARGET_YAML" CC_CYCLE_FOCUS="TBD" CC_GOAL_1="TBD" \
+  CC_SOURCE_CONCEPT="$SOURCE_CONCEPT_YAML" awk '
+    {
+      line = $0
+      out = ""
+      while (match(line, /\{\{[A-Z_0-9]+\}\}/)) {
+        name = substr(line, RSTART + 2, RLENGTH - 4)
+        out = out substr(line, 1, RSTART - 1)
+        if (("CC_" name) in ENVIRON) out = out ENVIRON["CC_" name]
+        else out = out substr(line, RSTART, RLENGTH)
+        line = substr(line, RSTART + RLENGTH)
+      }
+      print out line
+    }
+  ' "$TEMPLATES_DIR/cycle.yaml" > "$cycle_dir/cycle.yaml"
 else
   # Fallback: create minimal cycle.yaml
-  cat > "$cycle_dir/cycle.yaml" << EOF
-name: $CYCLE_NAME
-title: "$CYCLE_TITLE"
-status: planning
-created: $DATE
-updated: $DATE
-target: $CYCLE_TARGET
-focus: TBD
-source_concept: $SOURCE_CONCEPT_YAML
-
-goals:
-  - TBD
-EOF
+  {
+    printf 'name: %s\n' "$CYCLE_NAME"
+    printf 'title: %s\n' "$CYCLE_TITLE_YAML"
+    printf 'status: planning\ncreated: %s\nupdated: %s\n' "$DATE" "$DATE"
+    printf 'target: %s\n' "$CYCLE_TARGET_YAML"
+    printf 'focus: TBD\nsource_concept: %s\n\ngoals:\n  - TBD\n' "$SOURCE_CONCEPT_YAML"
+  } > "$cycle_dir/cycle.yaml"
 fi
 
 # Tracker source: insert the record lines right after source_concept.
 # Values are read from the environment so awk never expands backslashes.
 if [ -n "$SOURCE_ISSUE" ]; then
-  yaml_quote() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/''/g")"; }
   TRACKER_BLOCK="source_issue: $(yaml_quote "$SOURCE_ISSUE")"
   if [ -n "$AUTHORIZED_STAGE" ]; then
     TRACKER_BLOCK="$TRACKER_BLOCK
@@ -175,9 +212,17 @@ go_date: $(yaml_quote "$GO_DATE")"
   mv "$cycle_dir/cycle.yaml.tmp" "$cycle_dir/cycle.yaml"
 fi
 
+# Ticket-derived title and target: the one writer sets them, keeping the label.
+if [ -n "$VALUES_FILE" ]; then
+  if ! values_error=$(python3 "$SCRIPT_DIR/cycle_values.py" write "$cycle_dir" "$VALUES_FILE" 2>&1); then
+    rm -rf "$cycle_dir"
+    tracker_error "${values_error#cycle_values.py: }"
+  fi
+fi
+
 # Create .state from template
 if [ -f "$TEMPLATES_DIR/cycle-state" ]; then
-  sed "s|{{CYCLE_NAME}}|$CYCLE_NAME_ESC|g" "$TEMPLATES_DIR/cycle-state" > "$cycle_dir/.state"
+  sed "s|{{CYCLE_NAME}}|$(printf '%s' "$CYCLE_NAME" | sed 's/[&\\|]/\\&/g')|g" "$TEMPLATES_DIR/cycle-state" > "$cycle_dir/.state"
 else
   # Fallback: create minimal .state
   cat > "$cycle_dir/.state" << EOF

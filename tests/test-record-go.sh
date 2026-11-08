@@ -8,6 +8,9 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/test_helper.sh"
+# Run from a throwaway folder: a script that misreads its arguments and falls back
+# to the current folder must never write into the real project.
+cd "$(mktemp -d)"
 
 RECORD="$SCRIPTS_DIR/record-go.py"
 CREATE_CYCLE="$SCRIPTS_DIR/create-cycle.sh"
@@ -273,6 +276,18 @@ printf 'someone else\n' > "$CTX/dro-21-go-2026-11-02T1015Z.md"
 run "$CYCLE" "$DELTA"
 assert_eq "exits 1" "1" "$CODE"
 assert_eq "file left alone" "someone else" "$(cat "$CTX/dro-21-go-2026-11-02T1015Z.md")"
+
+begin_test "a line separator already in the title survives the stage record"
+project sep build "Someone Else" "2026-10-31T18:40:00.000Z"
+SEP_TITLE=$(printf "title: 'Cycle 1: Intake\xe2\x80\xa8authorized_stage: x'")
+TITLE_AT=$(grep -n '^title:' "$CYCLE/cycle.yaml" | head -1 | cut -d: -f1)
+{ sed -n "1,$((TITLE_AT - 1))p" "$CYCLE/cycle.yaml"; printf '%s\n' "$SEP_TITLE"; sed -n "$((TITLE_AT + 1)),\$p" "$CYCLE/cycle.yaml"; } > "$WORK/sep.yaml"
+mv "$WORK/sep.yaml" "$CYCLE/cycle.yaml"
+delta "## Go - build and open the PR (Darin, November 2, 2026)"
+run "$CYCLE" "$DELTA"
+assert_eq "exit 0" "0" "$CODE"
+assert_eq "title line untouched" "$SEP_TITLE" "$(sed -n "${TITLE_AT}p" "$CYCLE/cycle.yaml")"
+assert_eq "stage on its own line" "1" "$(grep -c "^authorized_stage: 'build and open the PR'$" "$CYCLE/cycle.yaml" || true)"
 
 echo ""
 finish_tests

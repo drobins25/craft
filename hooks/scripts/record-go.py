@@ -43,7 +43,7 @@ import tempfile
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from annotate_write import write_atomic  # noqa: E402
-from tracker_comments import read_key, slug, stamp_of  # noqa: E402
+from tracker_comments import read_key, slug, split_lines, stamp_of  # noqa: E402
 
 KEYS = ('authorized_stage', 'go_author', 'go_date')
 MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
@@ -115,7 +115,7 @@ def substitute(old_stage, new_stage, stage_line, unreadable):
 
 def new_yaml(yaml_text, record):
     """The yaml with the three record lines replaced, or inserted after source_issue."""
-    lines = yaml_text.splitlines(True)
+    lines = split_lines(yaml_text)
     values = dict(zip(KEYS, record))
     if has_line(yaml_text, KEYS[0]):
         for i, line in enumerate(lines):

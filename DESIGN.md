@@ -301,6 +301,7 @@ All hooks defined in `hooks/hooks.json`. Scripts in `hooks/scripts/`.
 | `find-issue-cycle.py` | Find the planning, ready or active cycle a tracker issue already has |
 | `snapshot-delta.py` | Copy only the comments and issue text new since the last copy into a tracker cycle's context |
 | `record-go.py` | Re-resolve the newest Go from that copy and update the cycle's stage record |
+| `follow-issue.py` | Tell a planning flow whether a tracker cycle still matches its issue (`commands/references/tracker-follow.md`): `check` records a rewritten title or description in the cycle, and `keep` or `update` answer the card, mark the context README's issue copies `(current)` or `(superseded)`, and clear the record |
 | `question-answers.py` | List which questions Craft posted on the issue now have answers |
 | `delete-story.sh` | Remove a story file |
 | `move-story.sh` | Move story between backlog and cycle |
@@ -451,11 +452,11 @@ Key fields:
 
 ```yaml
 name: cycle-slug
-title: "Cycle NN: Display Title"
+title: 'Cycle NN: Display Title'
 status: planning | ready | active | complete
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
-target: One-line description of what ships
+target: 'One-line description of what ships'
 focus: Primary focus area
 source_concept: [planning/concept-a.md, planning/concept-b.md]   # may be empty []
 
@@ -464,11 +465,13 @@ goals:
   - Outcome 2
 ```
 
+Craft's scripts write `title` and `target` (`create-cycle.sh`), and `focus` and `goals` once they hold ticket text (`cycle_values.py`), as one single-quoted line each with every `'` doubled. Older double-quoted or plain values still read.
+
 **`source_concept`** - YAML flow list of planning doc paths (relative to project root) this cycle is sourced from. Empty list `[]` means the cycle is freeform (no planning source). When populated, cycle-design routes story-creation moments to the From planning protocol (`commands/references/story-from-planning.md`) so each planning-extracted story's spark draws from the planning content. Stories added during the add-a-separate-story moment within a planning-sourced cycle remain freeform and get no `source_concept` of their own. Captured at cycle creation via `create-cycle.sh`'s 5th positional arg, gated behind the Step 1 verbatim-quote rule + AskUserQuestion safety gate.
 
 **`source_issue`, `authorized_stage`, `go_author`, `go_date`** - Present only on tracker-sourced cycles, as one-line single-quoted keys directly after `source_concept`. A cycle created without an issue has none of them, and a cycle for an issue that had no Go has only `source_issue`. Written by `create-cycle.sh`'s 6th to 9th positional args (issue key, stage, Go author, Go date); the stage and what follows it are left out when the issue had no Go. `authorized_stage` is `plan`, `build` or `build and open the PR`; a hold Go creates no cycle. Both build stages require `go_author` and `go_date`. `go_author` and `go_date` are the tracker's record of the Go that granted the stage and are never rewritten by lifecycle scripts. Only a refresh (`record-go.py`) updates the three, and only when it finds a newer Go: a Go on a cycle that had none adds them, and an unreadable newest Go narrows the stage to `plan`. The issue's status never grants or limits work; only the newest Go does. `cycle-stage.sh` reads them before implementation starts: no `source_issue` or no `authorized_stage` key means implement (an issue with no Go works as before), build stages implement, and `plan`, `hold`, or an empty or unknown stage stop.
 
-**`context/`** - Created by tracker intake (`commands/references/tracker-intake.md`) when a cycle starts from an issue key or URL. Holds the issue and every comment copied verbatim, the Go comment when one exists, and a README naming the source. Stories written into the cycle cite these files by absolute path so planning starts from what was decided. Each refresh (`commands/references/tracker-refresh.md`) adds dated files with only the comments and issue text that are new, and earlier copies are never changed.
+**`context/`** - Created by tracker intake (`commands/references/tracker-intake.md`) when a cycle starts from an issue key or URL. Holds the issue and every comment copied verbatim, the Go comment when one exists, and a README naming the source. Stories written into the cycle cite these files by absolute path so planning starts from what was decided. Each refresh (`commands/references/tracker-refresh.md`) adds dated files with only the comments and issue text that are new, and earlier copies are never changed. A follow (`follow-issue.py`) also marks each issue copy's README row ` (current)` or ` (superseded)`; the copy files themselves are never changed.
 
 ---
 

@@ -5,6 +5,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/read-key.sh"
 ORCH_INDEX="$(dirname "$SCRIPT_DIR")/../reference/orchestration-index.min"
 COLD_INDEX="$(dirname "$SCRIPT_DIR")/../reference/cold-start-index.min"
 
@@ -60,7 +61,7 @@ if [ -f "${PROJECT_ROOT}.craft/.global-state" ]; then
   if [ -n "$PLANNING_CYCLE" ]; then
     plan_title=""
     if [ -f "${PROJECT_ROOT}.craft/cycles/$PLANNING_CYCLE/cycle.yaml" ]; then
-      plan_title=$(grep "^title:" "${PROJECT_ROOT}.craft/cycles/$PLANNING_CYCLE/cycle.yaml" 2>/dev/null | sed 's/title: *//' | tr -d '"')
+      plan_title=$(read_key "${PROJECT_ROOT}.craft/cycles/$PLANNING_CYCLE/cycle.yaml" title)
     fi
     plan_display="${plan_title:-$PLANNING_CYCLE}"
     context="[Craft:${project_tag}PLANNING cycle '$plan_display' — stories go to ${PROJECT_ROOT}.craft/cycles/$PLANNING_CYCLE/stories/]"
@@ -68,7 +69,7 @@ if [ -f "${PROJECT_ROOT}.craft/.global-state" ]; then
   elif [ -n "$ACTIVE_CYCLE" ]; then
     cycle_title=""
     if [ -f "${PROJECT_ROOT}.craft/cycles/$ACTIVE_CYCLE/cycle.yaml" ]; then
-      cycle_title=$(grep "^title:" "${PROJECT_ROOT}.craft/cycles/$ACTIVE_CYCLE/cycle.yaml" 2>/dev/null | sed 's/title: *//' | tr -d '"')
+      cycle_title=$(read_key "${PROJECT_ROOT}.craft/cycles/$ACTIVE_CYCLE/cycle.yaml" title)
     fi
     cycle_display="${cycle_title:-$ACTIVE_CYCLE}"
 

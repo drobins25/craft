@@ -11,6 +11,9 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/test_helper.sh"
+# Run from a throwaway folder: a script that misreads its arguments and falls back
+# to the current folder must never write into the real project.
+cd "$(mktemp -d)"
 source "$SCRIPT_DIR/fixtures/minimal.sh"
 source "$SCRIPT_DIR/fixtures/with-cycle.sh"
 source "$SCRIPT_DIR/fixtures/with-story.sh"

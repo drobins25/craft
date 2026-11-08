@@ -38,6 +38,7 @@ mtime_of() {
 # Resolve project root for state checks
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/find-workshop.sh" 2>/dev/null || exit 0
+source "$SCRIPT_DIR/read-key.sh"
 
 if [ -z "$PROJECT_ROOT" ] || [ ! -d "${PROJECT_ROOT}.craft" ]; then
   exit 0
@@ -49,9 +50,22 @@ CYCLE_TITLE=""; ACTIVE_CYCLE=""; CURRENT_STORY=""; CURRENT_CHUNK=""; TOTAL_CHUNK
 CYCLE_STATE_FILE="${PROJECT_ROOT}.craft/cycles/${ACTIVE_CYCLE}/.state"
 [ -n "$ACTIVE_CYCLE" ] && [ -f "$CYCLE_STATE_FILE" ] && source "$CYCLE_STATE_FILE"
 if [ -n "$ACTIVE_CYCLE" ] && [ -f "${PROJECT_ROOT}.craft/cycles/${ACTIVE_CYCLE}/cycle.yaml" ]; then
-  CYCLE_TITLE=$(grep "^title:" "${PROJECT_ROOT}.craft/cycles/${ACTIVE_CYCLE}/cycle.yaml" 2>/dev/null | sed 's/title: *//' | tr -d '"')
+  CYCLE_TITLE=$(read_key "${PROJECT_ROOT}.craft/cycles/${ACTIVE_CYCLE}/cycle.yaml" title)
 fi
 [ -z "$CYCLE_TITLE" ] && CYCLE_TITLE="$ACTIVE_CYCLE"
+# The title only ever goes inside the hand-built JSON below, so it is escaped
+# here once: a quote, a backslash or a control character would otherwise break
+# the message a hook must print as valid JSON.
+json_text() { # stdin, less one trailing newline -> escaped for the inside of a JSON string
+  python3 -c '
+import json, sys
+text = sys.stdin.read()
+if text.endswith("\n"):
+    text = text[:-1]
+sys.stdout.write(json.dumps(text, ensure_ascii=False)[1:-1])
+'
+}
+CYCLE_TITLE=$(printf '%s' "$CYCLE_TITLE" | json_text)
 
 # Progress dial: quarter-rounded COMPLETED chunks (CURRENT_CHUNK is the one in
 # progress, so completed = CURRENT_CHUNK - 1). ◔ floor while work is in motion -
@@ -106,8 +120,8 @@ BREADCRUMB="${PROJECT_ROOT}.craft/.continuation"
 if [ -f "$BREADCRUMB" ]; then
   CRUMB_AGE=$(($(date +%s) - $(mtime_of "$BREADCRUMB")))
   if [ "$CRUMB_AGE" -lt 1800 ]; then
-    ACTION=$(grep '^ACTION:' "$BREADCRUMB" | sed 's/^ACTION: //' | tr -d '"')
-    SKILL=$(grep '^SKILL:' "$BREADCRUMB" | sed 's/^SKILL: //')
+    ACTION=$(grep '^ACTION:' "$BREADCRUMB" | sed 's/^ACTION: //' | tr -d '"' | json_text)
+    SKILL=$(grep '^SKILL:' "$BREADCRUMB" | sed 's/^SKILL: //' | json_text)
     ARGS=$(grep '^ARGS:' "$BREADCRUMB" | sed 's/^ARGS: //')
     rm -f "$BREADCRUMB"
     if [ -n "$SKILL" ]; then

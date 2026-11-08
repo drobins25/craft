@@ -6,6 +6,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/read-key.sh"
 
 # Walk up to find project root (handles monorepo subdirectories)
 PROJECT_ROOT=""
@@ -30,7 +31,7 @@ echo "--- CRAFT CONTEXT (post-compaction recovery) ---"
 if [ -n "$ACTIVE_CYCLE" ]; then
   cycle_title=""
   if [ -f "${PROJECT_ROOT}.craft/cycles/$ACTIVE_CYCLE/cycle.yaml" ]; then
-    cycle_title=$(grep "^title:" "${PROJECT_ROOT}.craft/cycles/$ACTIVE_CYCLE/cycle.yaml" 2>/dev/null | sed 's/title: *//' | tr -d '"')
+    cycle_title=$(read_key "${PROJECT_ROOT}.craft/cycles/$ACTIVE_CYCLE/cycle.yaml" title)
   fi
   echo "Active cycle: ${cycle_title:-$ACTIVE_CYCLE}"
   [ -n "$PM" ] && echo "Package manager: $PM"

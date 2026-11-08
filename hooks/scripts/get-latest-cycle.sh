@@ -4,7 +4,9 @@
 #   --status=<s>  pick the highest-numbered cycle whose cycle.yaml status
 #                 equals <s> exactly (flag may come before or after the root)
 #
-# Output: key=value pairs for the most recent cycle
+# Output: plain key=value pairs for the most recent cycle, one per line, the
+# value running from the = to the end of the line (a title is printed verbatim,
+# quotes and all), the same form every other craft script hands the model
 #   LATEST_CYCLE=45-hero-card-share
 #   CYCLE_TITLE=Cycle 45: Share + Signature Moments
 #   CYCLE_STATUS=planning
@@ -13,9 +15,12 @@
 #   STORIES_COMPLETE=0
 #   STORIES_PLANNING=0
 #
-# If no cycles exist (or none match --status), outputs LATEST_CYCLE=""
+# If no cycles exist (or none match --status), outputs LATEST_CYCLE= (empty)
 
 set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/read-key.sh"
 
 PROJECT="."
 WANT_STATUS=""
@@ -31,7 +36,7 @@ if [ -z "$PROJECT" ]; then PROJECT="."; fi
 CYCLES_DIR="$PROJECT/.craft/cycles"
 
 if [ ! -d "$CYCLES_DIR" ]; then
-  echo 'LATEST_CYCLE=""'
+  echo 'LATEST_CYCLE='
   exit 0
 fi
 
@@ -57,24 +62,24 @@ else
 fi
 
 if [ -z "$LATEST" ]; then
-  echo 'LATEST_CYCLE=""'
+  echo 'LATEST_CYCLE='
   exit 0
 fi
 
 CYCLE_YAML="$CYCLES_DIR/$LATEST/cycle.yaml"
 STORIES_DIR="$CYCLES_DIR/$LATEST/stories"
 
-echo "LATEST_CYCLE=\"$LATEST\""
+echo "LATEST_CYCLE=$LATEST"
 
 # Read cycle.yaml for title and status
 if [ -f "$CYCLE_YAML" ]; then
-  TITLE=$(grep "^title:" "$CYCLE_YAML" | head -1 | sed 's/^title: *//' | sed 's/^"//;s/"$//')
+  TITLE=$(read_key "$CYCLE_YAML" title)
   STATUS=$(grep "^status:" "$CYCLE_YAML" | head -1 | awk '{print $2}')
-  echo "CYCLE_TITLE=\"$TITLE\""
-  echo "CYCLE_STATUS=\"$STATUS\""
+  echo "CYCLE_TITLE=$TITLE"
+  echo "CYCLE_STATUS=$STATUS"
 else
-  echo 'CYCLE_TITLE=""'
-  echo 'CYCLE_STATUS=""'
+  echo 'CYCLE_TITLE='
+  echo 'CYCLE_STATUS='
 fi
 
 # Count stories by status
@@ -83,13 +88,13 @@ if [ -d "$STORIES_DIR" ]; then
   READY=$(grep -l "^status: ready" "$STORIES_DIR"/*.md 2>/dev/null | wc -l | tr -d ' ')
   COMPLETE=$(grep -l "^status: complete" "$STORIES_DIR"/*.md 2>/dev/null | wc -l | tr -d ' ')
   PLANNING=$(grep -l "^status: planning" "$STORIES_DIR"/*.md 2>/dev/null | wc -l | tr -d ' ')
-  echo "STORIES_TOTAL=\"$TOTAL\""
-  echo "STORIES_READY=\"$READY\""
-  echo "STORIES_COMPLETE=\"$COMPLETE\""
-  echo "STORIES_PLANNING=\"$PLANNING\""
+  echo "STORIES_TOTAL=$TOTAL"
+  echo "STORIES_READY=$READY"
+  echo "STORIES_COMPLETE=$COMPLETE"
+  echo "STORIES_PLANNING=$PLANNING"
 else
-  echo 'STORIES_TOTAL="0"'
-  echo 'STORIES_READY="0"'
-  echo 'STORIES_COMPLETE="0"'
-  echo 'STORIES_PLANNING="0"'
+  echo 'STORIES_TOTAL=0'
+  echo 'STORIES_READY=0'
+  echo 'STORIES_COMPLETE=0'
+  echo 'STORIES_PLANNING=0'
 fi

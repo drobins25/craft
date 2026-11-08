@@ -25,7 +25,7 @@ If the host has no tracker tools, or a read fails, go to `## No tracker tools`.
 python3 "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/snapshot-delta.py" <cycle-dir> <staged comments> [--issue <staged issue>] --tool "<tool names as used>"
 ```
 
-It prints five `key=value` lines: `comments_file`, `new_comments`, `issue_file`, `stamp`, `say`. Then delete the staging folder.
+It prints five `key=value` lines: `comments_file`, `new_comments`, `issue_file`, `stamp`, `say`. Then delete the staging folder. An issue-text change is also recorded in the cycle, so the next story written or planned there stops at `${CLAUDE_PLUGIN_ROOT}/commands/references/tracker-follow.md`'s card.
 
 ## Stage
 

@@ -29,6 +29,8 @@ Remember the cycle's `source_concept` for the rest of this session - it determin
 
 If the file doesn't exist or status is not `planning` → show error and offer cycle picker.
 
+**Tracker issue check**: read `.craft/cycles/[arg]/cycle.yaml`. If it has a non-empty `source_issue`, Read `${CLAUDE_PLUGIN_ROOT}/commands/references/tracker-follow.md` with that cycle's directory and continue only through its `## Continue`. A cycle without a `source_issue` skips this and nothing below changes.
+
 ### Step D1: Show Current State
 
 Read all stories in the cycle. Check which have sparks, type tags, and creative tool output:

@@ -19,22 +19,18 @@ set -e
 
 CYCLE_DIR="${1:-}"
 YAML="$CYCLE_DIR/cycle.yaml"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=read-key.sh
+source "$SCRIPT_DIR/read-key.sh"
 
 if [ -z "$CYCLE_DIR" ] || [ ! -f "$YAML" ]; then
   echo "cycle-stage.sh: no cycle.yaml in '${CYCLE_DIR}'" >&2
   exit 1
 fi
 
-# Value of a flat top-level key written as a one-line single-quoted scalar.
-read_key() {
-  grep -m1 "^$1:" "$YAML" 2>/dev/null \
-    | sed -e "s/^$1:[[:space:]]*//" -e "s/[[:space:]]*\$//" \
-          -e "s/^'\(.*\)'\$/\1/" -e "s/''/'/g" || true
-}
-
-KEY=$(read_key source_issue)
-STAGE=$(read_key authorized_stage)
-AUTHOR=$(read_key go_author)
+KEY=$(read_key "$YAML" source_issue)
+STAGE=$(read_key "$YAML" authorized_stage)
+AUTHOR=$(read_key "$YAML" go_author)
 
 IMPLEMENT=yes
 SAY=""

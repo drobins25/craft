@@ -302,5 +302,31 @@ assert_not_contains "claims no work" "in flight" "$RESULT"
 rm -rf "$TEST_DIR"
 echo ""
 
+# Test 11: a backslash in a hand-off note still gives a valid JSON message,
+# and the note's text reads back exactly
+begin_test "Hand-off note with a backslash stays valid JSON"
+
+TEST_DIR=$(create_craft_with_story "test-cycle" "test-story" "Test Story" "3" "active")
+BS='\'
+printf 'ACTION: Continue workflow session "dir%sx" from stage 2\nSKILL: craft:workflow-run\n' "$BS" > "$TEST_DIR/.craft/.continuation"
+
+JSON='{"stop_hook_active": false}'
+set +e
+RESULT=$(cd "$TEST_DIR" && unset CRAFT_PROJECT_ROOT && echo "$JSON" | bash "$STOP_HOOK_SCRIPT" 2>/dev/null)
+EXIT_CODE=$?
+set -e
+
+assert_eq "exits 0" "0" "$EXIT_CODE"
+# Exact comparisons: grep would read the backslash as a pattern character
+MESSAGE=$(printf '%s' "$RESULT" | python3 -c 'import json,sys; sys.stdout.write(json.loads(sys.stdin.read())["systemMessage"])' 2>/dev/null || echo "INVALID JSON")
+assert_eq "note reads back with its backslash" "Continue workflow session dir${BS}x from stage 2" "${MESSAGE##* · }"
+case "$MESSAGE" in *"handing off → craft:workflow-run · "*) SKILL_SHOWN=yes ;; *) SKILL_SHOWN=no ;; esac
+assert_eq "skill named" "yes" "$SKILL_SHOWN"
+LINE_BREAKS=$(printf '%s' "$RESULT" | python3 -c 'import json,sys; print(json.loads(sys.stdin.read())["systemMessage"].count("\n"))' 2>/dev/null || echo "INVALID JSON")
+assert_eq "no stray line break in the message" "0" "$LINE_BREAKS"
+
+rm -rf "$TEST_DIR"
+echo ""
+
 # --- Summary ---
 finish_tests

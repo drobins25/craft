@@ -145,6 +145,20 @@ def _parse_scalar(raw):
         return ""
     if s[0] in ('"', "'"):
         quote = s[0]
+        if quote == "'":
+            # A doubled quote inside a single-quoted scalar is one literal quote.
+            out = []
+            i = 1
+            while i < len(s):
+                if s[i] == "'":
+                    if s[i + 1:i + 2] == "'":
+                        out.append("'")
+                        i += 2
+                        continue
+                    return "".join(out)
+                out.append(s[i])
+                i += 1
+            return s
         end = s.find(quote, 1)
         if end != -1:
             return s[1:end]

@@ -20,6 +20,26 @@ SCRIPTS_DIR="$TEST_HELPER_DIR/../hooks/scripts"
 TEMPLATES_DIR="$TEST_HELPER_DIR/../templates"
 PLUGIN_ROOT="$TEST_HELPER_DIR/.."
 
+# --- Strict YAML readers ---
+# A flat YAML file read by a real parser (PyYAML, else ruby's Psych) and printed as
+# JSON, so a test can prove a value round-trips through a strict reader. Returns 127
+# when neither parser is installed.
+
+strict_json() {
+  local file="$1"
+  if python3 -c 'import yaml' 2>/dev/null; then
+    python3 -c 'import json,sys,yaml; print(json.dumps(yaml.safe_load(open(sys.argv[1], encoding="utf-8")), default=str))' "$file"
+  elif command -v ruby >/dev/null 2>&1; then
+    ruby -ryaml -rjson -rdate -e 'puts JSON.generate(YAML.safe_load(File.read(ARGV[0]), permitted_classes: [Date]))' "$file"
+  else
+    return 127
+  fi
+}
+
+strict_get() { # strict_get <file> <key>
+  strict_json "$1" | python3 -c 'import json,sys; sys.stdout.write(str(json.load(sys.stdin)[sys.argv[1]]))' "$2"
+}
+
 # --- Counters ---
 PASS=0
 FAIL=0

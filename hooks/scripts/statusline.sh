@@ -34,10 +34,16 @@ else
 fi
 
 # Resolve project root (CRAFT_PROJECT_ROOT set by session-start, or find-workshop.sh fallback)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Without the helper the status line shows the cycle slug instead of failing
+if [ -f "$SCRIPT_DIR/read-key.sh" ]; then
+  source "$SCRIPT_DIR/read-key.sh"
+else
+  read_key() { return 0; }
+fi
 if [ -n "$CRAFT_PROJECT_ROOT" ]; then
   ROOT="${CRAFT_PROJECT_ROOT%/}"
 else
-  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   source "$SCRIPT_DIR/find-workshop.sh" 2>/dev/null || true
   ROOT="${PROJECT_ROOT%/}"
 fi
@@ -64,7 +70,7 @@ fi
 # Get cycle display name (prefer title from yaml, fall back to slug)
 cycle_name=""
 if [ -f "$ROOT/.craft/cycles/$ACTIVE_CYCLE/cycle.yaml" ]; then
-  cycle_name=$(grep "^title:" "$ROOT/.craft/cycles/$ACTIVE_CYCLE/cycle.yaml" 2>/dev/null | sed 's/title: *//' | tr -d '"')
+  cycle_name=$(read_key "$ROOT/.craft/cycles/$ACTIVE_CYCLE/cycle.yaml" title)
 fi
 if [ -z "$cycle_name" ]; then
   cycle_name=$(echo "$ACTIVE_CYCLE" | sed 's/^[0-9]*-//')

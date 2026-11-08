@@ -80,6 +80,8 @@ Read the story file path from args or context. Verify the file exists. Identify 
 
 **Do NOT use `$CRAFT_PROJECT_ROOT` as the project root** — in monorepos it may point to the monorepo root, not the sub-project containing the story. Always derive from the story file path.
 
+**Tracker issue check**: for a story in a cycle, read that cycle directory's `cycle.yaml` (the story's own cycle, from the story path, or `CYCLE:` in batch, checked once per batch). If it has a non-empty `source_issue`, Read `${CLAUDE_PLUGIN_ROOT}/commands/references/tracker-follow.md` with that cycle's directory and continue only through its `## Continue`, before the goal reads in S-1 and M-1. A backlog story, or a cycle without a `source_issue`, skips this and nothing below changes.
+
 ### 0.1b Gather Sibling Context (Smart)
 
 **Skip if:** Story is in backlog (no cycle context).

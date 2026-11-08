@@ -5,10 +5,11 @@
 set -e
 
 # Resolve project root (CRAFT_PROJECT_ROOT set by session-start, or find-workshop.sh fallback)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/read-key.sh"
 if [ -n "$CRAFT_PROJECT_ROOT" ]; then
   ROOT="${CRAFT_PROJECT_ROOT%/}"
 else
-  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   source "$SCRIPT_DIR/find-workshop.sh" 2>/dev/null || true
   ROOT="${PROJECT_ROOT%/}"
 fi
@@ -53,7 +54,7 @@ if [ -f "$ROOT/.craft/.global-state" ]; then
   source "$ROOT/.craft/.global-state"
 
   if [ -n "$ACTIVE_CYCLE" ] && [ -f "$ROOT/.craft/cycles/$ACTIVE_CYCLE/.state" ]; then
-    cycle_title=$(grep "^title:" "$ROOT/.craft/cycles/$ACTIVE_CYCLE/cycle.yaml" 2>/dev/null | sed 's/title: *//' | tr -d '"')
+    cycle_title=$(read_key "$ROOT/.craft/cycles/$ACTIVE_CYCLE/cycle.yaml" title)
     echo "## Cycle State: ${cycle_title:-$ACTIVE_CYCLE}" >> "$export_file"
     echo '```bash' >> "$export_file"
     cat "$ROOT/.craft/cycles/$ACTIVE_CYCLE/.state" >> "$export_file"

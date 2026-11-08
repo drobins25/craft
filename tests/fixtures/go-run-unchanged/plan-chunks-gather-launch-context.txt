@@ -1,0 +1,9 @@
+### 0.1 Gather Launch Context
+
+Read the story file path from args or context. Verify the file exists. Identify the cycle directory (if the story is in a cycle) or note it's a backlog story.
+
+**Derive project root from the story file path** — strip everything after `/.craft/`. For example:
+- Story at `/repo/apps/craftsman/.craft/cycles/01/stories/foo.md` → project root is `/repo/apps/craftsman/`
+- Story at `/repo/.craft/backlog/foo.md` → project root is `/repo/`
+
+**Do NOT use `$CRAFT_PROJECT_ROOT` as the project root** — in monorepos it may point to the monorepo root, not the sub-project containing the story. Always derive from the story file path.

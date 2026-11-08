@@ -2,6 +2,13 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.15.4 - 2026-11-07
+
+- Changed cycles made from a tracker issue so they follow the issue when you rewrite it. Before writing or planning a story, craft shows what changed in the ticket and offers to update the cycle from it, keep the cycle as it is, or stop. If the ticket can't be reached, craft says so instead of carrying on silently.
+- Changed how bug tickets are read. Craft treats the ticket as the problem to solve and asks what the story should do about it, instead of copying the ticket's wording in as the fix.
+- Fixed cycle titles, targets and goals copied from a tracker ticket losing text. Quotes, `#`, brackets and other characters in the ticket now show exactly as written in the status line, the dashboard and every craft message, including after the cycle follows a rewritten ticket.
+- Fixed craft's end-of-turn message breaking when a workflow session name contains a backslash.
+
 ## 2.15.3 - 2026-11-04
 
 - Fixed `/craft:mockup` refusing to start while a mockup from an earlier session was still open. Craft now names the mockup you left open and starts the new one, and you can resume or abandon the old one by name whenever you like. Only a mockup open in the same conversation still asks you to finish it first.
