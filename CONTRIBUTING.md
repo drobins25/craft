@@ -112,7 +112,7 @@ The hooks module (`hooks/register.tsx`) has local-only checks. None of them run 
 
 - `claude plugin validate .` - exits 0 when the manifest is sound; the output should include a `hooks:` line naming the module.
 - `claude plugin test` from the repo root - runs the module's kit tests (`tests/progress-band.test.ts`) with no network or sign-in. It collects every `*.test.ts` under the folder it runs in, so run it where no dependency folder holds test files.
-- `tsc -p .` - type-checks the module against the engine-written `.claude-plugin/types/`. That folder only exists after a `--plugin-dir` launch, so launch a separate checkout (with its own `CLAUDE_CONFIG_DIR`, never this working tree), then run `tsc -p .` inside that same checkout.
+- `tsc -p .` - type-checks the module and its kit tests against the engine-written `.claude-plugin/types/`. Claude Code writes that folder into the working tree the first time `claude plugin test` or `claude plugin validate .` loads the module, and git ignores it, so run one of those first, then `tsc -p .` in place. Never launch this working tree with `--plugin-dir`.
 
 CI covers the module through `tests/test-progress-band-wiring.sh`, which stays network-free and package-free.
 

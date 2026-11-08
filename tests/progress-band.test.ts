@@ -1,8 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
-
-type Body = Parameters<typeof test>[1]
-type Engine = Parameters<Body>[0]
-type On = Parameters<Body>[1]
+import type { Engine } from 'claude-code/testing'
+import type { On, RenderElement } from 'claude-code'
 type Files = Map<string, string>
 
 const ROOT = '/work/p'
@@ -15,7 +13,7 @@ function stubEngine(on: On) {
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   on('command.register', (_, e) => {
     registered.push({ name: e.name, description: e.description })
-    return { value: undefined }
+    return { value: { command: e.name } }
   })
   return registered
 }
@@ -108,7 +106,7 @@ async function open(
   // Beneath the plugin, standing for the engine's own drawing of the band's place.
   on('ui.render', ($e, e) => {
     const { Text } = $e.ui.resolve(e)
-    return h(Text, null, 'engine')
+    return h(Text, null, 'engine') as RenderElement
   })
   const surface = options.surface === undefined ? 'terminal' : options.surface
   await $.session.start({ cwd: options.sessionRoot ?? ROOT, surface, isInteractive: surface !== null })
@@ -137,6 +135,11 @@ async function draw($: Engine, hasSurvey = false): Promise<Drawn> {
 }
 
 const texts = (drawn: Drawn) => drawn.map(d => d.text)
+
+// The engine's command.run takes the whole event, origin and presentation
+// included; a test stands in for the user typing the command at the prompt.
+const runCommand = ($: Engine, command: string) =>
+  $.command.run({ command, args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } })
 const ENGINE = ['engine']
 
 test('kit smoke: the kit loads the module and runs only this file', async ($, on) => {
@@ -161,8 +164,8 @@ test('/craft-progress hides, then shows', async ($, on) => {
   stubEngine(on)
   await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
 
-  const first = await $.command.run({ command: 'craft-progress', args: '' })
-  const second = await $.command.run({ command: 'craft-progress', args: '' })
+  const first = await runCommand($, 'craft-progress')
+  const second = await runCommand($, 'craft-progress')
 
   expect(first.text).toBe('Craft progress hidden.')
   expect(second.text).toBe('Craft progress shown.')
@@ -172,7 +175,7 @@ test('hidden is not remembered across sessions', async ($, on) => {
   stubEngine(on)
   await $.session.start({ cwd: '/work', surface: 'terminal', isInteractive: true })
 
-  const first = await $.command.run({ command: 'craft-progress', args: '' })
+  const first = await runCommand($, 'craft-progress')
 
   expect(first.text).toBe('Craft progress hidden.')
 })
@@ -223,7 +226,7 @@ test('a long title can give way, but the label and status never shrink', async (
   const fixed = boxes.filter(b => b.props.flexShrink === 0)
   expect(fixed).toHaveLength(1)
   expect(fixed[0]?.text).toBe('Story 5 building')
-  expect(fixed[0]?.children.map(c => (typeof c === 'string' ? c : c.type))).toEqual(['Text', 'Text'])
+  expect(fixed[0]?.children.map(c => (typeof c === 'string' ? c : (c as { type: string }).type))).toEqual(['Text', 'Text'])
   expect(fixed[0]?.text).not.toContain('A very long')
   const titleText = title.find(t => t.text.includes('A very long'))
   expect(titleText?.props.wrap).toBe('truncate-end')
@@ -396,10 +399,10 @@ test('hidden band draws nothing', async ($, on) => {
   files.set(`${CYCLE}/stories/s.md`, storyFile())
   await open($, on, files)
 
-  await $.command.run({ command: 'craft-progress', args: '' })
+  await runCommand($, 'craft-progress')
   expect(texts(await draw($))).toEqual(ENGINE)
 
-  await $.command.run({ command: 'craft-progress', args: '' })
+  await runCommand($, 'craft-progress')
   expect(texts(await draw($))[1]).toBe('building')
 })
 
@@ -472,6 +475,6 @@ test('a -p session reads nothing and starts no timer', async ($, on) => {
   await clock.advance(3000)
 
   expect(calls).toEqual({ read: [], exists: [], list: [] })
-  const answer = await $.command.run({ command: 'craft-progress', args: '' })
+  const answer = await runCommand($, 'craft-progress')
   expect(answer.text).toBe('Craft progress hidden.')
 })
