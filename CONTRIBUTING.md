@@ -108,6 +108,14 @@ The bash test suite covers hook scripts, state management, and lifecycle operati
 
 Run before opening a PR. All commits should pass.
 
+The hooks module (`hooks/register.tsx`) has local-only checks. None of them run in CI:
+
+- `claude plugin validate .` - exits 0 when the manifest is sound; the output should include a `hooks:` line naming the module.
+- `claude plugin test` from the repo root - runs the module's kit tests (`tests/progress-band.test.ts`) with no network or sign-in. It collects every `*.test.ts` under the folder it runs in, so run it where no dependency folder holds test files.
+- `tsc -p .` - type-checks the module and its kit tests against the engine-written `.claude-plugin/types/`. Only a session that loads the folder with `--plugin-dir` writes that folder (git ignores it); `claude plugin validate .` and `claude plugin test` do not. So type-check in a separate checkout: launch it once with `claude --plugin-dir <checkout>` under its own `CLAUDE_CONFIG_DIR`, then run `tsc -p .` inside that checkout. Never launch this working tree with `--plugin-dir`. Without the folder, `tsc -p .` only reports errors; `noEmit` in `tsconfig.json` keeps it from writing `.js` files into the tree.
+
+CI covers the module through `tests/test-progress-band-wiring.sh`, which stays network-free and package-free.
+
 CI runs these same suites on every pull request targeting `main` - the PR is
 the enforcement layer, the local run is how you stay ahead of it. The suites
 run as five grouped jobs (`dashboard`, `hooks`, `lifecycle`, `flows`, `misc`)

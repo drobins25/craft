@@ -1,0 +1,7 @@
+{
+  "extends": "./.claude-plugin/types/tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true
+  }
+}
