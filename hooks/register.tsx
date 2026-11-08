@@ -1,6 +1,8 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
+const MAX_CHUNKS = 99
+
 import type { ProgressChunk, ProgressSnapshot } from '../types'
 
 // The band's two session-only values: whether the user hid it, and the story
@@ -21,15 +23,21 @@ function frontmatter(text: string): string {
   return text.match(/^---\r?\n([\s\S]*?)\r?\n---/)?.[1] ?? ''
 }
 
+// Drawn text never carries a control character, so a crafted title or state
+// value cannot reach the terminal as an escape sequence.
+function clean(value: string): string {
+  return value.replace(/[\u0000-\u001f\u007f]/g, '')
+}
+
 function field(block: string, key: string): string {
   const m = block.match(new RegExp(`^${key}:[ \\t]*(.*)$`, 'm'))
-  return (m?.[1] ?? '').trim().replace(/^["']|["']$/g, '')
+  return clean(m?.[1] ?? '').trim().replace(/^["']|["']$/g, '')
 }
 
 // Craft's state files are shell assignments, KEY="value", one per line.
 function stateField(text: string, key: string): string {
   const m = text.match(new RegExp(`^${key}="?([^"\\n]*)"?\\s*$`, 'm'))
-  return (m?.[1] ?? '').trim()
+  return clean(m?.[1] ?? '').trim()
 }
 
 async function readOr($: EngineInterface, path: string): Promise<string> {
@@ -115,7 +123,9 @@ function describeStory(path: string, text: string, currentChunk: number): Progre
   const storyStatus = field(meta, 'status')
   const number = field(meta, 'story_number')
   const headings = (text.match(/^### Chunk \d+:/gm) ?? []).length
-  const count = parseInt(field(meta, 'chunks_total'), 10) || headings
+  // A story's chunk count is bounded so a bad frontmatter value cannot make
+  // every refresh allocate and draw an unbounded row of balls.
+  const count = Math.min(parseInt(field(meta, 'chunks_total'), 10) || headings, MAX_CHUNKS)
   const chunksComplete = parseInt(field(meta, 'chunks_complete'), 10) || 0
   const basename = (path.split('/').pop() ?? '').replace(/\.md$/, '')
 
