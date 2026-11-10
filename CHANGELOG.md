@@ -2,6 +2,10 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.17.0 - 2026-11-08
+
+- Changed how craft closes out a code review. It now checks each finding against your project before you see it, drops the ones that turn out not to be real, and shows what is left in one message: what a person using the product sees broken, the command it ran to prove it, the fix it would make and where. You answer with go, or name one finding to change its route first.
+
 ## 2.16.0 - 2026-11-07
 
 - Added a progress band above the prompt while craft builds a story: one ball per chunk, a green ring on the chunk being built that fills once it passes, with the story's name and status on the line above. Type `/craft-progress` to hide or show it for the session. It needs Claude Code 2.1.287 or later; on older versions it simply doesn't appear.

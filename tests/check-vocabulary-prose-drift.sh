@@ -63,6 +63,7 @@ VOCAB_PROSE_NONLINK=(
   "dismissed:a review finding's dismissal line (who and why), never a link"
   "outcome:a review record's clean|findings word, never a link"
   "found_during:a bug's free-text place of discovery, never a link"
+  "error:a command's output quoted in the review close-out example, never a field"
 )
 
 _vocab_prose_is_nonlink() {

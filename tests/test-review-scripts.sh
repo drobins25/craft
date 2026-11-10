@@ -58,7 +58,7 @@ run_graduate() {
 
 CLEAN_BODY=$'## Verified\n\n- Checked the auth path handles expired tokens\n\n## Findings\n\nNone.\n'
 
-TWO_BODY=$'## Verified\n\n- Read the migration end to end\n\n## Findings\n\n### 1. Issue (logic): Off by one in the pager\n\n**Symptom.** Last page empty\n**Expected.** Items shown\n**Actual.** Nothing shown\n**Consequences.** Users miss data\n**Reproduce.** Open page 3\n**Evidence.** pager.py:12\n**Fix.**\n\n```diff\n- end = start + size - 1\n+ end = start + size\n```\n\n### 2. Suggestion (doc-drift): README names the old flag\n\n**Symptom.** README stale\n**Fix.** Update the flag name\n'
+TWO_BODY=$'## Verified\n\n- Read the migration end to end\n\n## Findings\n\n### 1. (logic): Off by one in the pager\n\n**Symptom.** Last page empty\n**Expected.** Items shown\n**Actual.** Nothing shown\n**Consequences.** Users miss data\n**Reproduce.** Open page 3\n**Evidence.** pager.py:12\n**Fix.**\n\n```diff\n- end = start + size - 1\n+ end = start + size\n```\n\n### 2. (doc-drift): README names the old flag\n\n**Symptom.** README stale\n**Fix.** Update the flag name\n'
 
 # --- capture ---
 
@@ -70,11 +70,12 @@ REC=$(printf '%s\n' "$OUT" | tail -1)
 assert_eq "path is under .craft/reviews and date-slugged" "$ROOT/.craft/reviews/$TODAY-branch-feature-x.md" "$REC"
 assert_file_exists "record exists" "$REC"
 KEYS=$(awk '/^---$/{n++; next} n==1{sub(/:.*/,""); printf "%s ", $0}' "$REC")
-assert_eq "key order" "type created captured_at mode strategy reviewed ref focus files lines craft_version reviewer gates issues suggestions patterns outcome " "$KEYS"
+assert_eq "key order" "type created captured_at mode strategy reviewed ref focus files lines craft_version reviewer gates findings outcome " "$KEYS"
 assert_file_contains "outcome clean" "^outcome: clean$" "$REC"
-assert_file_contains "issues 0" "^issues: 0$" "$REC"
-assert_file_contains "suggestions 0" "^suggestions: 0$" "$REC"
-assert_file_contains "patterns 0" "^patterns: 0$" "$REC"
+assert_file_contains "findings 0" "^findings: 0$" "$REC"
+assert_file_not_contains "no issues line" "^issues:" "$REC"
+assert_file_not_contains "no suggestions line" "^suggestions:" "$REC"
+assert_file_not_contains "no patterns line" "^patterns:" "$REC"
 assert_file_contains "craft version override" "^craft_version: 9.9.9$" "$REC"
 assert_file_contains "created is today" "^created: $TODAY$" "$REC"
 assert_file_not_contains "no status key" "^status:" "$REC"
@@ -82,16 +83,15 @@ assert_file_not_contains "no verdict key" "^verdict:" "$REC"
 assert_file_contains "Verified section kept" "^## Verified$" "$REC"
 assert_eq "Findings None." "None." "$(awk '/^## Findings$/{f=1; next} f && NF{print; exit}' "$REC")"
 
-begin_test "findings stamp graduated_to under every heading, docs for doc-drift"
+begin_test "findings stamp a blank graduated_to under every heading, doc-drift included"
 fresh_root
 run_capture "$TWO_BODY"
 assert_eq "exit 0" "0" "$RC"
 REC=$(printf '%s\n' "$OUT" | tail -1)
 assert_eq "line after heading 1 is blank graduated_to" "graduated_to:" "$(grep -A1 '^### 1\. ' "$REC" | tail -1)"
-assert_eq "line after heading 2 is docs" "graduated_to: docs" "$(grep -A1 '^### 2\. ' "$REC" | tail -1)"
-assert_file_contains "issues 1" "^issues: 1$" "$REC"
-assert_file_contains "suggestions 1" "^suggestions: 1$" "$REC"
-assert_file_contains "patterns 0" "^patterns: 0$" "$REC"
+assert_eq "line after the doc-drift heading is blank graduated_to" "graduated_to:" "$(grep -A1 '^### 2\. ' "$REC" | tail -1)"
+assert_file_contains "findings 2" "^findings: 2$" "$REC"
+assert_file_not_contains "no docs stamp" "^graduated_to: docs" "$REC"
 assert_file_contains "outcome findings" "^outcome: findings$" "$REC"
 
 begin_test "finding body is kept verbatim"
@@ -105,16 +105,16 @@ assert_file_contains "diff fence kept" '^+ end = start + size$' "$REC"
 
 begin_test "a heading inside a fenced diff is not a finding"
 fresh_root
-FENCED=$'## Verified\n\n- Read it\n\n## Findings\n\n### 1. Issue (logic): Real one\n\n**Evidence.**\n\n```diff\n### 2. Issue (logic): quoted not real\ngraduated_to: nope\n```\n'
+FENCED=$'## Verified\n\n- Read it\n\n## Findings\n\n### 1. (logic): Real one\n\n**Evidence.**\n\n```diff\n### 2. (logic): quoted not real\ngraduated_to: nope\n```\n'
 run_capture "$FENCED"
 assert_eq "exit 0" "0" "$RC"
 REC=$(printf '%s\n' "$OUT" | tail -1)
-assert_file_contains "issues 1" "^issues: 1$" "$REC"
+assert_file_contains "findings 1" "^findings: 1$" "$REC"
 assert_eq "one stamped graduated_to line outside the fence" "1" "$(grep -c '^graduated_to:$' "$REC")"
 
 begin_test "a graduated_to line quoted inside a fenced Evidence block does not refuse"
 fresh_root
-QUOTED=$'## Verified\n\n- Read it\n\n## Findings\n\n### 1. Suggestion (consistency): Quoted\n\n**Evidence.**\n\n~~~\ngraduated_to: fix-a\n~~~\n'
+QUOTED=$'## Verified\n\n- Read it\n\n## Findings\n\n### 1. (consistency): Quoted\n\n**Evidence.**\n\n~~~\ngraduated_to: fix-a\n~~~\n'
 run_capture "$QUOTED"
 assert_eq "exit 0" "0" "$RC"
 REC=$(printf '%s\n' "$OUT" | tail -1)
@@ -190,14 +190,17 @@ assert_contains "empty Verified stderr" "^missing required field: Verified$" "$E
 run_capture $'## Verified\n\n- ok\n\n## Findings\n\n### 1. Bug (logic): wrong word\n'
 assert_eq "bad heading rc" "2" "$RC"
 assert_contains "bad heading stderr" "^invalid finding heading: ### 1. Bug (logic): wrong word$" "$ERR"
-run_capture $'## Verified\n\n- ok\n\n## Findings\n\n### 1. Issue (typo): wrong category\n'
+run_capture $'## Verified\n\n- ok\n\n## Findings\n\n### 1. Issue (logic): a\n'
+assert_eq "old severity heading rc" "2" "$RC"
+assert_contains "old severity heading stderr" "^invalid finding heading: ### 1. Issue (logic): a$" "$ERR"
+run_capture $'## Verified\n\n- ok\n\n## Findings\n\n### 1. (typo): wrong category\n'
 assert_eq "bad category rc" "2" "$RC"
-run_capture $'## Verified\n\n- ok\n\n## Findings\n\n### 2. Issue (logic): starts at two\n'
+run_capture $'## Verified\n\n- ok\n\n## Findings\n\n### 2. (logic): starts at two\n'
 assert_eq "gap rc" "2" "$RC"
 assert_contains "gap stderr" "^invalid finding number: 2 (expected 1)$" "$ERR"
-run_capture $'## Verified\n\n- ok\n\n## Findings\n\n### 1. Issue (logic): a\n\n### 1. Issue (logic): b\n'
+run_capture $'## Verified\n\n- ok\n\n## Findings\n\n### 1. (logic): a\n\n### 1. (logic): b\n'
 assert_eq "duplicate number rc" "2" "$RC"
-run_capture $'## Verified\n\n- ok\n\n## Findings\n\n### 1. Issue (logic): a\ngraduated_to: fix-a\n'
+run_capture $'## Verified\n\n- ok\n\n## Findings\n\n### 1. (logic): a\ngraduated_to: fix-a\n'
 assert_eq "pre-stamped rc" "2" "$RC"
 assert_contains "pre-stamped stderr" "^invalid body: graduated_to line (capture stamps it)$" "$ERR"
 run_capture $'## Verified\n\n- ok\n'
@@ -234,7 +237,7 @@ mk_two_record() {
 }
 
 # Finding 2 is doc-drift (already docs); use a three-finding record when both need blanks.
-THREE_BODY=$'## Verified\n\n- Read it\n\n## Findings\n\n### 1. Issue (logic): One\n\n**Fix.** a\n\n### 2. Suggestion (consistency): Two\n\n**Fix.** b\n\n### 3. Pattern (performance): Three\n\n**Fix.** c\n'
+THREE_BODY=$'## Verified\n\n- Read it\n\n## Findings\n\n### 1. (logic): One\n\n**Fix.** a\n\n### 2. (consistency): Two\n\n**Fix.** b\n\n### 3. (performance): Three\n\n**Fix.** c\n'
 
 mk_three_record() {
   fresh_root
@@ -246,6 +249,19 @@ mk_three_record() {
   : > "$ROOT/.craft/fixes/fix-b.md"
   COPY=$(mktemp); cp "$REC" "$COPY"
 }
+
+begin_test "graduate fills a finding under the old heading on a record already on disk"
+fresh_root
+mkdir -p "$ROOT/.craft/reviews" "$ROOT/.craft/fixes"
+: > "$ROOT/.craft/fixes/fix-a.md"
+REC="$ROOT/.craft/reviews/old.md"
+printf '%s\n' '---' 'type: review' 'outcome: findings' '---' '' '## Verified' '' '- v' '' '## Findings' '' '### 1. Issue (logic): x' 'graduated_to:' '' 'body' > "$REC"
+COPY=$(mktemp); cp "$REC" "$COPY"
+run_graduate "$REC" 1 fix-a
+assert_eq "exit 0" "0" "$RC"
+assert_file_contains "old-heading finding graduated" "^graduated_to: fix-a$" "$REC"
+assert_eq "one line changed" "1" "$(diff "$COPY" "$REC" | grep -c '^>')"
+rm -f "$COPY"
 
 begin_test "graduate changes exactly one line"
 mk_three_record
@@ -354,7 +370,7 @@ rm -f "$COPY"
 
 begin_test "graduate ignores a heading-shaped line in Verified (review 2026-10-18 finding 1)"
 fresh_root
-run_capture $'## Verified\n\n- v\n### 1. Issue (logic): decoy in verified\n\n## Findings\n\n### 1. Issue (logic): real\n\nbody\n'
+run_capture $'## Verified\n\n- v\n### 1. (logic): decoy in verified\n\n## Findings\n\n### 1. (logic): real\n\nbody\n'
 assert_eq "capture exit 0" "0" "$RC"
 REC=$(printf '%s\n' "$OUT" | tail -1)
 assert_eq "one stamp, under the real finding only" "1" "$(grep -c '^graduated_to:' "$REC")"
@@ -362,7 +378,7 @@ mkdir -p "$ROOT/.craft/fixes"; : > "$ROOT/.craft/fixes/fix-a.md"
 run_graduate "$REC" 1 fix-a
 assert_eq "graduate exit 0" "0" "$RC"
 assert_file_contains "real finding graduated" "^graduated_to: fix-a$" "$REC"
-assert_eq "decoy line untouched" "1" "$(grep -c '^### 1. Issue (logic): decoy in verified$' "$REC")"
+assert_eq "decoy line untouched" "1" "$(grep -c '^### 1. (logic): decoy in verified$' "$REC")"
 
 begin_test "numeric flags refuse a trailing newline (review 2026-10-18 finding 2)"
 fresh_root

@@ -7,10 +7,10 @@
 #          --gates="<what ran - result | none | not reported>"
 #          [--craft-version=<X>] --stdin
 #   The body arrives on stdin: a `## Verified` list, then `## Findings` holding
-#   either `None.` or findings under `### N. <Issue|Suggestion|Pattern>
-#   (<category>): <title>` headings, numbered 1..N. Capture derives the file
-#   name, craft version, counts and outcome, and stamps a `graduated_to:` line
-#   under every finding heading (`docs` for a doc-drift finding, blank otherwise).
+#   either `None.` or findings under `### N. (<category>): <title>` headings,
+#   numbered 1..N. Capture derives the file name, craft version, the findings
+#   count and outcome, and stamps a blank `graduated_to:` line under every
+#   finding heading, whatever its category.
 #   --lines is required for branch and story runs and refused for project runs.
 #
 # A problem prints `missing required field: <name>` or `invalid <thing>: <value>`
@@ -102,7 +102,7 @@ import sys
  ref, focus, files, lines_flag, craft_version, reviewer, gates) = sys.argv[1:16]
 
 HEADING = re.compile(
-    r'^### ([0-9]+)\. (Issue|Suggestion|Pattern) '
+    r'^### ([0-9]+)\. '
     r'\((security|logic|performance|consistency|doc-drift)\): \S')
 FENCE = re.compile(r'^ {0,3}(`{3,}|~{3,})')
 
@@ -190,7 +190,7 @@ for i, line in enumerate(body_lines):
         problems.append('invalid body: graduated_to line (capture stamps it)')
         break
 
-findings = []  # (line index, number, severity, category)
+findings = []  # (line index, number)
 if findings_at is not None:
     for i in range(findings_at + 1, len(body_lines)):
         line = body_lines[i]
@@ -200,8 +200,8 @@ if findings_at is not None:
         if not m:
             problems.append('invalid finding heading: ' + line)
             continue
-        findings.append((i, int(m.group(1)), m.group(2), m.group(3)))
-    for position, (_, number, _, _) in enumerate(findings, start=1):
+        findings.append((i, int(m.group(1))))
+    for position, (_, number) in enumerate(findings, start=1):
         if number != position:
             problems.append('invalid finding number: %d (expected %d)' % (number, position))
             break
@@ -216,18 +216,12 @@ if problems:
     sys.exit(2)
 
 # ── Assemble ──────────────────────────────────────────────────────────
-stamps = {i: ('graduated_to: docs' if cat == 'doc-drift' else 'graduated_to:')
-          for i, _, _, cat in findings}
+stamps = {i: 'graduated_to:' for i, _ in findings}
 out_body = []
 for i, line in enumerate(body_lines):
     out_body.append(line)
     if i in stamps:
         out_body.append(stamps[i])
-
-counts = {'Issue': 0, 'Suggestion': 0, 'Pattern': 0}
-for _, _, severity, _ in findings:
-    counts[severity] += 1
-
 
 def field(key, value):
     value = one_line(value)
@@ -252,9 +246,7 @@ front += [
     field('craft_version', craft_version),
     field('reviewer', reviewer),
     field('gates', gates),
-    'issues: %d' % counts['Issue'],
-    'suggestions: %d' % counts['Suggestion'],
-    'patterns: %d' % counts['Pattern'],
+    'findings: %d' % len(findings),
     'outcome: ' + ('findings' if findings else 'clean'),
     '---',
     '',

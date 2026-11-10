@@ -119,7 +119,7 @@ import sys
 record_path, tmp_path, numbers, value, by, reason = sys.argv[1:7]
 
 HEADING = re.compile(
-    r'^### ([0-9]+)\. (Issue|Suggestion|Pattern) '
+    r'^### ([0-9]+)\. (?:(?:Issue|Suggestion|Pattern) )?'
     r'\((security|logic|performance|consistency|doc-drift)\): \S')
 FENCE = re.compile(r'^ {0,3}(`{3,}|~{3,})')
 
