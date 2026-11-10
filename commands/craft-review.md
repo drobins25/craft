@@ -1,6 +1,6 @@
 ---
 name: review
-description: "PR review skill - invokes pr-reviewer-expert agent against branch diff, story commits, or full project audit. Every run on your own work leaves a record in .craft/reviews/, clean or not, and every finding gets a proposed door; a review of someone else's PR leaves nothing behind."
+description: "PR review skill - invokes pr-reviewer-expert agent against branch diff, story commits, or full project audit. Every run on your own work leaves a record in .craft/reviews/, clean or not, and every finding gets a proposed door; a review of someone else's PR leaves nothing in your project."
 ---
 
 # Review
@@ -11,7 +11,7 @@ Run a PR-style code review using the crystallized pr-reviewer-expert agent. Thre
 
 | Mode | Trigger | What gets reviewed |
 |------|---------|-------------------|
-| **Branch** (default) | `/craft:review` | Everything on current branch not on origin/main |
+| **Branch** (default) | `/craft:review` | Everything this branch's pull request would contain, committed or not |
 | **Story** | `/craft:review story [name]` | Commits from a specific story |
 | **Project** | `/craft:review project [path]` | Full codebase or subsystem audit (no diffs) |
 
@@ -29,9 +29,11 @@ Optional review strategy: `--maze` enables perpendicular maze review (architect 
 - `story` or `story <name>` → **Story mode**
 - `project` or `project <path>` → **Project mode**
 
+When the user says what to review in their own words, such as a PR link, a folder or "whatever would be in the PR", review exactly that, record it under the mode it fits, and tell the user in one line what you resolved it to. This matters because the user knows what they want reviewed, and the arguments above are shortcuts, not limits.
+
 Extract `--focus` flag if present. Default focus is `correctness,security`.
 
-**Whose code:** when the user asked to review a contribution that is not this project's own work (another author's PR, a fork, an upstream change), this is an **outside review**. Say so once and run Steps 2 through 6 the same way, except that Step 5b is skipped and nothing is written under `.craft/`. Step 6 shows the same message without any `Proposed:` line, `On go:` block or `**Question:** Go?`, and ends after the last finding; the findings are the user's to carry to the PR. The user's words decide this; never infer it from commit authors.
+**Whose code:** when the user asked to review a contribution that is not this project's own work (another author's PR, a fork, an upstream change), this is an **outside review**. Say so once and run Steps 2 through 6 the same way, except that Step 5b is skipped and nothing is written under `.craft/`. Step 6 shows the same message without any `Proposed:` line, `On go:` block or `**Question:** Go?`, and ends after the last finding; the findings are the user's to carry to the PR. The user's words decide this; never infer it from commit authors. An outside review keeps every file it works with, the fetched diff, any batches and the reviewer reports, in your session's scratchpad directory, or a temp directory outside the project when there is none. It saves the close-out message there too, and names that file's full path in one line after the message. This matters because the project must end the review exactly as it started, and the findings are the user's to carry to the PR, so they need a home that outlives the terminal.
 
 ### Step 2: Gather Context
 
@@ -43,27 +45,9 @@ Extract `--focus` flag if present. Default focus is `correctness,security`.
 
 ### Step 3: Gather Diff / Scope
 
-**Branch mode:**
+**Branch mode:** review what this branch's pull request would contain: every change between the branch it will merge into and the working tree, committed or not, new files included, without staging anything. Find that base branch from the repository itself, or use the one the user names. Before the reviewer runs, tell the user in one line what you compared, how many files that covers and which of them are uncommitted. This matters because the developer reads the review as a review of their PR, and a change left out of the diff is a change nobody reviewed.
 
-```bash
-# Detect the default remote branch
-DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
-
-# Get the diff
-git diff origin/${DEFAULT_BRANCH}...HEAD
-
-# Get changed file list
-git diff --name-only origin/${DEFAULT_BRANCH}...HEAD
-
-# Get commit log for the branch
-git log --oneline origin/${DEFAULT_BRANCH}..HEAD
-```
-
-If there are no commits ahead of origin, tell the user:
-
-> "No commits ahead of origin/${DEFAULT_BRANCH}. Nothing to review."
-
-Stop there. No reviewer ran, so this exit writes no record.
+If nothing differs from the base, say so in one line naming the base, and stop there. No reviewer ran, so this exit writes no record.
 
 **If diff exceeds ~500 lines**, split by directory or subsystem. Run the agent multiple times with scoped diffs rather than one massive prompt. Each batch reviewer gets the Step 4a prompt unchanged except for its diff; never limit which files its findings may land in, because only findings reach the developer reading the close-out. Tell the user:
 
@@ -162,12 +146,7 @@ The maze review splits question-generation from question-answering. The architec
 
 #### Step 4b.1: Slice the Diff (if needed)
 
-If the diff exceeds ~500 lines, slice it by subsystem/directory:
-
-```bash
-# Get changed files grouped by top-level directory
-git diff --name-only origin/${DEFAULT_BRANCH}...HEAD | sed 's|/.*||' | sort -u
-```
+If the diff exceeds ~500 lines, slice it by subsystem/directory, grouping the files Step 3 compared by their top-level directory.
 
 Create one slice per subsystem. Each slice gets its own architect pass. Tell the user:
 
@@ -346,8 +325,8 @@ Make one capture call per `/craft:review` invocation, after every batch, maze sl
 
 Pass the flags to `hooks/scripts/review-capture.sh` from these sources:
 
-- `--ref` is `git rev-parse --short` of the diff's base and of HEAD joined as `<base>..<head>`; in project mode it is HEAD alone.
-- `--lines` is insertions plus deletions from `git diff --shortstat` (omit it in project mode).
+- `--ref` is `git rev-parse --short` of the diff's base and of HEAD joined as `<base>..<head>`, with `+uncommitted` after it when the review covered uncommitted changes; in project mode it is HEAD alone.
+- `--lines` is insertions plus deletions across the same comparison Step 3 reviewed, new files included (omit it in project mode).
 - `--gates` is the result of the reviewer's `Gates run:` line, and `not reported` when the report has none. Never write `none` for an unknown.
 - The body is the reviewer's `## Verified` list and `## Findings`. With several reports (batches, slices, the cross-slice pass), concatenate their Verified lists under one `## Verified`, renumber only the `### N.` headings 1..N, and keep every other line as written. Join the `Gates run:` results with `; ` for `--gates`. When the report has no Verified list, write the single line `- None reported - the reviewer's report listed no checks it found clean.` under `## Verified`, never an invented check.
 

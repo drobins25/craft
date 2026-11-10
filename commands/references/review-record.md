@@ -169,7 +169,7 @@ The route is `fix now, adhoc`, `story`, `bug` or `close`. An unresolved finding 
 
 The message holds no table, no lettered options, no pick line and no quoted source lines. The only code lines are the command and output under each Checked; backticks elsewhere mark only headings, file paths and flags.
 
-An outside review shows the same message without any `Proposed:` line, `On go:` block or `**Question:** Go?`, and ends after the last finding. Nothing graduates and nothing is written.
+An outside review shows the same message without any `Proposed:` line, `On go:` block or `**Question:** Go?`, and ends after the last finding, followed by one line naming the file the message was saved to. Nothing graduates and nothing is written in the project.
 
 The example is invented and owns nothing in this codebase: mirror the shape, not the content.
 

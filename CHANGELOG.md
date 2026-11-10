@@ -5,6 +5,9 @@ Notable, user-facing changes per version. Internal changes (tests, refactors, co
 ## 2.17.0 - 2026-11-08
 
 - Changed how craft closes out a code review. It now checks each finding against your project before you see it, drops the ones that turn out not to be real, and shows what is left in one message: what a person using the product sees broken, the command it ran to prove it, the fix it would make and where. You answer with go, or name one finding to change its route first.
+- Fixed `/craft:review` missing work you haven't committed yet. It used to check only your commits, and before your first commit it stopped with "Nothing to review". It now reviews everything your pull request would contain, new files included, and tells you up front what it compared, how many files that covers and which ones aren't committed yet.
+- Added plain-language scope to `/craft:review`. Tell it what to look at in your own words, such as "whatever would be in the PR", a folder, or the branch you'll merge into, and it tells you in one line what it took that to mean before it starts.
+- Changed reviews of someone else's pull request to save their findings to a file outside your project. Craft gives you the file's path after the findings, so you can carry them to the PR long after the terminal is gone.
 
 ## 2.16.0 - 2026-11-07
 
