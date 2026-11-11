@@ -23,11 +23,13 @@ const LOOKS = {
   'planning-many': { word: 'Planning', base: PLAN_BASE, sweep: PLAN_SWEEP },
 } as const
 
-// Whether the view word is moving: a model turn runs here with no card up, the
-// view is the build or a planning view of a story this session is planning, and
-// the state is not a finished one. The frame timer writes only while this holds.
+// Whether the view word is moving: it follows the story, not the turn, so a
+// story building in background agents keeps sweeping. Moving means no card is
+// up, the view is the build or a planning view of a story this session is
+// planning, and the state is not a finished one. The frame timer writes only
+// while this holds.
 export function moves(snap: ProgressSnapshot): boolean {
-  if (snap.error || !snap.motion || !snap.working || snap.waitingOnUser) return false
+  if (snap.error || !snap.motion || snap.waitingOnUser) return false
   if (snap.view === 'building') return snap.storyStatus !== 'complete'
   return snap.owned && snap.stage !== 'ready'
 }

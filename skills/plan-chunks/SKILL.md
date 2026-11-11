@@ -814,7 +814,7 @@ If any agents failed:
 
 If "Retry failed stories" → run `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] clear` on each queued story, then queue for single-story planning (S-1 through S-6) after batch triage
 If "Skip them for now" → run `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] clear` on each failed story, then proceed with successful plans only
-If "Retry all" → re-launch the full batch (M-2)
+If "Retry all" → run `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] clear` on each story in the batch, then re-launch the full batch (M-2)
 
 ### M-5: Hand Off to Batch Triage
 

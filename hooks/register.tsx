@@ -34,12 +34,12 @@ const frameTicker: Ticker = { timer: null, lastTickAt: 0, generation: 0 }
 // Whether this session has a surface to draw on; a -p run or the SDK has none,
 // so every hook below only passes through.
 let live = false
-let working = false
 let waiting = 0
 const validators = new Set<string>()
 let lastFacts: DiskFacts | null = null
 // Set by a press on the ready row's control and cleared when the band next
-// redraws, so a double press submits once.
+// redraws or the main turn the press started ends, so a double press submits
+// once and a picker closed with no pick leaves the control pressable.
 let pressLocked = false
 
 let inFlight: Promise<void> | null = null
@@ -54,7 +54,7 @@ async function publishNow($: EngineInterface): Promise<void> {
     const held = await read($, progress)
     const next = compose(
       lastFacts,
-      { working, waiting, validating: validators.size > 0 },
+      { waiting, validating: validators.size > 0 },
       held,
       await $.clock.now(),
     )
@@ -153,7 +153,7 @@ async function press($: EngineInterface): Promise<void> {
   if (pressLocked) return
   pressLocked = true
   try {
-    if (await readSlot($)) {
+    if (await readSlot($, lastFacts?.root)) {
       pressLocked = false
       return
     }
@@ -168,7 +168,7 @@ async function press($: EngineInterface): Promise<void> {
 // are this session's. The set is written only when it changes.
 async function rememberOwn($: EngineInterface, stdout: string): Promise<void> {
   const { set, cleared } = parseStageLines(stdout)
-  const root = await findRoot($)
+  const root = lastFacts?.root || (await findRoot($))
   if (!root) return
   const inProject = (path: string) => path.startsWith(`${root}/.craft/`)
   const was = await read($, ownPlanning)
@@ -206,7 +206,6 @@ export const register: Register = on => {
       name: 'craft-progress',
       description: "Show or hide craft's progress band above the prompt",
     })
-    working = false
     waiting = 0
     validators.clear()
     lastFacts = null
@@ -232,7 +231,6 @@ export const register: Register = on => {
     await revive($)
     if (e.agentId === undefined) {
       // A new main-loop turn means no card from an earlier one is still open.
-      working = true
       waiting = 0
       await publish($)
     }
@@ -242,8 +240,11 @@ export const register: Register = on => {
   on('turn.complete', async ($, e, next) => {
     if (!live) return next(e)
     await revive($)
-    if (e.agentId === undefined) working = false
-    else validators.delete(e.agentId)
+    if (e.agentId === undefined) {
+      pressLocked = false
+      return next(e)
+    }
+    validators.delete(e.agentId)
     await publish($)
     return next(e)
   })

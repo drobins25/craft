@@ -35,7 +35,7 @@ export type DiskFacts = {
 
 // What the session knows that no file says: a model turn is running, how many
 // question cards are open, a chunk validator or the claims audit is running.
-export type SessionFlags = { working: boolean; waiting: number; validating: boolean }
+export type SessionFlags = { waiting: number; validating: boolean }
 
 function trimSlashes(path: string): string {
   return path.replace(/\/+$/, '')
@@ -273,8 +273,8 @@ async function holdFinished(
 }
 
 // The cycle's raw current-story value, read fresh; '' when free or unreadable.
-export async function readSlot($: EngineInterface): Promise<string> {
-  const root = await findRoot($)
+export async function readSlot($: EngineInterface, known?: string): Promise<string> {
+  const root = known || (await findRoot($))
   if (!root) return ''
   const cycleName = stateField(await readOr($, `${root}/.craft/.global-state`), 'ACTIVE_CYCLE')
   if (!cycleName) return ''
@@ -362,7 +362,6 @@ export function compose(
     slotHolder: facts.slot,
     validating: flags.validating,
     waitingOnUser: flags.waiting > 0,
-    working: flags.working,
     motion: facts.motion,
     error: '',
   }

@@ -404,7 +404,10 @@ test('story start: Building, building, star and green word, first ring', async (
     '○',
     ' chunk 1 of 3',
   ])
-  expect(drawn.slice(0, 9).map(d => d.color)).toEqual(Array(9).fill(BUILD_BASE))
+  // A building story sweeps with no turn running: frame 0 puts the head on the first letter.
+  expect(drawn[0]?.color).toBe(BUILD_BASE)
+  expect(drawn[1]?.color).toBe(BUILD_SWEEP)
+  expect(drawn.slice(2, 9).map(d => d.color)).toEqual(Array(7).fill(BUILD_BASE))
   expect(drawn[STATE]?.color).toBe(BUILD_BASE)
   expect(drawn[TITLE]?.color).toBe('subtle')
   expect(drawn.slice(BALLS, BALLS + 3).map(d => d.color)).toEqual(['success', 'inactive', 'inactive'])
@@ -896,7 +899,7 @@ test('an aborted card does not stick', async ($, on) => {
   expect(texts(await draw($))[STATE + 1]).toBe(' · First title')
 })
 
-test('session.start resets working and validators', async ($, on) => {
+test('session.start resets validators', async ($, on) => {
   const files: Files = new Map()
   buildingWorld(files)
   const world = await open($, on, files)
@@ -909,8 +912,6 @@ test('session.start resets working and validators', async ($, on) => {
   const drawn = await draw($)
 
   expect(drawn[STATE]?.text).toBe('building')
-  expect(drawn.slice(1, 9).map(d => d.color)).toEqual(Array(8).fill(BUILD_BASE))
-  expect(drawn.slice(1, 9).some(d => d.bold)).toBe(false)
 })
 
 // A clock the test owns, so it can refuse one period the way the engine may.
@@ -1079,37 +1080,27 @@ test('a moving band writes frames', async ($, on) => {
   expect(frameWrites(world)).toBeGreaterThan(0)
 })
 
-test('still band writes no frame: no turn is running', async ($, on) => {
+test('a building story sweeps with no turn running', async ($, on) => {
   const files: Files = new Map()
   buildingWorld(files)
   const world = await open($, on, files)
 
   await world.clock.advance(2400)
 
-  expect(frameWrites(world)).toBe(0)
+  expect(frameWrites(world)).toBeGreaterThan(0)
 })
 
-test('still band writes no frame: a turn ended', async ($, on) => {
+test('the sweep keeps moving after the main turn ends, while the implementer runs in the background', async ($, on) => {
   const files: Files = new Map()
   buildingWorld(files)
   const world = await open($, on, files)
   await startTurn($)
+  await startTurn($, 'impl1')
   await endTurn($)
 
   await world.clock.advance(2400)
 
-  expect(frameWrites(world)).toBe(0)
-})
-
-test('a subagent turn does not make the main loop busy', async ($, on) => {
-  const files: Files = new Map()
-  buildingWorld(files)
-  const world = await open($, on, files)
-  await startTurn($, 'a9')
-
-  await world.clock.advance(2400)
-
-  expect(frameWrites(world)).toBe(0)
+  expect(frameWrites(world)).toBeGreaterThan(0)
 })
 
 test('still band writes no frame: a card is up', async ($, on) => {

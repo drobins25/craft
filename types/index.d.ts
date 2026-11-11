@@ -24,7 +24,6 @@ export type ProgressSnapshot = {
   holdSlot: string
   validating: boolean
   waitingOnUser: boolean
-  working: boolean
   motion: boolean
   since: number
   minutes: number

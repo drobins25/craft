@@ -4,7 +4,7 @@ import type { BuildingFacts, DiskFacts, SessionFlags, StagedStory } from '../hoo
 import type { ProgressSnapshot } from '../types'
 import { CLEARED_LINE, SET_LINE } from './fixtures/planning-stage-stdout'
 
-const IDLE: SessionFlags = { working: false, waiting: 0, validating: false }
+const IDLE: SessionFlags = { waiting: 0, validating: false }
 
 const building = (over: Partial<BuildingFacts> = {}): BuildingFacts => ({
   path: '/work/p/.craft/cycles/c/stories/s.md',
@@ -47,7 +47,7 @@ test('compose: a project with nothing running draws nothing', () => {
 test('compose: the building view carries the story and the session flags', () => {
   const snap = compose(
     facts({ building: building(), slot: 's', motion: false }),
-    { working: true, waiting: 2, validating: true },
+    { waiting: 2, validating: true },
     null,
     0,
   )
@@ -69,7 +69,6 @@ test('compose: the building view carries the story and the session flags', () =>
     holdSlot: '',
     validating: true,
     waitingOnUser: true,
-    working: true,
     motion: false,
     since: 0,
     minutes: 0,
@@ -174,7 +173,6 @@ const heldOwn = (over: Partial<ProgressSnapshot> = {}): ProgressSnapshot => ({
   holdSlot: '',
   validating: false,
   waitingOnUser: false,
-  working: false,
   motion: true,
   since: 100,
   minutes: 0,

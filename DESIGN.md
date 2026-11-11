@@ -299,7 +299,7 @@ All hooks defined in `hooks/hooks.json`. Scripts in `hooks/scripts/`.
 - **`session.start`** - Reads craft's state and starts a three-second refresh and a frame timer for the sheen; a non-interactive run (`-p` or the SDK) has nothing to draw on, so it reads nothing and starts no timer
 - **`command.run` for `craft-progress`** - Hides or shows the whole band, in either view
 - **`ui.render` for `AbovePrompt`** - Draws the planning view or the building view; it yields only to a survey (a question card does not hide it)
-- **`turn.start` / `turn.complete`** - The sheen moves while a model turn runs in this session and rests when it ends
+- **`turn.start` / `turn.complete`** - A new main-loop turn clears a question card an aborted turn left open; a validator's turn end returns the state to `building`
 - **`tool.call`** - A question card up in this session adds `waiting on you` and freezes the sheen; a call to the stage script (`planning-stage.sh`) names the story this session is planning
 - **`agent.spawn`** - The chunk validator or the claims auditor spawning moves the building state to `validating`
 
@@ -307,7 +307,7 @@ Both views read `✶ <View> Story N · <state> · <title>` with the second line 
 
 The planning view reads the `planning_stage` field in story frontmatter, which plan-chunks writes at each phase through `planning-stage.sh` and clears on every exit, so every terminal on the project sees it and nothing is added to the state files. When this session's story loses its stage and reads ready, this terminal alone holds a still `ready to implement` row in session memory, writing nothing to disk; its state text is a button that submits `/craft:story-implement` with no story named, so craft's own picker asks which one. While a story is implementing, the row reads `ready to implement · after Story N` and is not pressable.
 
-The sheen is a two-letter highlight sweeping the view word, 12 frames at 5 a second; it freezes while a card is up, between turns, for another session's planning story, and on the `ready to implement` and `complete` rows. `progress_band_motion: false` in `.craft/settings.yaml` stops all movement; an absent key means on and craft never writes it.
+The sheen is a two-letter highlight sweeping the view word, 12 frames at 5 a second. It follows the story, not the conversation: it keeps moving while the story builds in background agents, and freezes while a card is up, for another session's planning story, and on the `ready to implement` and `complete` rows. `progress_band_motion: false` in `.craft/settings.yaml` stops all movement; an absent key means on and craft never writes it.
 
 The band reads `.craft/.global-state`, the active cycle's `.state`, story files' frontmatter and `.craft/settings.yaml`, and writes nothing of craft's: the hidden flag, the held ready row and the snapshot live only in session memory. Its value shapes are typed in `types/index.d.ts`.
 

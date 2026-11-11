@@ -200,6 +200,7 @@ check_in "M-1b Cancel batch" "$CLEAR" "$(line_of '**If "Cancel batch":**')"
 check_in "M-1b circular dependency" "$CLEAR" "$(line_of '**Circular dependency:**')"
 check_in "M-4 Skip them for now" "$CLEAR" "$(line_of 'If "Skip them for now"')"
 check_in "M-4 Retry failed stories" "$CLEAR" "$(line_of 'If "Retry failed stories"')"
+check_in "M-4 Retry all" "$CLEAR" "$(line_of 'If "Retry all"')"
 check_in "BT-5 Reject" "$CLEAR" "$(line_of '- **BT-5: "Reject"**')"
 check_in "BT-5 Adjust" "$CLEAR" "$(line_of '- **BT-5: "Adjust"**')"
 
