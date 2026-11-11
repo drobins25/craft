@@ -301,11 +301,12 @@ The reviewer's report is a claim, not a result. Check every finding before anyon
    - Name the path a user of the project takes to reach it.
    - Open what the reviewer's fix changes, and name every other path the symptom can take. When the fix covers one path of several, complete it so it covers all of them.
    - Check whether an earlier finding has the same cause.
-3. End each finding as exactly one of:
-   - **reproduced, blocking** - you saw it happen, and the failure scenario is wrong output, a crash, lost data or a failure the product's user sees.
-   - **reproduced, non-blocking** - you saw it happen, and the failure scenario is cleanup, efficiency, conventions or doc drift, including a doc a developer follows into an error.
-   - **unresolved** - you could neither reproduce it nor refute it.
-   - **not real** - no user path reaches it, you refuted it, or it has the same cause as an earlier finding.
+3. End each finding on what a user of the product would meet, because its ending decides what the developer reading the close-out does next (fix it, judge it, or let it close), and a finding ended for any other reason hides a real problem behind a correct-sounding one. Take the first of these that fits:
+   - **not real** - no user path reaches it, it has the same cause as an earlier finding, or you ran its failure scenario and the symptom did not happen.
+   - **reproduced, blocking** - you saw the symptom happen, and the failure scenario is wrong output, a crash, lost data or a failure the product's user sees.
+   - **reproduced, non-blocking** - you saw the symptom happen, and the failure scenario is cleanup, efficiency, conventions or doc drift, including a doc a developer follows into an error.
+   - **unresolved** - anything else, including a finding you argued away by reading without running it.
+   Disproving one consequence of a reproduced finding leaves it reproduced; the message names that consequence with its output.
 4. Set blocking or non-blocking by the failure scenario alone, never by whether you ran it. Say "reproduced" about a finding only with its command and output kept beside it. A path you read but did not run is recorded as read, not reproduced.
    A finding whose symptom a user still reaches is real whether or not this branch introduced it; say it predates the branch and route it like any other.
 5. A doc-drift finding is checked like any other. Nothing is written to a docs file.
