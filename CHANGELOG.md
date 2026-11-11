@@ -2,6 +2,10 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.17.1 - 2026-11-10
+
+- Fixed the review check closing a finding as not real on a side point. A finding whose problem the check saw happen now stays open even when one of its effects turns out smaller than the reviewer thought, and the message says which effect, with what the check ran. A finding argued away without running it is now marked unresolved instead of closed, so expect a few more of those.
+
 ## 2.17.0 - 2026-11-08
 
 - Changed how craft closes out a code review. It now checks each finding against your project before you see it, drops the ones that turn out not to be real, and shows what is left in one message: what a person using the product sees broken, the command it ran to prove it, the fix it would make and where. You answer with go, or name one finding to change its route first.
