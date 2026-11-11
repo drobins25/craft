@@ -1,6 +1,6 @@
 ---
 name: review
-description: "PR review skill - invokes pr-reviewer-expert agent against branch diff, story commits, or full project audit. Every run on your own work leaves a record in .craft/reviews/, clean or not, and every finding gets a proposed door; a review of someone else's PR leaves nothing behind."
+description: "PR review skill - invokes pr-reviewer-expert agent against branch diff, story commits, or full project audit. Every run on your own work leaves a record in .craft/reviews/, clean or not, and every finding gets a proposed door; a review of someone else's PR leaves nothing in your project."
 ---
 
 # Review
@@ -11,7 +11,7 @@ Run a PR-style code review using the crystallized pr-reviewer-expert agent. Thre
 
 | Mode | Trigger | What gets reviewed |
 |------|---------|-------------------|
-| **Branch** (default) | `/craft:review` | Everything on current branch not on origin/main |
+| **Branch** (default) | `/craft:review` | Everything this branch's pull request would contain, committed or not |
 | **Story** | `/craft:review story [name]` | Commits from a specific story |
 | **Project** | `/craft:review project [path]` | Full codebase or subsystem audit (no diffs) |
 
@@ -29,13 +29,15 @@ Optional review strategy: `--maze` enables perpendicular maze review (architect 
 - `story` or `story <name>` → **Story mode**
 - `project` or `project <path>` → **Project mode**
 
+When the user says what to review in their own words, such as a PR link, a folder or "whatever would be in the PR", review exactly that, record it under the mode it fits, and tell the user in one line what you resolved it to. This matters because the user knows what they want reviewed, and the arguments above are shortcuts, not limits.
+
 Extract `--focus` flag if present. Default focus is `correctness,security`.
 
-**Whose code:** when the user asked to review a contribution that is not this project's own work (another author's PR, a fork, an upstream change), this is an **outside review**. Say so once and run Steps 2 through 5 the same way. An outside review ends at Step 5: Steps 5a, 5b and 6 do not run, nothing is written under `.craft/`, and the findings are the user's to carry to the PR. The user's words decide this; never infer it from commit authors.
+**Whose code:** when the user asked to review a contribution that is not this project's own work (another author's PR, a fork, an upstream change), this is an **outside review**. Say so once, as the review starts, and run Steps 2 through 6 the same way, except that Step 5b is skipped and nothing is written under `.craft/`. Step 6 shows the same message without any `Proposed:` line, `On go:` block or `**Question:** Go?`, and ends after the last finding; the findings are the user's to carry to the PR. The user's words decide this; never infer it from commit authors. An outside review keeps every file it works with, the fetched diff, any batches and the reviewer reports, in your session's scratchpad directory, or a temp directory outside the project when there is none. It saves the close-out message there too, and names that file's full path in one line after the message. This matters because the project must end the review exactly as it started, and the findings are the user's to carry to the PR, so they need a home that outlives the terminal.
 
 ### Step 2: Gather Context
 
-**Always pre-load these files (read them, include relevant content in agent prompt):**
+**Always pre-load these files, and put each one whole in the agent prompt, because the reviewer, not you, decides which parts bear on the diff:**
 
 1. `.craft/design/locked.md` - locked decisions the reviewer must respect
 2. `.craft/project.md` - stack, patterns, conventions
@@ -43,29 +45,11 @@ Extract `--focus` flag if present. Default focus is `correctness,security`.
 
 ### Step 3: Gather Diff / Scope
 
-**Branch mode:**
+**Branch mode:** review what this branch's pull request would contain: every change between the branch it will merge into and the working tree, committed or not, new files included, without staging anything. Find that base branch from the repository itself, or use the one the user names. Before the reviewer runs, tell the user in one line what you compared, how many files that covers and which of them are uncommitted. This matters because the developer reads the review as a review of their PR, and a change left out of the diff is a change nobody reviewed.
 
-```bash
-# Detect the default remote branch
-DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+If nothing differs from the base, say so in one line naming the base, and stop there. No reviewer ran, so this exit writes no record.
 
-# Get the diff
-git diff origin/${DEFAULT_BRANCH}...HEAD
-
-# Get changed file list
-git diff --name-only origin/${DEFAULT_BRANCH}...HEAD
-
-# Get commit log for the branch
-git log --oneline origin/${DEFAULT_BRANCH}..HEAD
-```
-
-If there are no commits ahead of origin, tell the user:
-
-> "No commits ahead of origin/${DEFAULT_BRANCH}. Nothing to review."
-
-Stop there. No reviewer ran, so this exit writes no record.
-
-**If diff exceeds ~500 lines**, split by directory or subsystem. Run the agent multiple times with scoped diffs rather than one massive prompt. Tell the user:
+**If diff exceeds ~500 lines**, split by directory or subsystem. Run the agent multiple times with scoped diffs rather than one massive prompt. Each batch reviewer gets the Step 4a prompt unchanged except for its diff; never limit which files its findings may land in, because only findings reach the developer reading the close-out. Tell the user:
 
 > "Large diff ([N] lines across [M] files). I'll review in batches by directory to keep findings sharp."
 
@@ -140,18 +124,18 @@ PLUGIN_ROOT: ${CLAUDE_PLUGIN_ROOT}
 - Read each changed file in full (not just the diff) to understand surrounding context
 - Check imports/callers of changed functions for cross-file issues
 - Respect locked decisions - do not flag patterns that are explicitly locked
-- Use two severity levels: issue (must fix) and suggestion (consider)
-- [For project mode: add "pattern" severity for consistency observations]
+- Report every issue you find that could cause wrong results, a crash, lost data, a slowdown or failure under load, a doc that no longer matches the code, or a break of a locked decision you can quote. Include the ones you are unsure of and the ones that need a specific input, timing or state to happen: name that condition and what happens when it occurs, and say in Actual what you could not confirm. Your job here is coverage, not filtering: the orchestrator checks every finding against the project before anyone reads it and drops the ones that are not real, so an issue you leave out is one nobody checks.
+- Leave out code style, naming, pedantic nitpicks a senior engineer would not raise, issues a linter will catch, and pre-existing issues. None of them changes whether this change is safe to merge, and each one costs the reader time.
 - Categorize each finding: security, logic, performance, consistency, or doc-drift
 - doc-drift = stale references in docs/comments, terminology that doesn't match current code, outdated examples, references to renamed/removed symbols
 - Lead with the finding. Every finding carries Symptom, Expected (requirement quoted), Actual (observed, or read in code and not run), Consequences, Reproduce from a named starting state, Evidence (raw), and the fix diff with file:line and category
 - Focus on: [focus areas]
 - Do NOT comment on formatting/style if linters exist
 - If the diff is clean and you have no real findings, say so - do not manufacture issues
-- Report in this shape: a `Gates run:` line (what you ran on your own initiative and the result, or `none`), a `## Verified` list (one line per check you made and found clean), then `## Findings` with each finding under `### N. <Issue|Suggestion|Pattern> (<category>): <title>`, and `**Withdrawn.** <why>` on any finding you raised and then disproved
+- Report in this shape: a `Gates run:` line (what you ran on your own initiative and the result, or `none`), a `## Verified` list (one line per check you made and found clean), then `## Findings` with each finding under `### N. (<category>): <title>`, and `**Withdrawn.** <why>` on any finding you raised and then disproved
 ```
 
-Then skip to **Step 5: Present Findings**.
+Then skip to **Step 5: Check the Findings**.
 
 ---
 
@@ -161,12 +145,7 @@ The maze review splits question-generation from question-answering. The architec
 
 #### Step 4b.1: Slice the Diff (if needed)
 
-If the diff exceeds ~500 lines, slice it by subsystem/directory:
-
-```bash
-# Get changed files grouped by top-level directory
-git diff --name-only origin/${DEFAULT_BRANCH}...HEAD | sed 's|/.*||' | sort -u
-```
+If the diff exceeds ~500 lines, slice it by subsystem/directory, grouping the files Step 3 compared by their top-level directory.
 
 Create one slice per subsystem. Each slice gets its own architect pass. Tell the user:
 
@@ -268,14 +247,14 @@ from the codebase. You have full context - use it.
 - For each YES: a finding with Symptom, Expected (requirement quoted), Actual (observed, or read in code and not run), Consequences, Reproduce from a named starting state, Evidence (raw), and the fix diff with file:line
 - For each NO: briefly explain why the code handles this correctly
 - You may also record BREADCRUMB findings - issues you notice along the way that aren't
-  part of the architect's questions. List these separately at the end. These are lower
-  priority - side-effects of your investigation, not your mission.
-- Use two severity levels for findings: issue (must fix) and suggestion (consider)
+  part of the architect's questions. List these separately at the end. They are
+  side-effects of your investigation, not your mission.
+- Report every issue you find that could cause wrong results, a crash, lost data, a slowdown or failure under load, a doc that no longer matches the code, or a break of a locked decision you can quote. Include the ones you are unsure of and the ones that need a specific input, timing or state to happen: name that condition and what happens when it occurs, and say in Actual what you could not confirm. Your job here is coverage, not filtering: the orchestrator checks every finding against the project before anyone reads it and drops the ones that are not real, so an issue you leave out is one nobody checks.
+- Leave out code style, naming, pedantic nitpicks a senior engineer would not raise, issues a linter will catch, and pre-existing issues. None of them changes whether this change is safe to merge, and each one costs the reader time.
 - Categorize each finding: security, logic, performance, consistency, or doc-drift
-- Breadcrumbs are always suggestions unless they're security/data-loss critical
 - Do NOT free-roam beyond the questions + breadcrumbs. When you've answered all questions, stop.
 - Do NOT comment on formatting/style if linters exist
-- Report in this shape: a `Gates run:` line (what you ran on your own initiative and the result, or `none`), a `## Verified` list with one line per NO answer (the check you made, in your words), then `## Findings` with one finding per YES or breadcrumb under `### N. <Issue|Suggestion|Pattern> (<category>): <title>`, and `**Withdrawn.** <why>` on any finding you raised and then disproved
+- Report in this shape: a `Gates run:` line (what you ran on your own initiative and the result, or `none`), a `## Verified` list with one line per NO answer (the check you made, in your words), then `## Findings` with one finding per YES or breadcrumb under `### N. (<category>): <title>`, and `**Withdrawn.** <why>` on any finding you raised and then disproved
 ```
 
 #### Step 4b.5: Cross-Slice Questions (large diffs only)
@@ -308,86 +287,44 @@ Do NOT repeat questions that would be caught within a single subsystem.
 
 Run the runner against any cross-slice questions the same way as Step 4b.4.
 
-### Step 5: Present Findings
+### Step 5: Check the Findings
 
-When the agent returns, present findings to the user.
+The reviewer's report is a claim, not a result. Check every finding before anyone sees it, and print nothing to the user while you do.
 
-**If no findings:**
+**If the report has no findings** (across every batch, slice and the cross-slice pass), print exactly: "No issues found. Checked for bugs, doc drift and locked decisions." Under it, print the line on the state of the branch and the lines on changes to what a reviewer read, was told or was allowed to do, as the close-out reference's message section describes them. This matters because a clean result is the one the reader trusts without a second look, and a gate nobody ran or a reviewer told less is what could make it wrong. Then continue to Step 5b.
 
-> "Clean review - no issues or suggestions found across [N] files."
+**If findings exist:**
 
-**If findings exist, show a summary table:**
+1. Number the findings 1..N once, across every batch, every maze slice and the cross-slice pass, in the order the reports list them, before the check starts. That number belongs to the finding in the record and in the message; nothing renumbers it later. A finding marked `**Withdrawn.**` is checked like the rest.
+2. For each finding, in turn:
+   - Try to reproduce the symptom. Keep the command you ran and the output you got.
+   - Name the path a user of the project takes to reach it.
+   - Open what the reviewer's fix changes, and name every other path the symptom can take. When the fix covers one path of several, complete it so it covers all of them.
+   - Check whether an earlier finding has the same cause.
+3. End each finding as exactly one of:
+   - **reproduced, blocking** - you saw it happen, and the failure scenario is wrong output, a crash, lost data or a failure the product's user sees.
+   - **reproduced, non-blocking** - you saw it happen, and the failure scenario is cleanup, efficiency, conventions or doc drift, including a doc a developer follows into an error.
+   - **unresolved** - you could neither reproduce it nor refute it.
+   - **not real** - no user path reaches it, you refuted it, or it has the same cause as an earlier finding.
+4. Set blocking or non-blocking by the failure scenario alone, never by whether you ran it. Say "reproduced" about a finding only with its command and output kept beside it. A path you read but did not run is recorded as read, not reproduced.
+   A finding whose symptom a user still reaches is real whether or not this branch introduced it; say it predates the branch and route it like any other.
+5. A doc-drift finding is checked like any other. Nothing is written to a docs file.
+6. In maze mode, run the check over the concatenated findings of every slice and the cross-slice pass, before the record is written.
 
-> "**Review complete - [N] findings across [M] files**
->
-> | # | Severity | Category | File | Finding |
-> |---|----------|----------|------|---------|
-> | 1 | Issue | security | auth.ts:42 | Token refresh race condition |
-> | 2 | Suggestion | logic | api/users.ts:18 | Missing null check on optional param |
-> | 3 | Pattern | consistency | components/ | Inconsistent error boundary usage |
-> | 4 | Suggestion | doc-drift | CLAUDE.md:85 | References removed "certainty gate" concept |
-
-Then show each finding in detail with the agent's fix diffs.
-
-**For each finding, show:**
-
-```
-### [#] [Severity] ([Category]): [Title]
-
-**File:** `path/to/file.ts:line`
-
-[Agent's explanation of the issue]
-
-**Fix:**
-\`\`\`diff
-- old code
-+ new code
-\`\`\`
-```
-
-### Step 5a: Drop Doc Findings
-
-**Outside review (Step 1):** stop here. Steps 5a, 5b and 6 do not run.
-
-After presenting findings, check if any have category `doc-drift`. If none, skip to Step 5b.
-
-If doc-drift findings exist:
-
-1. Create the directory if needed: `mkdir -p "$PROJECT/.craft/docs"`
-2. Append each doc-drift finding to `$PROJECT/.craft/docs/review-findings.md` in structured format
-3. Tell the user: "Dropped N doc-related findings to `.craft/docs/review-findings.md` for the next docs run."
-
-**File format** (append-only - don't overwrite existing content):
-
-```markdown
-## Review: [date] ([mode]: [branch/story/project])
-
-```yaml
-- finding: "[finding title]"
-  file: "[file:line]"
-  severity: "[issue/suggestion]"
-  detail: "[agent's explanation, 1-2 sentences]"
-  source:
-    date: "[YYYY-MM-DD]"
-    mode: "[branch/story/project]"
-    branch: "[branch name]"
-```
-```
-
-If the file already exists, append a new `## Review:` section. Each review run gets its own dated section so multiple reviews accumulate between docs runs.
-
-**The docs command (craft:docs) handles consumption and clearing.** This step only writes.
+Keep, for each finding, what the close-out message needs: the failure scenario (the inputs and state, then the wrong output), the command and output, each path read but not run, the complete fix with one `file:line` and its size, and for every not-real finding the reason. The message itself is shaped by `${CLAUDE_PLUGIN_ROOT}/commands/references/review-record.md`.
 
 ### Step 5b: Write the Record
 
-Every run that reached a reviewer leaves one record in `.craft/reviews/`, whether or not it found anything. This is a separate per-run file written by `review-capture.sh`; Step 5a's docs hand-off above is unchanged and keeps its own role.
+Every run that reached a reviewer leaves one record in `.craft/reviews/`, whether or not it found anything. The record is written by `review-capture.sh`.
 
-Make one capture call per `/craft:review` invocation, after every batch, maze slice and the cross-slice pass has returned. Number the findings 1..N in the order Step 5 presented them across all of them, so the number in the table, the number in the record and the number in the user's answer ("3 bug") are the same number.
+**Outside review (Step 1):** skip this step. No record is written and nothing is created under `.craft/`.
+
+Make one capture call per `/craft:review` invocation, after every batch, maze slice and the cross-slice pass has returned. Number the findings 1..N in the order Step 5 numbered them across all of them, so the number in the message, the number in the record and the number in the user's answer ("3 bug") are the same number.
 
 Pass the flags to `hooks/scripts/review-capture.sh` from these sources:
 
-- `--ref` is `git rev-parse --short` of the diff's base and of HEAD joined as `<base>..<head>`; in project mode it is HEAD alone.
-- `--lines` is insertions plus deletions from `git diff --shortstat` (omit it in project mode).
+- `--ref` is `git rev-parse --short` of the diff's base and of HEAD joined as `<base>..<head>`, with `+uncommitted` after it when the review covered uncommitted changes; in project mode it is HEAD alone.
+- `--lines` is insertions plus deletions across the same comparison Step 3 reviewed, new files included (omit it in project mode).
 - `--gates` is the result of the reviewer's `Gates run:` line, and `not reported` when the report has none. Never write `none` for an unknown.
 - The body is the reviewer's `## Verified` list and `## Findings`. With several reports (batches, slices, the cross-slice pass), concatenate their Verified lists under one `## Verified`, renumber only the `### N.` headings 1..N, and keep every other line as written. Join the `Gates run:` results with `; ` for `--gates`. When the report has no Verified list, write the single line `- None reported - the reviewer's report listed no checks it found clean.` under `## Verified`, never an invented check.
 
@@ -395,7 +332,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/commands/references/review-record.md` for the full c
 
 ### Step 6: Close Out
 
-Read `${CLAUDE_PLUGIN_ROOT}/commands/references/review-record.md` and run its close-out: a Proposed paths table with one row per finding, answered in a word, with each answer running the door it names. Nothing is created until the user answers, and no path in this command edits project code outside the adhoc flow. A clean run (`outcome: clean`) has no findings and shows no table; the record is its whole close-out.
+Read `${CLAUDE_PLUGIN_ROOT}/commands/references/review-record.md` and run its close-out: one message with a proposed door for every checked finding, answered with go, and each answer running the door it names. Nothing is created until the user answers, and no path in this command edits project code outside the adhoc flow. A clean run (`outcome: clean`) shows only Step 5's no-findings sentence; the record is its whole close-out. An outside review shows the message in its outside form.
 
 ## Quick Commands
 
@@ -416,14 +353,14 @@ Read `${CLAUDE_PLUGIN_ROOT}/commands/references/review-record.md` and run its cl
 2. **Signal over noise** - fewer high-quality findings beat a wall of nitpicks
 3. **Always include a fix** - every finding has an actionable diff, not just a complaint
 4. **Respect the 500-line cap** - large diffs get split by subsystem
-5. **Two severities for changes, three for audits** - issue/suggestion for diffs, add pattern for project-wide
+5. **Every finding, no severity** - the reviewer reports every issue it finds, sure or not, and attaches no severity; the orchestrator's check drops what is not real and sets blocking or non-blocking
 6. **Every run on your own work leaves a record, clean or not** - a clean review that leaves nothing is indistinguishable from no review at all, so the record lists what the reviewer verified as well as what it found. An outside review leaves nothing, so other people's contributions never enter your records.
-7. **Every finding gets a proposed door** - each finding goes to the door that fits it, answered in a word, and the review record points at what it became
+7. **Every checked finding gets a proposed door** - all of them in one message answered with go, and the review record points at what it became
 
 ## Maze Mode Principles
 
 8. **Naive-about-intent** - the architect NEVER sees commit messages, PR descriptions, or story files. It asks "what does this code do?" not "did the developer do what they intended?"
 9. **Questions over exploration** - the runner answers specific questions instead of free-roaming. This prevents infinite issue regression (the CodeRabbit problem).
-10. **Breadcrumbs are secondary** - findings the runner discovers along the way are recorded but don't change the mission. They're suggestions, not blockers.
+10. **Breadcrumbs are secondary** - findings the runner discovers along the way are recorded but don't change the mission. Each breadcrumb goes through the Step 5 check like any other finding.
 11. **Cross-slice awareness** - for large diffs, a meta-architect pass catches contract mismatches between subsystems that per-slice architects can't see.
 12. **Convergence by design** - the review ends when all questions are answered. No open-ended "let me look around more."

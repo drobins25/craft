@@ -49,7 +49,6 @@ VOCAB_PROSE_OWNERS=(
 VOCAB_PROSE_NONLINK=(
   "name:every record's own identity field, never a link"
   "status:checked by the STATUS axis (test_vocabulary.py), not this one"
-  "lesson_scope:fix's craft|project bookkeeping enum"
   "planned_test:fix's planned-test bookkeeping field - a test name quoted from the source story, or none"
   "kind:tweak's own category enum (icon|copy|spacing|...)"
   "surface:tweak's free-text location slug"
@@ -63,6 +62,7 @@ VOCAB_PROSE_NONLINK=(
   "dismissed:a review finding's dismissal line (who and why), never a link"
   "outcome:a review record's clean|findings word, never a link"
   "found_during:a bug's free-text place of discovery, never a link"
+  "error:a command's output quoted in the review close-out example, never a field"
 )
 
 _vocab_prose_is_nonlink() {

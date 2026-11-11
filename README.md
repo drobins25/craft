@@ -390,7 +390,7 @@ You rarely type these. Craft routes plain English to the right one - this table 
 | `/craft:cycle-assign` | Move story to cycle |
 | `/craft:cycle-complete` | Complete a cycle, trigger reflection |
 | `/craft:analyze` | Run QA, UX, Creative, Style, or Walkthrough analysis |
-| `/craft:review` | PR-style code review - branch, story, or project audit. `--maze` flag enables perpendicular review via maze-architect. Every run on your own work leaves a record, clean or not, and every finding gets a proposed door; reviewing someone else's PR leaves nothing behind |
+| `/craft:review` | PR-style code review - branch, story, or project audit. `--maze` flag enables perpendicular review via maze-architect. Every run on your own work leaves a record, clean or not, and every finding gets a proposed door; reviewing someone else's PR leaves nothing in your project |
 | `/craft:reflect` | Improve the harness based on learnings |
 | `/craft:update-docs` | Re-scan project, update documentation |
 | `/craft:docs` | Generate or update docs using the crystallized doc-writer agent (two-pass: brief then generate) |

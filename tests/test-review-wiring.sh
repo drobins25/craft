@@ -110,15 +110,12 @@ if [ "$EX_RC" = "0" ] && [ -f "$EX_REC" ]; then
   assert_eq "exactly three diff body lines" "3" "$(printf '%s\n' "$DIFF_OUT" | grep -cE '^[<>]')"
 fi
 
-begin_test "Step 5a is unchanged and the record is written after it"
+begin_test "Step 5 is the check and Step 5a is gone"
 CMD_TEXT=$(cat "$REVIEW_CMD")
-assert_contains_literal "5a append line" 'Append each doc-drift finding to `$PROJECT/.craft/docs/review-findings.md` in structured format' "$CMD_TEXT"
-assert_contains_literal "5a consumption line" "The docs command (craft:docs) handles consumption and clearing." "$CMD_TEXT"
-STEP_5A_LINE=$(grep -n '^### Step 5a' "$REVIEW_CMD" | head -1 | cut -d: -f1)
-CAPTURE_LINE=$(grep -n 'review-capture.sh' "$REVIEW_CMD" | head -1 | cut -d: -f1)
-assert_eq "the command names review-capture.sh" "yes" "$([ -n "$CAPTURE_LINE" ] && echo yes || echo no)"
-assert_eq "review-capture.sh is named after the Step 5a heading" "yes" \
-  "$([ -n "$CAPTURE_LINE" ] && [ -n "$STEP_5A_LINE" ] && [ "$CAPTURE_LINE" -gt "$STEP_5A_LINE" ] && echo yes || echo no)"
+assert_contains_literal "Step 5 heading" "### Step 5: Check the Findings" "$CMD_TEXT"
+assert_not_contains "no Step 5a" "Step 5a" "$CMD_TEXT"
+assert_not_contains "no docs holding file" "review-findings.md" "$CMD_TEXT"
+assert_contains_literal "the command names review-capture.sh" "review-capture.sh" "$CMD_TEXT"
 assert_contains_literal "the no-commits exit writes no record" "writes no record" "$CMD_TEXT"
 
 begin_test "Step 6 reads the close-out reference and the old menu is gone"
@@ -132,7 +129,6 @@ REVIEWER_TEXT=$(cat "$REVIEWER")
 assert_contains_literal "Gates run line" "Gates run:" "$REVIEWER_TEXT"
 assert_contains_literal "Verified list" "## Verified" "$REVIEWER_TEXT"
 assert_contains_literal "Withdrawn label" "**Withdrawn.**" "$REVIEWER_TEXT"
-assert_contains_literal "finding heading grammar" "### N. <Issue|Suggestion|Pattern> (<category>): <title>" "$REVIEWER_TEXT"
 
 begin_test "vocabulary prose check is clean with review-record.md in scope"
 VOCAB_RC=0
