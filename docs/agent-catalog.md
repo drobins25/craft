@@ -47,7 +47,7 @@ Agents that support code review, research, and verification workflows. Invoked b
 
 | Agent | Model | Purpose |
 |-------|-------|---------|
-| `pr-reviewer-expert` | sonnet | PR review crystallized from CodeRabbit's architecture. Reads `locked.md` and `project.md` before forming any opinion. Reports only what it is certain is real and attaches no severity; the review's close-out sets blocking or non-blocking. Never comments on style if a linter exists. |
+| `pr-reviewer-expert` | sonnet | PR review crystallized from CodeRabbit's architecture. Reads `locked.md` and `project.md` before forming any opinion. Reports every issue it finds, sure or not, and attaches no severity; the review's close-out checks each one and sets blocking or non-blocking. Never comments on style if a linter exists. |
 | `maze-architect` | haiku | Generates 2-4 review questions from a raw diff with zero intent context. Never sees commit messages. Used by `/craft:review --maze` to create perpendicular review routes. Haiku model because the task is pattern recognition, not judgment. |
 | `researcher` | haiku | Constrained extraction for one research sub-question - verbatim quotes, source-backed findings, no synthesis. Writes a branch file, returns a lightweight summary. Used by `/craft:research`. |
 | `research-synthesizer` | sonnet | Reads all branch files in a research topic and writes `_plan.md` + `_sources.md`. Preserves conflicts verbatim, re-enforces the evidence gate, runs quote-claim alignment. Replaces the orchestrator-side synthesis that used to run in the main loop. Model locked - see its rationale block. |

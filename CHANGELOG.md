@@ -8,6 +8,9 @@ Notable, user-facing changes per version. Internal changes (tests, refactors, co
 - Fixed `/craft:review` missing work you haven't committed yet. It used to check only your commits, and before your first commit it stopped with "Nothing to review". It now reviews everything your pull request would contain, new files included, and tells you up front what it compared, how many files that covers and which ones aren't committed yet.
 - Added plain-language scope to `/craft:review`. Tell it what to look at in your own words, such as "whatever would be in the PR", a folder, or the branch you'll merge into, and it tells you in one line what it took that to mean before it starts.
 - Changed reviews of someone else's pull request to save their findings to a file outside your project. Craft gives you the file's path after the findings, so you can carry them to the PR long after the terminal is gone.
+- Changed what the reviewer sends to the close-out. It now reports every risk it sees, including ones it could not prove, and the close-out check decides which are real. The verdict line counts a finding the check could neither prove nor rule out as unresolved, so a quiet review never hides an open risk.
+- Changed the review message to stay on the findings. The account of how the review ran is one line per change in what the reviewer read, was told or was allowed to do, and nothing else.
+- Changed the lesson question after an adhoc fix. Craft now asks only when it can name the step that would have caught the problem and the rule that changes it, drafts the lesson for your yes, and asks once per cause. Lessons about craft itself are no longer recorded in your project.
 
 ## 2.16.0 - 2026-11-07
 

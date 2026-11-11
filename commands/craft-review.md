@@ -33,11 +33,11 @@ When the user says what to review in their own words, such as a PR link, a folde
 
 Extract `--focus` flag if present. Default focus is `correctness,security`.
 
-**Whose code:** when the user asked to review a contribution that is not this project's own work (another author's PR, a fork, an upstream change), this is an **outside review**. Say so once and run Steps 2 through 6 the same way, except that Step 5b is skipped and nothing is written under `.craft/`. Step 6 shows the same message without any `Proposed:` line, `On go:` block or `**Question:** Go?`, and ends after the last finding; the findings are the user's to carry to the PR. The user's words decide this; never infer it from commit authors. An outside review keeps every file it works with, the fetched diff, any batches and the reviewer reports, in your session's scratchpad directory, or a temp directory outside the project when there is none. It saves the close-out message there too, and names that file's full path in one line after the message. This matters because the project must end the review exactly as it started, and the findings are the user's to carry to the PR, so they need a home that outlives the terminal.
+**Whose code:** when the user asked to review a contribution that is not this project's own work (another author's PR, a fork, an upstream change), this is an **outside review**. Say so once, as the review starts, and run Steps 2 through 6 the same way, except that Step 5b is skipped and nothing is written under `.craft/`. Step 6 shows the same message without any `Proposed:` line, `On go:` block or `**Question:** Go?`, and ends after the last finding; the findings are the user's to carry to the PR. The user's words decide this; never infer it from commit authors. An outside review keeps every file it works with, the fetched diff, any batches and the reviewer reports, in your session's scratchpad directory, or a temp directory outside the project when there is none. It saves the close-out message there too, and names that file's full path in one line after the message. This matters because the project must end the review exactly as it started, and the findings are the user's to carry to the PR, so they need a home that outlives the terminal.
 
 ### Step 2: Gather Context
 
-**Always pre-load these files (read them, include relevant content in agent prompt):**
+**Always pre-load these files, and put each one whole in the agent prompt, because the reviewer, not you, decides which parts bear on the diff:**
 
 1. `.craft/design/locked.md` - locked decisions the reviewer must respect
 2. `.craft/project.md` - stack, patterns, conventions
@@ -124,9 +124,8 @@ PLUGIN_ROOT: ${CLAUDE_PLUGIN_ROOT}
 - Read each changed file in full (not just the diff) to understand surrounding context
 - Check imports/callers of changed functions for cross-file issues
 - Respect locked decisions - do not flag patterns that are explicitly locked
-- Flag only what will definitely produce wrong results, a doc that no longer matches the code, or a locked decision you can quote
-- Do not flag code style or quality concerns, potential issues that depend on specific inputs or state, pre-existing issues, pedantic nitpicks a senior engineer would not flag, or issues a linter will catch
-- If you are not certain an issue is real, do not flag it
+- Report every issue you find that could cause wrong results, a crash, lost data, a slowdown or failure under load, a doc that no longer matches the code, or a break of a locked decision you can quote. Include the ones you are unsure of and the ones that need a specific input, timing or state to happen: name that condition and what happens when it occurs, and say in Actual what you could not confirm. Your job here is coverage, not filtering: the orchestrator checks every finding against the project before anyone reads it and drops the ones that are not real, so an issue you leave out is one nobody checks.
+- Leave out code style, naming, pedantic nitpicks a senior engineer would not raise, issues a linter will catch, and pre-existing issues. None of them changes whether this change is safe to merge, and each one costs the reader time.
 - Categorize each finding: security, logic, performance, consistency, or doc-drift
 - doc-drift = stale references in docs/comments, terminology that doesn't match current code, outdated examples, references to renamed/removed symbols
 - Lead with the finding. Every finding carries Symptom, Expected (requirement quoted), Actual (observed, or read in code and not run), Consequences, Reproduce from a named starting state, Evidence (raw), and the fix diff with file:line and category
@@ -250,9 +249,8 @@ from the codebase. You have full context - use it.
 - You may also record BREADCRUMB findings - issues you notice along the way that aren't
   part of the architect's questions. List these separately at the end. They are
   side-effects of your investigation, not your mission.
-- Flag only what will definitely produce wrong results, a doc that no longer matches the code, or a locked decision you can quote
-- Do not flag code style or quality concerns, potential issues that depend on specific inputs or state, pre-existing issues, pedantic nitpicks a senior engineer would not flag, or issues a linter will catch
-- If you are not certain an issue is real, do not flag it
+- Report every issue you find that could cause wrong results, a crash, lost data, a slowdown or failure under load, a doc that no longer matches the code, or a break of a locked decision you can quote. Include the ones you are unsure of and the ones that need a specific input, timing or state to happen: name that condition and what happens when it occurs, and say in Actual what you could not confirm. Your job here is coverage, not filtering: the orchestrator checks every finding against the project before anyone reads it and drops the ones that are not real, so an issue you leave out is one nobody checks.
+- Leave out code style, naming, pedantic nitpicks a senior engineer would not raise, issues a linter will catch, and pre-existing issues. None of them changes whether this change is safe to merge, and each one costs the reader time.
 - Categorize each finding: security, logic, performance, consistency, or doc-drift
 - Do NOT free-roam beyond the questions + breadcrumbs. When you've answered all questions, stop.
 - Do NOT comment on formatting/style if linters exist
@@ -293,7 +291,7 @@ Run the runner against any cross-slice questions the same way as Step 4b.4.
 
 The reviewer's report is a claim, not a result. Check every finding before anyone sees it, and print nothing to the user while you do.
 
-**If the report has no findings** (across every batch, slice and the cross-slice pass), print exactly: "No issues found. Checked for bugs, doc drift and locked decisions." Under it, print one line for each step you ran differently from how this command or the close-out reference writes it, in the form the close-out reference's message section gives. This matters because a clean result is the one the reader trusts without a second look, and a step you changed is the one thing that could make it wrong. Then continue to Step 5b.
+**If the report has no findings** (across every batch, slice and the cross-slice pass), print exactly: "No issues found. Checked for bugs, doc drift and locked decisions." Under it, print the line on the state of the branch and the lines on changes to what a reviewer read, was told or was allowed to do, as the close-out reference's message section describes them. This matters because a clean result is the one the reader trusts without a second look, and a gate nobody ran or a reviewer told less is what could make it wrong. Then continue to Step 5b.
 
 **If findings exist:**
 
@@ -355,7 +353,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/commands/references/review-record.md` and run its cl
 2. **Signal over noise** - fewer high-quality findings beat a wall of nitpicks
 3. **Always include a fix** - every finding has an actionable diff, not just a complaint
 4. **Respect the 500-line cap** - large diffs get split by subsystem
-5. **Certain findings, no severity** - the reviewer flags only what it is certain is real and attaches no severity; the orchestrator's check sets blocking or non-blocking
+5. **Every finding, no severity** - the reviewer reports every issue it finds, sure or not, and attaches no severity; the orchestrator's check drops what is not real and sets blocking or non-blocking
 6. **Every run on your own work leaves a record, clean or not** - a clean review that leaves nothing is indistinguishable from no review at all, so the record lists what the reviewer verified as well as what it found. An outside review leaves nothing, so other people's contributions never enter your records.
 7. **Every checked finding gets a proposed door** - all of them in one message answered with go, and the review record points at what it became
 
