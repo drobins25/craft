@@ -49,7 +49,6 @@ VOCAB_PROSE_OWNERS=(
 VOCAB_PROSE_NONLINK=(
   "name:every record's own identity field, never a link"
   "status:checked by the STATUS axis (test_vocabulary.py), not this one"
-  "lesson_scope:fix's craft|project bookkeeping enum"
   "planned_test:fix's planned-test bookkeeping field - a test name quoted from the source story, or none"
   "kind:tweak's own category enum (icon|copy|spacing|...)"
   "surface:tweak's free-text location slug"

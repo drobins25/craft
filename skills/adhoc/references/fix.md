@@ -28,7 +28,6 @@ review: [name of the review record this fix came from, e.g. 2026-10-18-branch-fe
 files_changed: 0
 lines_changed: 0
 trigger: [how the problem was discovered]
-lesson_scope:
 satisfied_todo: [stamped by the todo-satisfaction beat - <todo-slug> or none-matched]
 ---
 
@@ -116,40 +115,41 @@ If validation fails - the symptom persists or a new problem appeared - update th
 
 If validation passes: update `status: validated`. Hand back to the shell for the commit (Step 5 there), then return here for lesson capture.
 
-## Step 6: Lesson Capture
+## Step 6: Lesson
 
-After validation passes, check if there's a workflow lesson worth capturing. Not every fix has one - pure code bugs (typo, wrong value) usually don't. But when the fix reveals a process gap - something craft or the user could have done differently to prevent the fix entirely - that's a lesson.
+After validation passes, decide whether this fix carries a lesson for this project. A lesson names the step in this project's code, plans or way of working that would have caught the problem before it needed a fix, and the rule that changes that step next time, both tied to evidence already in this record's Investigation and Confidence Check. This matters because the rule pass reads every fix record in full, so a lesson earns its question only by naming a step and a rule the rule pass would otherwise have to infer.
+
+When you can name both, and no earlier fix in this thread recorded the same cause, draft the lesson and show it in one question, with the draft in the question text:
 
 Use **AskUserQuestion**:
 ```
-question: "Was there a workflow lesson here - something we should do differently next time?"
+question: "Lesson from this fix: [what went wrong] -> [rule]. Record it?"
 header: "Lesson"
 options:
-  - label: "Yes, let me describe it"
-    description: "Capture a process lesson from this fix"
-  - label: "No, just a code fix"
-    description: "No workflow lesson - skip"
+  - label: "Yes, record it"
+    description: "Write the lesson as drafted"
+  - label: "Correct it"
+    description: "Say it in your own words; the draft is rewritten from them"
+  - label: "No lesson"
+    description: "Record nothing"
 ```
 
-**If "No":** Skip to Step 7.
-
-**If "Yes":** The user provides the lesson context. Write a `## Lesson` section to the fix file:
+**If "Yes":** write the `## Lesson` section to the fix file:
 
 ```markdown
 ## Lesson
-**Scope:** craft | project
-**What went wrong:** [process/workflow mistake - not the code bug, but why it happened]
-**Rule:** [what to do differently next time]
+**What went wrong:** [the step that missed it, not the code bug]
+**Rule:** [what that step does differently next time]
 **Applies to:** [comma-separated contexts where this rule matters]
 ```
 
-**Scope guide:**
-- `craft` - the harness, orchestrator, or workflow process caused or missed the issue. Examples: didn't check for uncommitted changes, skipped a validation step, wrote to wrong branch.
-- `project` - the codebase or planning had a gap. Examples: missing mobile constraint, schema not updated, pattern copied from wrong context.
+**If "Correct it":** rewrite the three fields from the user's words, show them once, and write on their yes.
 
-Also update the fix file frontmatter: add `lesson_scope: craft` or `lesson_scope: project`.
+**If "No lesson":** write nothing. Continue to Step 7.
 
-If the user's description is brief, fill in the structured fields based on what you know from the root cause. Show it to them for confirmation before writing.
+When an earlier fix in this thread already recorded this cause, write `## Lesson` with one line, `See <that record's name>.`, and ask nothing.
+
+When you cannot name both the step and the rule, write nothing and ask nothing; the close-out's Lesson line reads "none". Continue to Step 7.
 
 ## Step 7: Todo Satisfaction
 
