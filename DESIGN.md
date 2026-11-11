@@ -294,13 +294,22 @@ All hooks defined in `hooks/hooks.json`. Scripts in `hooks/scripts/`.
 - **`stop-hook-guard.sh`** - Guards against unclean session stops, ensures state consistency
 
 ### Hooks module
-`hooks/register.tsx`, listed under `modules` in `hooks/hooks.json`, runs on Claude Code 2.1.287 and later; older versions skip it and the rest of craft is unaffected. It draws the build progress band and registers one command.
+`hooks/register.tsx`, listed under `modules` in `hooks/hooks.json`, runs on Claude Code 2.1.287 and later; older versions skip it and the rest of craft is unaffected (the ready row's button needs 2.1.295). It draws one progress band above the prompt with two views, planning and building, and registers one command. The module is split three ways along the I/O line: `register.tsx` wires the hooks and holds the session state, `take.ts` reads craft's files and decides what the band shows, and `draw.tsx` turns that into the two lines.
 
-- **`session.start`** - Reads craft's state and starts a three-second refresh; a non-interactive run (`-p` or the SDK) has nothing to draw on, so it reads nothing and starts no timer
-- **`command.run` for `craft-progress`** - Hides or shows the band for the session
-- **`ui.render` for `AbovePrompt`** - Draws one ball per chunk of the story being built (a green ring on the chunk in progress, a filled green ball once it passes) with the story's name and status above; it yields to a question card
+- **`session.start`** - Reads craft's state and starts a three-second refresh and a frame timer for the sheen; a non-interactive run (`-p` or the SDK) has nothing to draw on, so it reads nothing and starts no timer
+- **`command.run` for `craft-progress`** - Hides or shows the whole band, in either view
+- **`ui.render` for `AbovePrompt`** - Draws the planning view or the building view; it yields only to a survey (a question card does not hide it)
+- **`turn.start` / `turn.complete`** - The sheen moves while a model turn runs in this session and rests when it ends
+- **`tool.call`** - A question card up in this session adds `waiting on you` and freezes the sheen; a call to the stage script (`planning-stage.sh`) names the story this session is planning
+- **`agent.spawn`** - The chunk validator or the claims auditor spawning moves the building state to `validating`
 
-It reads `.craft/.global-state`, the active cycle's `.state` and the current story file, and writes nothing of craft's: the hidden flag and the snapshot live only in session memory. Its value shapes are typed in `types/index.d.ts`.
+Both views read `✶ <View> Story N · <state> · <title>` with the second line indented under the view word. The building view draws one ball per chunk of the story being built (a green ring on the chunk in progress, a filled green ball once it passes) and the state `building`, `validating` or `complete`. The planning view draws one ball per step of the six-step planning flow, `step k of 6`, the minutes since the stage first appeared and `next: <step>`; with several stories mid-planning and none of them this session's it reads `Planning N stories`. Precedence: the story this session is planning, then the building view while a story is current, then any story carrying a stage, then the finished story's complete row, then nothing.
+
+The planning view reads the `planning_stage` field in story frontmatter, which plan-chunks writes at each phase through `planning-stage.sh` and clears on every exit, so every terminal on the project sees it and nothing is added to the state files. When this session's story loses its stage and reads ready, this terminal alone holds a still `ready to implement` row in session memory, writing nothing to disk; its state text is a button that submits `/craft:story-implement` with no story named, so craft's own picker asks which one. While a story is implementing, the row reads `ready to implement · after Story N` and is not pressable.
+
+The sheen is a two-letter highlight sweeping the view word, 12 frames at 5 a second; it freezes while a card is up, between turns, for another session's planning story, and on the `ready to implement` and `complete` rows. `progress_band_motion: false` in `.craft/settings.yaml` stops all movement; an absent key means on and craft never writes it.
+
+The band reads `.craft/.global-state`, the active cycle's `.state`, story files' frontmatter and `.craft/settings.yaml`, and writes nothing of craft's: the hidden flag, the held ready row and the snapshot live only in session memory. Its value shapes are typed in `types/index.d.ts`.
 
 ### Utility Scripts (called by hooks or commands)
 | Script | Purpose |
@@ -329,7 +338,8 @@ It reads `.craft/.global-state`, the active cycle's `.state` and the current sto
 | `get-latest-cycle.sh` | Resolve the most recent cycle directory path (`--status=` filters by cycle status) |
 | `update-global-state.sh` | Update .global-state key-value pairs |
 | `update-cycle-state.sh` | Update cycle .state file |
-| `update-story-status.sh` | Change story status in frontmatter |
+| `update-story-status.sh` | Change story status in frontmatter; clears the story's planning stage on ready, active and complete |
+| `planning-stage.sh` | Write, rewrite or clear a story's `planning_stage` frontmatter field, the one line the progress band's planning view reads |
 | `statusline.sh` | Generate status line display |
 | `find-workshop.sh` | Locate .craft/ directory. Also owns the shared before-init lookup (`craft_before_init_root`: the set-up project, then the git top level, then the current folder) and the monorepo-top refusal (`craft_refuse_monorepo_top`) that bugs and notebook captures use |
 | `discover-projects.sh` | Find all craft projects |

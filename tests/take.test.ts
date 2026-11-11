@@ -1,0 +1,373 @@
+import { expect, test } from 'claude-code/testing'
+import { compose, field, frontmatter, motionOn, parseStageLines, stageOf, stateField, take } from '../hooks/take'
+import type { BuildingFacts, DiskFacts, SessionFlags, StagedStory } from '../hooks/take'
+import type { ProgressSnapshot } from '../types'
+import { CLEARED_LINE, SET_LINE } from './fixtures/planning-stage-stdout'
+
+const IDLE: SessionFlags = { working: false, waiting: 0, validating: false }
+
+const building = (over: Partial<BuildingFacts> = {}): BuildingFacts => ({
+  path: '/work/p/.craft/cycles/c/stories/s.md',
+  label: 'Story 5',
+  title: 'First title',
+  storyStatus: 'active',
+  chunks: [
+    { n: 1, state: 'building' },
+    { n: 2, state: 'waiting' },
+  ],
+  error: '',
+  ...over,
+})
+
+const facts = (over: Partial<DiskFacts> = {}): DiskFacts => ({
+  root: '/work/p',
+  own: [],
+  building: null,
+  staged: [],
+  heldComplete: null,
+  heldReady: null,
+  slot: '',
+  motion: true,
+  ...over,
+})
+
+test('a sibling module loads', () => {
+  expect(typeof compose).toBe('function')
+  expect(typeof take).toBe('function')
+})
+
+test('compose: no facts draws nothing', () => {
+  expect(compose(null, IDLE, null, 0)).toBeNull()
+})
+
+test('compose: a project with nothing running draws nothing', () => {
+  expect(compose(facts(), IDLE, null, 0)).toBeNull()
+})
+
+test('compose: the building view carries the story and the session flags', () => {
+  const snap = compose(
+    facts({ building: building(), slot: 's', motion: false }),
+    { working: true, waiting: 2, validating: true },
+    null,
+    0,
+  )
+
+  expect(snap).toEqual({
+    view: 'building',
+    path: '/work/p/.craft/cycles/c/stories/s.md',
+    label: 'Story 5',
+    title: 'First title',
+    storyStatus: 'active',
+    chunks: [
+      { n: 1, state: 'building' },
+      { n: 2, state: 'waiting' },
+    ],
+    stage: '',
+    stages: [],
+    owned: false,
+    slotHolder: 's',
+    holdSlot: '',
+    validating: true,
+    waitingOnUser: true,
+    working: true,
+    motion: false,
+    since: 0,
+    minutes: 0,
+    error: '',
+  })
+})
+
+test('compose: waiting counts cards, so zero is not waiting', () => {
+  const snap = compose(facts({ building: building() }), { ...IDLE, waiting: 0 }, null, 0)
+
+  expect(snap?.waitingOnUser).toBe(false)
+})
+
+test('compose: a read error draws the error line and nothing else', () => {
+  const snap = compose(
+    facts({ building: building({ path: '', label: '', title: '', storyStatus: '', chunks: [], error: "Can't read story file x.md" }) }),
+    IDLE,
+    null,
+    0,
+  )
+
+  expect(snap?.error).toBe("Can't read story file x.md")
+  expect(snap?.chunks).toEqual([])
+})
+
+test('compose: with the story slot free, the finished story keeps its complete row', () => {
+  const done = building({ storyStatus: 'complete', chunks: [{ n: 1, state: 'done' }] })
+
+  const snap = compose(facts({ heldComplete: done }), IDLE, null, 0)
+
+  expect(snap?.view).toBe('building')
+  expect(snap?.storyStatus).toBe('complete')
+  expect(snap?.slotHolder).toBe('')
+})
+
+test('compose: a story that is running wins over a held complete row', () => {
+  const snap = compose(
+    facts({ building: building(), heldComplete: building({ label: 'Story 4', storyStatus: 'complete' }) }),
+    IDLE,
+    null,
+    0,
+  )
+
+  expect(snap?.label).toBe('Story 5')
+})
+
+test('compose is pure: the same inputs give equal snapshots', () => {
+  const input = facts({ building: building() })
+
+  expect(compose(input, IDLE, null, 5)).toEqual(compose(input, IDLE, null, 5))
+})
+
+test('frontmatter reads the leading block only', () => {
+  expect(frontmatter('---\na: 1\n---\nbody\n---\nb: 2\n---')).toBe('a: 1')
+  expect(frontmatter('no block here')).toBe('')
+})
+
+test('field strips quotes and control characters', () => {
+  expect(field('title: "Hello\u001b there"', 'title')).toBe('Hello there')
+  expect(field('title: x', 'missing')).toBe('')
+})
+
+test('stateField reads a shell assignment', () => {
+  expect(stateField('A="1"\nCURRENT_STORY="s"\n', 'CURRENT_STORY')).toBe('s')
+  expect(stateField('CURRENT_STORY=""\n', 'CURRENT_STORY')).toBe('')
+  expect(stateField('', 'CURRENT_STORY')).toBe('')
+})
+
+test('motionOn: only a first key of exactly false turns motion off', () => {
+  expect(motionOn('')).toBe(true)
+  expect(motionOn('progress_band_motion: false\n')).toBe(false)
+  expect(motionOn("progress_band_motion: 'false'\n")).toBe(false)
+  expect(motionOn('progress_band_motion: true\n')).toBe(true)
+  expect(motionOn('progress_band_motion: False\n')).toBe(true)
+  expect(motionOn('progress_band_motion: false\nprogress_band_motion: true\n')).toBe(false)
+  expect(motionOn('progress_band_motion: true\nprogress_band_motion: false\n')).toBe(true)
+  expect(motionOn('  progress_band_motion: false\n')).toBe(true)
+  expect(motionOn('# progress_band_motion: false\n')).toBe(true)
+})
+
+const T_PATH = '/work/p/.craft/cycles/c/stories/t.md'
+const staged = (name: string, stage: StagedStory['stage'] = 'planner'): StagedStory => ({
+  path: `/work/p/.craft/cycles/c/stories/${name}.md`,
+  label: `Story ${name}`,
+  title: `Title ${name}`,
+  stage,
+})
+const readyRow = { path: T_PATH, label: 'Story 6', title: 'Ready title' }
+
+// The snapshot the band last drew: a planning view of this session's own story.
+const heldOwn = (over: Partial<ProgressSnapshot> = {}): ProgressSnapshot => ({
+  view: 'planning',
+  path: T_PATH,
+  label: 'Story 6',
+  title: 'Ready title',
+  storyStatus: '',
+  chunks: [],
+  stage: 'triage',
+  stages: ['triage'],
+  owned: true,
+  slotHolder: '',
+  holdSlot: '',
+  validating: false,
+  waitingOnUser: false,
+  working: false,
+  motion: true,
+  since: 100,
+  minutes: 0,
+  error: '',
+  ...over,
+})
+
+test('the parser reads the script\'s real lines', () => {
+  expect(parseStageLines(`noise\n${SET_LINE}\nmore`)).toEqual({
+    set: ['/work/p/.craft/cycles/c/stories/t.md'],
+    cleared: [],
+  })
+  expect(parseStageLines(CLEARED_LINE)).toEqual({ set: [], cleared: ['/work/p/.craft/cycles/c/stories/t.md'] })
+  expect(parseStageLines(`${SET_LINE}\r\n${CLEARED_LINE}\r\n`)).toEqual({
+    set: ['/work/p/.craft/cycles/c/stories/t.md'],
+    cleared: ['/work/p/.craft/cycles/c/stories/t.md'],
+  })
+})
+
+test('the parser ignores lines that only look like the script\'s', () => {
+  expect(parseStageLines('Planning stage set to Planner: /a.md')).toEqual({ set: [], cleared: [] })
+  expect(parseStageLines('echo Planning stage cleared: /a.md')).toEqual({ set: [], cleared: [] })
+  expect(parseStageLines('')).toEqual({ set: [], cleared: [] })
+})
+
+test('stageOf: only the six stage values are a stage', () => {
+  expect(stageOf('---\nplanning_stage: triage\n---\n')).toBe('triage')
+  expect(stageOf('---\nplanning_stage: "plan-check"\n---\n')).toBe('plan-check')
+  expect(stageOf('---\nplanning_stage: bogus\n---\n')).toBeNull()
+  expect(stageOf('---\nplanning_stage: ready\n---\n')).toBeNull()
+  expect(stageOf('---\nstatus: ready\n---\nplanning_stage: planner\n')).toBeNull()
+  expect(stageOf('---\nstatus: ready\n---\n')).toBeNull()
+})
+
+test('compose: one own story draws its planning view, owned', () => {
+  const snap = compose(facts({ own: [staged('t', 'triage')] }), IDLE, null, 500)
+
+  expect(snap).toMatchObject({
+    view: 'planning',
+    path: staged('t').path,
+    label: 'Story t',
+    title: 'Title t',
+    stage: 'triage',
+    stages: ['triage'],
+    owned: true,
+    chunks: [],
+    since: 500,
+    minutes: 0,
+  })
+})
+
+test('compose: several own stories draw the many view over them, owned, in file order', () => {
+  const snap = compose(facts({ own: [staged('b', 'triage'), staged('a')] }), IDLE, null, 0)
+
+  expect(snap).toMatchObject({
+    view: 'planning-many',
+    label: '2 stories',
+    title: '',
+    path: '',
+    stage: '',
+    stages: ['planner', 'triage'],
+    owned: true,
+  })
+})
+
+test('compose: this session\'s story wins over the build', () => {
+  const snap = compose(facts({ own: [staged('t')], building: building(), slot: 's' }), IDLE, null, 0)
+
+  expect(snap?.view).toBe('planning')
+  expect(snap?.owned).toBe(true)
+  expect(snap?.slotHolder).toBe('s')
+})
+
+test('compose: the build wins over another session\'s planning', () => {
+  const snap = compose(facts({ building: building(), staged: [staged('t')], slot: 's' }), IDLE, null, 0)
+
+  expect(snap?.view).toBe('building')
+})
+
+test('compose: one staged story draws planning, not owned', () => {
+  const snap = compose(facts({ staged: [staged('t', 'direction')] }), IDLE, null, 0)
+
+  expect(snap).toMatchObject({ view: 'planning', stage: 'direction', owned: false })
+})
+
+test('compose: several staged stories with none owned draw Planning N stories, not owned', () => {
+  const snap = compose(facts({ staged: [staged('b'), staged('a', 'triage')] }), IDLE, null, 0)
+
+  expect(snap).toMatchObject({ view: 'planning-many', label: '2 stories', owned: false, stages: ['triage', 'planner'] })
+})
+
+test('compose: planning replaces the held complete row', () => {
+  const done = building({ storyStatus: 'complete', chunks: [{ n: 1, state: 'done' }] })
+
+  expect(compose(facts({ heldComplete: done }), IDLE, null, 0)?.view).toBe('building')
+  expect(compose(facts({ heldComplete: done, staged: [staged('t')] }), IDLE, null, 0)?.view).toBe('planning')
+})
+
+test('compose: the clock restarts when the story shown changes and carries when it does not', () => {
+  const first = compose(facts({ staged: [staged('t')] }), IDLE, null, 1000)
+  const sameStory = compose(facts({ staged: [staged('t', 'triage')] }), IDLE, first, 1000 + 5 * 60000 + 59999)
+  const otherStory = compose(facts({ staged: [staged('u')] }), IDLE, sameStory, 1000 + 5 * 60000 + 59999)
+
+  expect(first).toMatchObject({ since: 1000, minutes: 0 })
+  expect(sameStory).toMatchObject({ since: 1000, minutes: 5 })
+  expect(otherStory).toMatchObject({ since: 1000 + 5 * 60000 + 59999, minutes: 0 })
+})
+
+test('compose: the many view keys its clock on the group, not a story', () => {
+  const first = compose(facts({ staged: [staged('a'), staged('b')] }), IDLE, null, 1000)
+  const again = compose(facts({ staged: [staged('a'), staged('c')] }), IDLE, first, 61000)
+
+  expect(again).toMatchObject({ view: 'planning-many', since: 1000, minutes: 1 })
+})
+
+test('compose: the building view starts no clock', () => {
+  const snap = compose(facts({ building: building(), slot: 's' }), IDLE, heldOwn(), 999)
+
+  expect(snap).toMatchObject({ view: 'building', since: 0, minutes: 0 })
+})
+
+test('compose: the held ready row, from a live own step, with the slot free', () => {
+  const snap = compose(facts({ heldReady: readyRow }), IDLE, heldOwn(), 900)
+
+  expect(snap).toMatchObject({
+    view: 'planning',
+    stage: 'ready',
+    owned: true,
+    path: T_PATH,
+    label: 'Story 6',
+    title: 'Ready title',
+    slotHolder: '',
+    holdSlot: '',
+    chunks: [],
+    since: 100,
+  })
+})
+
+test('compose: the hold\'s slot rule', () => {
+  const formedBehind = compose(facts({ heldReady: readyRow, building: building(), slot: '29-x' }), IDLE, heldOwn(), 0)
+  expect(formedBehind).toMatchObject({ view: 'planning', stage: 'ready', slotHolder: '29-x', holdSlot: '29-x' })
+
+  const stays = compose(
+    facts({ heldReady: readyRow, building: building(), slot: '29-x' }),
+    IDLE,
+    heldOwn({ stage: 'ready', stages: [], holdSlot: '29-x', slotHolder: '29-x' }),
+    0,
+  )
+  expect(stays).toMatchObject({ view: 'planning', stage: 'ready', slotHolder: '29-x', holdSlot: '29-x' })
+
+  const freed = compose(
+    facts({ heldReady: readyRow }),
+    IDLE,
+    heldOwn({ stage: 'ready', stages: [], holdSlot: '29-x', slotHolder: '29-x' }),
+    0,
+  )
+  expect(freed).toMatchObject({ stage: 'ready', slotHolder: '', holdSlot: '' })
+
+  const otherStory = compose(
+    facts({ heldReady: readyRow, building: building(), slot: '30-y' }),
+    IDLE,
+    heldOwn({ stage: 'ready', stages: [], holdSlot: '29-x', slotHolder: '29-x' }),
+    0,
+  )
+  expect(otherStory?.view).toBe('building')
+
+  const startedFromFree = compose(
+    facts({ heldReady: readyRow, building: building(), slot: '30-y' }),
+    IDLE,
+    heldOwn({ stage: 'ready', stages: [] }),
+    0,
+  )
+  expect(startedFromFree?.view).toBe('building')
+})
+
+test('compose: planning starting elsewhere replaces the ready row', () => {
+  const snap = compose(
+    facts({ heldReady: readyRow, staged: [staged('u')] }),
+    IDLE,
+    heldOwn({ stage: 'ready', stages: [] }),
+    0,
+  )
+
+  expect(snap).toMatchObject({ view: 'planning', owned: false, path: staged('u').path })
+})
+
+test('compose: an own story that plans again wins over its ready row', () => {
+  const snap = compose(
+    facts({ heldReady: readyRow, own: [staged('t')] }),
+    IDLE,
+    heldOwn({ stage: 'ready', stages: [] }),
+    0,
+  )
+
+  expect(snap).toMatchObject({ stage: 'planner', owned: true })
+})

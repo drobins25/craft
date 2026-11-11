@@ -304,5 +304,17 @@ class TestMembershipAndBody(unittest.TestCase):
         self.assertNotIn('2026-10-18-branch-feature-x', [l["raw_value"] for l in links])
 
 
+class TestPlanningStageKey(unittest.TestCase):
+    def test_planning_stage_key_changes_nothing(self):
+        staged = corpus_helper.read_fixture(NUMBERED_DEPS)
+        self.assertIn("\nplanning_stage: planner\n", staged)
+        bare = staged.replace("planning_stage: planner\n", "", 1)
+        self.assertNotIn("planning_stage", bare)
+        self.assertEqual(
+            registry.parse_file("story", NUMBERED_DEPS, staged),
+            registry.parse_file("story", NUMBERED_DEPS, bare),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

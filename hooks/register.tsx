@@ -1,210 +1,221 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register } from 'claude-code'
+import type { EngineInterface, Register, Timer } from 'claude-code'
 
-const MAX_CHUNKS = 99
+import { draw, FRAME_MS, FRAMES, moves } from './draw'
+import { compose, findRoot, parseStageLines, readSlot, take } from './take'
+import type { DiskFacts, ScanEntry } from './take'
 
-import type { ProgressChunk, ProgressSnapshot } from '../types'
-
-// The band's two session-only values: whether the user hid it, and the story
-// snapshot it draws. Nothing here is written to disk.
+// The band's session-only values: whether the user hid it, the snapshot it
+// draws, the planning stories this session owns, and the sheen's frame. Nothing
+// here is written to disk. The shape tag changes whenever the snapshot does, so
+// a value an older version left reads as absent and the band redraws from disk.
 export const progressHidden = atom({ plugin: 'craft', key: 'progressHidden' } as const, false)
 export const progress = atom({ plugin: 'craft', key: 'progress' } as const, null, {
-  shape: 'progress-1',
+  shape: 'progress-2',
 })
+export const ownPlanning = atom({ plugin: 'craft', key: 'ownPlanning' } as const, [] as string[], {
+  shape: 'progress-2',
+})
+export const progressFrame = atom({ plugin: 'craft', key: 'progressFrame' } as const, 0)
 
 const REFRESH_MS = 3000
+// A timer that has not ticked in this many periods is taken for dead and restarted.
+const STALE_PERIODS = 3
+const VALIDATORS = /(^|:)(chunk-validator|claims-auditor)$/
 
-function trimSlashes(path: string): string {
-  return path.replace(/\/+$/, '')
-}
+// A repeating timer and when it last ticked. `generation` lets a restart that
+// began first lose to one that began later.
+type Ticker = { timer: Timer | null; lastTickAt: number; generation: number }
 
-// The leading `---` block of a story or registry file; empty when there is none.
-function frontmatter(text: string): string {
-  return text.match(/^---\r?\n([\s\S]*?)\r?\n---/)?.[1] ?? ''
-}
+const cache = new Map<string, ScanEntry>()
+const refreshTicker: Ticker = { timer: null, lastTickAt: 0, generation: 0 }
+const frameTicker: Ticker = { timer: null, lastTickAt: 0, generation: 0 }
 
-// Drawn text never carries a control character, so a crafted title or state
-// value cannot reach the terminal as an escape sequence.
-function clean(value: string): string {
-  return value.replace(/[\u0000-\u001f\u007f]/g, '')
-}
+// Whether this session has a surface to draw on; a -p run or the SDK has none,
+// so every hook below only passes through.
+let live = false
+let working = false
+let waiting = 0
+const validators = new Set<string>()
+let lastFacts: DiskFacts | null = null
+// Set by a press on the ready row's control and cleared when the band next
+// redraws, so a double press submits once.
+let pressLocked = false
 
-function field(block: string, key: string): string {
-  const m = block.match(new RegExp(`^${key}:[ \\t]*(.*)$`, 'm'))
-  return clean(m?.[1] ?? '').trim().replace(/^["']|["']$/g, '')
-}
+let inFlight: Promise<void> | null = null
+let readsBegan = false
+let again = false
+let publishing: Promise<void> = Promise.resolve()
 
-// Craft's state files are shell assignments, KEY="value", one per line.
-function stateField(text: string, key: string): string {
-  const m = text.match(new RegExp(`^${key}="?([^"\\n]*)"?\\s*$`, 'm'))
-  return clean(m?.[1] ?? '').trim()
-}
-
-async function readOr($: EngineInterface, path: string): Promise<string> {
-  try {
-    return await $.fs.read(path)
-  } catch {
-    return ''
-  }
-}
-
-async function listOr($: EngineInterface, path: string): Promise<string[]> {
-  try {
-    return (await $.fs.list(path)).map(entry => entry.name)
-  } catch {
-    return []
-  }
-}
-
-// The nearest folder up from `start` holding craft's state: an initialized
-// project first, then a folder with a project description.
-async function nearestCraftFolder($: EngineInterface, start: string): Promise<string> {
-  for (const marker of ['/.craft/.global-state', '/.craft/project.md']) {
-    for (let dir = start; dir && dir !== '/'; dir = dir.slice(0, dir.lastIndexOf('/'))) {
-      if (await $.fs.exists(dir + marker)) return dir
-    }
-  }
-  return ''
-}
-
-// Where the project lives, found the way craft's own scripts find it: the
-// project-root setting, else the nearest folder up from the session with craft's
-// state. At a monorepo top with registered sub-projects, the pinned project,
-// else the one sub-project with an active cycle, else the top itself. Craft
-// also requires that top to be the repository root; a registry stands for it here.
-async function findRoot($: EngineInterface): Promise<string> {
-  const fromEnv = trimSlashes((await $.env.get('CRAFT_PROJECT_ROOT')) ?? '')
-  if (fromEnv && (await $.fs.exists(`${fromEnv}/.craft`))) return fromEnv
-
-  const top = await nearestCraftFolder($, trimSlashes(await $.session.root()))
-  if (!top) return ''
-
-  const subProjects: string[] = []
-  for (const name of await listOr($, `${top}/.craft/projects`)) {
-    if (!name.endsWith('.md')) continue
-    const relative = trimSlashes(field(frontmatter(await readOr($, `${top}/.craft/projects/${name}`)), 'path'))
-    if (relative && (await $.fs.exists(`${top}/${relative}/.craft`))) subProjects.push(`${top}/${relative}`)
-  }
-  if (subProjects.length === 0) return top
-
-  const pinned = trimSlashes(((await readOr($, `${top}/.craft/.pinned-project`)).split('\n')[0] ?? '').trim())
-  if (pinned && (await $.fs.exists(`${pinned}/.craft`))) return pinned
-
-  const active: string[] = []
-  for (const sub of subProjects) {
-    if (stateField(await readOr($, `${sub}/.craft/.global-state`), 'ACTIVE_CYCLE')) active.push(sub)
-  }
-  return active.length === 1 ? (active[0] ?? top) : top
-}
-
-// The story's file: named exactly by the cycle's current story, else the first
-// story file whose name contains it (the way craft's own scripts find it).
-async function findStoryFile($: EngineInterface, storiesDir: string, current: string): Promise<string> {
-  const exact = `${storiesDir}/${current}.md`
-  if (await readOr($, exact)) return exact
-  const match = (await listOr($, storiesDir)).sort().find(name => name.endsWith('.md') && name.includes(current))
-  return match ? `${storiesDir}/${match}` : ''
-}
-
-// Chunk n is done once its story is complete or craft has moved past it, building
-// while it is the active story's current chunk, and waiting otherwise.
-function chunkStates(storyStatus: string, count: number, chunksComplete: number, currentChunk: number): ProgressChunk[] {
-  return Array.from({ length: count }, (_, i) => {
-    const n = i + 1
-    let state: ProgressChunk['state'] = 'waiting'
-    if (storyStatus === 'complete' || n <= chunksComplete || (currentChunk > 0 && n < currentChunk)) state = 'done'
-    else if (storyStatus === 'active' && n === currentChunk) state = 'building'
-    return { n, state }
-  })
-}
-
-function describeStory(path: string, text: string, currentChunk: number): ProgressSnapshot {
-  const meta = frontmatter(text)
-  const storyStatus = field(meta, 'status')
-  const number = field(meta, 'story_number')
-  const headings = (text.match(/^### Chunk \d+:/gm) ?? []).length
-  // A story's chunk count is bounded so a bad frontmatter value cannot make
-  // every refresh allocate and draw an unbounded row of balls.
-  const count = Math.min(parseInt(field(meta, 'chunks_total'), 10) || headings, MAX_CHUNKS)
-  const chunksComplete = parseInt(field(meta, 'chunks_complete'), 10) || 0
-  const basename = (path.split('/').pop() ?? '').replace(/\.md$/, '')
-
-  return {
-    path,
-    label: number ? `Story ${number}` : basename,
-    title: field(meta, 'title'),
-    storyStatus,
-    chunks: chunkStates(storyStatus, count, chunksComplete, currentChunk),
-    error: '',
-  }
-}
-
-// When craft has cleared its current story, a story that was finished keeps its
-// complete row; anything else, or a file that cannot be read, draws nothing.
-async function holdFinished(
-  $: EngineInterface,
-  root: string,
-  held: ProgressSnapshot | null,
-): Promise<ProgressSnapshot | null> {
-  if (!held || !held.path.startsWith(`${root}/`)) return null
-  const text = await readOr($, held.path)
-  if (field(frontmatter(text), 'status') !== 'complete') return null
-  return describeStory(held.path, text, 0)
-}
-
-// Where the build stands, from craft's own state. Every early exit is quiet:
-// only a named current story whose file cannot be read draws an error.
-async function take($: EngineInterface, held: ProgressSnapshot | null): Promise<ProgressSnapshot | null> {
-  const root = await findRoot($)
-  if (!root) return null
-
-  const cycleName = stateField(await readOr($, `${root}/.craft/.global-state`), 'ACTIVE_CYCLE')
-  if (!cycleName) return null
-
-  const cycle = `${root}/.craft/cycles/${cycleName}`
-  const state = await readOr($, `${cycle}/.state`)
-  const current = stateField(state, 'CURRENT_STORY')
-  if (!current) return holdFinished($, root, held)
-
-  const path = await findStoryFile($, `${cycle}/stories`, current)
-  const text = path ? await readOr($, path) : ''
-  if (!text) {
-    return {
-      path: '',
-      label: '',
-      title: '',
-      storyStatus: '',
-      chunks: [],
-      error: `Can't read story file ${current}.md`,
-    }
-  }
-  return describeStory(path, text, parseInt(stateField(state, 'CURRENT_CHUNK'), 10) || 0)
-}
-
-// Re-reads craft's state and stores the snapshot only when it changed, since
-// every write redraws the band. Runs in a session's timer, so it never throws.
-async function refresh($: EngineInterface): Promise<void> {
+// Stores the composed snapshot only when it changed, since every write redraws
+// the band. Publishes queue, so the last one always carries the latest flags.
+async function publishNow($: EngineInterface): Promise<void> {
   try {
     const held = await read($, progress)
-    const latest = await take($, held)
-    if (JSON.stringify(latest) !== JSON.stringify(held)) await update($, progress, () => latest)
+    const next = compose(
+      lastFacts,
+      { working, waiting, validating: validators.size > 0 },
+      held,
+      await $.clock.now(),
+    )
+    if (JSON.stringify(next) !== JSON.stringify(held)) {
+      await update($, progress, () => next)
+      pressLocked = false
+    }
+  } catch {
+    // A failed write leaves the band as it was; the next event or tick publishes again.
+  }
+}
+
+function publish($: EngineInterface): Promise<void> {
+  publishing = publishing.then(() => publishNow($))
+  return publishing
+}
+
+// One read pass: the only disk access besides the planning-stage wrap. Never throws.
+async function pass($: EngineInterface): Promise<void> {
+  try {
+    const held = await read($, progress)
+    const own = await read($, ownPlanning)
+    readsBegan = true
+    lastFacts = await take($, { held, own, cache })
+    await publish($)
   } catch {
     // A failed read leaves the band as it was; the next tick tries again.
   }
+}
+
+// Requests that arrive before a pass has read anything join it; one that
+// arrives later asks for exactly one more pass. Two passes never run at once.
+function requestRefresh($: EngineInterface): Promise<void> {
+  if (inFlight) {
+    if (readsBegan) again = true
+    return inFlight
+  }
+  const run = (async () => {
+    do {
+      again = false
+      readsBegan = false
+      await pass($)
+    } while (again)
+  })()
+  inFlight = run.finally(() => {
+    inFlight = null
+  })
+  return inFlight
+}
+
+async function start($: EngineInterface, ticker: Ticker, ms: number, tick: () => Promise<void>): Promise<void> {
+  ticker.timer?.cancel()
+  ticker.timer = null
+  const generation = (ticker.generation += 1)
+  const at = await $.clock.now()
+  if (generation !== ticker.generation) return
+  ticker.lastTickAt = at
+  ticker.timer = $.clock.every(ms, () => {
+    void (async () => {
+      try {
+        ticker.lastTickAt = await $.clock.now()
+        await tick()
+      } catch {
+        // A failed tick is skipped; the next period tries again.
+      }
+    })()
+  })
+}
+
+function stop(ticker: Ticker): void {
+  ticker.generation += 1
+  ticker.timer?.cancel()
+  ticker.timer = null
+}
+
+// A validator the engine no longer lists as running ended without its turn
+// reaching this module, so it must not hold the band on `validating`.
+async function dropEndedValidators($: EngineInterface): Promise<void> {
+  if (validators.size === 0) return
+  try {
+    const running = new Set(
+      (await $.agent.list()).filter(a => a.status === 'pending' || a.status === 'running').map(a => a.id),
+    )
+    const before = validators.size
+    for (const id of [...validators]) if (!running.has(id)) validators.delete(id)
+    if (validators.size !== before) await publish($)
+  } catch {
+    // No agent list here: a validator's own turn end still clears it.
+  }
+}
+
+// The ready row's control: starts craft's own story picker. It names no story
+// and asks nothing; the slot is read again so a row left up while a story runs
+// never submits.
+async function press($: EngineInterface): Promise<void> {
+  if (pressLocked) return
+  pressLocked = true
+  try {
+    if (await readSlot($)) {
+      pressLocked = false
+      return
+    }
+    await $.command.run({ command: 'craft:story-implement' })
+  } catch {
+    // A rejected run leaves the control pressable again.
+    pressLocked = false
+  }
+}
+
+// Remembers the stories the planning-stage script names, so the band knows which
+// are this session's. The set is written only when it changes.
+async function rememberOwn($: EngineInterface, stdout: string): Promise<void> {
+  const { set, cleared } = parseStageLines(stdout)
+  const root = await findRoot($)
+  if (!root) return
+  const inProject = (path: string) => path.startsWith(`${root}/.craft/`)
+  const was = await read($, ownPlanning)
+  const now = [...was.filter(path => !cleared.includes(path)), ...set.filter(path => inProject(path) && !was.includes(path))]
+  if (now.length === was.length && now.every((path, i) => path === was[i])) return
+  await update($, ownPlanning, () => now)
+  await requestRefresh($)
+}
+
+const refreshTick = ($: EngineInterface) => async () => {
+  await dropEndedValidators($)
+  await requestRefresh($)
+}
+
+const frameTick = ($: EngineInterface) => async () => {
+  const snap = await read($, progress)
+  if (!snap || !moves(snap) || (await read($, progressHidden))) return
+  await update($, progressFrame, n => (n + 1) % FRAMES)
+}
+
+const startRefresh = ($: EngineInterface) => start($, refreshTicker, REFRESH_MS, refreshTick($))
+const startFrames = ($: EngineInterface) => start($, frameTicker, FRAME_MS, frameTick($))
+
+// Called first by every event hook: a timer the engine refused a period of has
+// ended for good, and a session that goes on has to bring it back.
+async function revive($: EngineInterface): Promise<void> {
+  const now = await $.clock.now()
+  if (refreshTicker.timer && now - refreshTicker.lastTickAt > STALE_PERIODS * REFRESH_MS) await startRefresh($)
+  if (frameTicker.timer && now - frameTicker.lastTickAt > STALE_PERIODS * FRAME_MS) await startFrames($)
 }
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'craft-progress',
-      description: "Show or hide craft's build progress above the prompt",
+      description: "Show or hide craft's progress band above the prompt",
     })
-    // A -p run or the SDK has no surface to draw on: read nothing, start no timer.
-    if (e.surface !== null) {
-      await refresh($)
-      $.clock.every(REFRESH_MS, () => {
-        void refresh($)
-      })
+    working = false
+    waiting = 0
+    validators.clear()
+    lastFacts = null
+    stop(refreshTicker)
+    stop(frameTicker)
+    live = e.surface !== null
+    if (live) {
+      await Promise.all([startRefresh($), startFrames($)])
+      await requestRefresh($)
     }
 
     return next(e)
@@ -216,46 +227,66 @@ export const register: Register = on => {
     return { text: hidden ? 'Craft progress hidden.' : 'Craft progress shown.' }
   })
 
+  on('turn.start', async ($, e, next) => {
+    if (!live) return next(e)
+    await revive($)
+    if (e.agentId === undefined) {
+      // A new main-loop turn means no card from an earlier one is still open.
+      working = true
+      waiting = 0
+      await publish($)
+    }
+    return next(e)
+  })
+
+  on('turn.complete', async ($, e, next) => {
+    if (!live) return next(e)
+    await revive($)
+    if (e.agentId === undefined) working = false
+    else validators.delete(e.agentId)
+    await publish($)
+    return next(e)
+  })
+
+  on('tool.call', { tool: 'AskUserQuestion' }, async ($, e, next) => {
+    if (!live) return next(e)
+    await revive($)
+    waiting += 1
+    await publish($)
+    try {
+      return await next(e)
+    } finally {
+      waiting = Math.max(0, waiting - 1)
+      await publish($)
+    }
+  }).catch(($, e, next) => next(e))
+
+  on('agent.spawn', async ($, e, next) => {
+    if (!live) return next(e)
+    await revive($)
+    const result = await next(e)
+    const id = result.agentId ?? e.resume?.agentId
+    if (id && VALIDATORS.test(e.subagentType)) {
+      validators.add(id)
+      await publish($)
+    }
+    return result
+  }).catch(($, e, next) => next(e))
+
+  on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
+    if (!e.command.includes('planning-stage.sh')) return next(e)
+    if (!live) return next(e)
+    const answer = await next(e)
+    const stdout = (answer.result as { stdout?: unknown } | undefined)?.stdout
+    if (typeof stdout === 'string') await rememberOwn($, stdout)
+    return answer
+  }).catch(($, e, next) => next(e))
+
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const snap = await read($, progress)
     if (e.props.hasSurvey || !snap || (await read($, progressHidden))) return next(e)
-    const { Box, Text } = $.ui.resolve(e)
-
-    if (snap.error) {
-      return <Text color="error">{snap.error}</Text>
-    }
-
-    const total = snap.chunks.length
-    const doneCount = snap.chunks.filter(c => c.state === 'done').length
-    const building = snap.chunks.find(c => c.state === 'building')
-    const isComplete = snap.storyStatus === 'complete'
-    const label = isComplete ? 'complete' : building ? 'building' : snap.storyStatus || 'ready'
-    const labelColor = isComplete ? 'success' : building ? 'warning' : 'suggestion'
-    // One ball per chunk: a green ring while it builds, a filled green ball once built.
-    const ball = { done: '●', building: '○', waiting: '○' } as const
-    const ballColor = { done: 'success', building: 'success', waiting: 'inactive' } as const
-    const detail = isComplete
-      ? `all ${total} chunks done`
-      : building
-        ? `chunk ${building.n} of ${total}`
-        : `${doneCount} of ${total} chunks done`
-
-    return (
-      <Box flexDirection="column" marginTop={1}>
-        <Box>
-          <Box flexShrink={0}>
-            <Text color="claude" bold>{`${snap.label} `}</Text>
-            <Text color={labelColor} bold>{label}</Text>
-          </Box>
-          {snap.title ? <Text color="subtle" wrap="truncate-end">{` · ${snap.title}`}</Text> : null}
-        </Box>
-        <Box gap={1}>
-          {snap.chunks.map(c => (
-            <Text key={String(c.n)} color={ballColor[c.state]}>{ball[c.state]}</Text>
-          ))}
-          <Text>{` ${detail}`}</Text>
-        </Box>
-      </Box>
-    )
+    return draw($.ui.resolve(e), snap, await read($, progressFrame), () => {
+      void press($)
+    })
   })
 }

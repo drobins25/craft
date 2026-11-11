@@ -2,6 +2,12 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.18.0 - 2026-11-10
+
+- Added a planning view to the progress band. While craft plans a story, the band shows which of the six steps it is on, how long it has been planning, what comes next and when it is waiting on you, in every terminal open on the project. When planning ends the row leaves; when a story is approved, the terminal that planned it keeps a "ready to implement" row with a button that starts the implement picker.
+- Changed the build view of the band to lead with "Building" and say whether craft is building or validating the current chunk, with "complete" in green; the yellow and the "active" label are gone.
+- Added a shimmer to the band's lead word while craft is working, which stops when it is waiting on you. Set `progress_band_motion: false` in `.craft/settings.yaml` to keep the band still. `/craft-progress` still hides or shows the band in either view. The ready row's button needs Claude Code 2.1.295.
+
 ## 2.17.1 - 2026-11-10
 
 - Fixed the review check closing a finding as not real on a side point. A finding whose problem the check saw happen now stays open even when one of its effects turns out smaller than the reviewer thought, and the message says which effect, with what the check ran. A finding argued away without running it is now marked unresolved instead of closed, so expect a few more of those.

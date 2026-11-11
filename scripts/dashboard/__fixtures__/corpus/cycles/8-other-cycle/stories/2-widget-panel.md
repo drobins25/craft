@@ -3,6 +3,7 @@ name: widget-panel
 title: "Widget Panel Revisited"
 type: ui
 status: planning
+planning_stage: planner
 created: 2026-02-10
 updated: 2026-02-10
 cycle: other-cycle

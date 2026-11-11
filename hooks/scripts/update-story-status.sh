@@ -40,6 +40,15 @@ case "$NEW_STATUS" in
     ;;
 esac
 
+# Leaving planning for ready, active or complete removes the progress band's stage
+# marker first, so a death between the two edits never leaves a stage beside the new
+# status. Silenced so callers still read this script's own final line.
+case "$NEW_STATUS" in
+  ready|active|complete)
+    "$SCRIPT_DIR/planning-stage.sh" "$STORY_FILE" clear >/dev/null 2>&1 || true
+    ;;
+esac
+
 DATE=$(date +%Y-%m-%d)
 
 # Update story frontmatter
