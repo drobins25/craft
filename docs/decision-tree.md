@@ -742,7 +742,7 @@ stateDiagram-v2
     note right of CYCLE_ACTIVE: ACTIVE_CYCLE set, .learnings.yaml tracking
     note right of STORY_ACTIVE: CURRENT_STORY set, learnings written to .learnings.yaml after each chunk
     note right of CYCLE_COMPLETE: All stories done, reflect offered when due, bugs filed if a UI walkthrough finds any
-    note right of HARNESS_UPDATED: Written by /craft:reflect (CLAUDE.md, rules, hooks, skills, commands), not cycle-complete
+    note right of HARNESS_UPDATED: Written by the reflect command (CLAUDE.md, rules, hooks, skills, commands), not cycle-complete
 ```
 
 ---
