@@ -256,7 +256,7 @@ You don't have to type these commands, by the way - say it in your own words ("m
 
 > Requires Claude Code 2.1 or later. Tested on macOS and Linux; on Windows, WSL is recommended (native + Git Bash should work but is untested).
 >
-> The progress band above the prompt and its `/craft-progress` toggle need Claude Code 2.1.287 or later; everything else in craft works on 2.1.
+> The progress band above the prompt and its `/craft-progress` toggle need Claude Code 2.1.287 or later (the ready row's button needs 2.1.295); everything else in craft works on 2.1.
 
 Two commands from your terminal, then launch Claude Code - about a minute, start to finish.
 

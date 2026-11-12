@@ -590,6 +590,7 @@ cycle: [preserved if present]
 story_number: [preserved if present]
 decisions: [preserved from original]
 alignment: [preserved from original]
+planning_stage: [preserved if present]
 chunks_total: [N — from your plan]
 chunks_complete: 0
 current_chunk: 0

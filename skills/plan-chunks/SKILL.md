@@ -42,6 +42,22 @@ The orchestrator may pass enriched args with labeled fields. Parse these to skip
 
 **Under a Go run** (only when `${CLAUDE_PLUGIN_ROOT}/commands/references/go-run.md` is in force for this conversation; otherwise nothing in this skill changes): at Phase 0, run `python3 "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/go-brief.py" <cycle-dir>`. On `prompts=answer`, every prompt and card in this skill follows go-run.md's `## Known prompts` and `## Planning`, and the S-6 and BT-7 hand-offs go to its `## At the stage ceiling` instead of story-implement, so a run never goes past the stage the Go allows. Any other verdict ends the Go run as go-run.md says, and this skill then asks everything as written.
 
+## Planning Stage
+
+The progress band shows which phase of planning a story is in, in every terminal, by reading a `planning_stage` field in the story's own frontmatter. This skill keeps that field true, and only through one script:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] <stage>
+${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] clear
+```
+
+- **Stages:** `content-check`, `alignment-check`, `direction`, `planner`, `plan-check`, `triage`. A phase writes its stage when it begins and never when it is skipped, so the band shows only phases that run. A phase that is re-entered (a fork, a research request, a re-plan) writes again from the stage it re-enters; the field is overwritten, never added to.
+- **Never edit `planning_stage` with Edit or Write.** The script writes the one line atomically; a hand edit can leave a half-written frontmatter that other terminals read mid-write.
+- **The ready flip clears it.** `update-story-status.sh ... ready` removes the field itself, so approval needs no separate clear.
+- **Every other exit runs the clear:** a user who stops, a hand-back, a cancelled or excluded story. A leftover stage shows every terminal a story that nobody is planning.
+- **A failure that ends the flow** (an agent error, a failing script, an unreadable story) runs the clear before it is reported.
+- **In batch, one call per story:** each story's stage is written and cleared on its own file.
+
 ---
 
 ## Your Posture: Opinionated Partner
@@ -119,6 +135,8 @@ Check args and environment to determine which planning path to follow:
 **Skip if:** Autonomous mode (invoked from `craft:story-implement-auto`).
 **Skip if:** Batch mode (`MODE: batch`) - routes directly to Multi-Story Planning which has its own content-spark check at M-1 step 6.
 
+When this phase runs, first: `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] content-check`.
+
 Read the story file. Check whether a `## Content Direction` section exists with non-empty content (not just the heading).
 
 **If missing:** The story hasn't been through content-spark yet. Use **AskUserQuestion**:
@@ -151,7 +169,7 @@ After it completes, continue to Phase 0.45.
 **Skip if:** Story frontmatter has `alignment: complete` AND the story contains an `## Alignment` section (the receipt the check writes). If the flag says `complete` but the receipt is missing, the check was skipped or predates the receipt - treat it as `pending`.
 **Skip if:** Autonomous mode (invoked from `craft:story-implement-auto`).
 
-Read the story file's `alignment` frontmatter field.
+Read the story file's `alignment` frontmatter field. When the check runs (below), first: `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] alignment-check`.
 
 **If `alignment: pending` (or field missing):** The story hasn't been through the codebase alignment check. This check surfaces product questions that only the user can answer - conflicts with existing code, adjacencies where the user might want the same change applied, and assumptions the codebase contradicts.
 
@@ -162,7 +180,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/commands/references/alignment-check.md` and follow t
 4. Loop until zero unasked product questions remain
 5. Record the `## Alignment` receipt in the story and set `alignment: complete` in the frontmatter
 
-**Batch mode (`MODE: batch`):** Flag stories with `alignment: pending` during triage. Ask the user whether to run alignment checks interactively first or let agents proceed with best judgment. See `${CLAUDE_PLUGIN_ROOT}/commands/references/alignment-check.md` "Batch Planning" section.
+**Batch mode (`MODE: batch`):** Flag stories with `alignment: pending` during triage. Ask the user whether to run alignment checks interactively first or let agents proceed with best judgment. When the interactive alignment checks run, write `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] alignment-check` for each story as its check begins. See `${CLAUDE_PLUGIN_ROOT}/commands/references/alignment-check.md` "Batch Planning" section.
 
 **If `alignment: complete`:** Continue to Phase 0.46.
 
@@ -177,7 +195,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/commands/references/alignment-check.md` and follow t
 
 Read the story file's frontmatter `type` field.
 
-**For `type: ui`** — Recommend running creative-spark (UI stories benefit from visual riffing before chunks lock the implementation):
+**For `type: ui`** — When this question is asked, first: `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] direction`. Recommend running creative-spark (UI stories benefit from visual riffing before chunks lock the implementation):
 
 ```
 question: "Want to riff visual options before planning chunks?"
@@ -210,7 +228,7 @@ After creative-spark completes, the story will have a `## Visual Direction` sect
 **Skip if:** The user's own words in this session asked to plan this story: they invoked `/craft:plan-chunks` naming it, said "plan this" or similar about it, or answered yes to a question that offered to plan it. That ask is the explicit request this gate exists to secure. It does not count when the story was reached with no ask from the user (an autonomous pick, a chained flow that never asked, or a story picked because none was named).
 **Skip if:** Autonomous mode (invoked from `craft:story-implement-auto`).
 
-**Otherwise:** Read the story file's `## Spark` section. Present it to the user:
+**Otherwise:** When the gate runs, first: `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] direction`. Read the story file's `## Spark` section. Present it to the user:
 
 > "Before I plan the implementation, let's confirm the direction:
 >
@@ -229,10 +247,10 @@ Use **AskUserQuestion**:
       description: "I want to refine the spark before planning"
 
 **If "Yes, plan this":** Proceed to planning.
-**If "Explore creatively first":** Stop planning. The user will explore on their own terms.
-**If "Adjust the scope":** Discuss with the user. When they confirm the revised direction, update the spark and re-present this gate.
+**If "Explore creatively first":** Run `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] clear`, then stop planning. The user will explore on their own terms.
+**If "Adjust the scope":** Discuss with the user. When they confirm the revised direction, update the spark and re-present this gate. If the user leaves the adjustment unfinished and planning stops, run `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] clear`.
 
-**Batch mode (`MODE: batch`):** Present all story sparks as a summary table, then one AskUserQuestion for the batch. Same skip logic - if `DIRECTION_CONFIRMED: true`, skip the gate.
+**Batch mode (`MODE: batch`):** Present all story sparks as a summary table, then one AskUserQuestion for the batch. Same skip logic - if `DIRECTION_CONFIRMED: true`, skip the gate. When the gate runs, write `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] direction` for each story first.
 
 > "Planning [N] stories in [Cycle Name]:
 >
@@ -255,13 +273,15 @@ options:
 ```
 
 **If "Review individually":** Present Phase 0.5 gate for each story sequentially (single-story pattern).
-**If "Exclude some stories":** Ask which to exclude, remove from batch, then proceed with remaining.
+**If "Exclude some stories":** Ask which to exclude, run `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] clear` on each excluded story, remove them from the batch, then proceed with remaining.
 
 ## Single-Story Planning
 
 This is the default path for all existing invocations. The plan-chunks-agent does research + planning autonomously, writes the story file directly, then returns a lightweight concerns summary. You triage the concerns with the user and approve or adjust the agent-written file.
 
 ### S-1: Launch Planning Agent
+
+Every time S-1 runs - the first launch, a fork re-launch, the R4 re-launch and an S-2 re-plan - first: `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] planner`.
 
 **INVOKE the plan-chunks-agent using the Task tool** with `subagent_type: "craft:plan-chunks-agent"`.
 
@@ -302,12 +322,12 @@ If the agent's output is a `## PLAN FORK` report instead of a concerns summary, 
 3. When the agent returns its concerns summary, proceed with Step 1 below as normal.
 R1. If the output is a `## RESEARCH REQUEST` instead (a load-bearing outside fact three searches did not settle): when the story already carries a `planner door` run line, ask the user on a question card what the plan should assume and run nothing more (in batch triage this ask is a BT-2 item, never asked here).
 R2. Otherwise Read `${CLAUDE_PLUGIN_ROOT}/commands/references/research-inline.md` with `QUERY` = the request's Question, `STORY`, `DOOR=planner`.
-R3. Read `${CLAUDE_PLUGIN_ROOT}/commands/references/alignment-check.md` and run it from Step 0, skipping the outside-world step; its Step 6 appends a new `_Checked:` block to the story's `## Alignment` section and sets `alignment: complete` as written (already `complete` whenever the check ran before).
+R3. First `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] alignment-check`, then Read `${CLAUDE_PLUGIN_ROOT}/commands/references/alignment-check.md` and run it from Step 0, skipping the outside-world step; its Step 6 appends a new `_Checked:` block to the story's `## Alignment` section and sets `alignment: complete` as written (already `complete` whenever the check ran before).
 R4. Re-launch S-1 fresh with the request's answer named in the prompt (never a SendMessage to a guessed address), then proceed with Step 1.
 
 The agent returns a lightweight concerns summary (~200-400 tokens) and has already written the story file with full planning detail. Run the full validation checklist on both artifacts before proceeding to triage.
 
-**Step 1 - Validate the concerns summary (agent's text output):**
+**Step 1 - Validate the concerns summary (agent's text output):** first: `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] plan-check`.
 - Output is non-empty
 - `## Overview` section present with story file path, chunk count, file count
 - `## Flagged Concerns` and `## Decisions Made` tables present
@@ -352,7 +372,7 @@ Ask on a question card (Read `${CLAUDE_PLUGIN_ROOT}/commands/references/question
 
 **If re-plan:** Re-invoke the plan-chunks-agent (return to S-1). Include in the retry prompt: "Previous plan attempt had structural issues: [failure list]. Ensure the plan includes a ## The Pitch section (sell + conditions table using the exact headers `| Condition | Secured by |`, every row tagged verified / system-owned / unverifiable), a ## Investigation narrative, refined ## Acceptance criteria (5+ specific items), chunks_total in 2-7 range, and every chunk has Goal, Files, Contracts (every line receipted), and Test cases. Every chunk's Done When must assert the project builds and all tests pass at that checkpoint. Rename and removal work must update ALL call sites - including test files, mocks, and fixtures - within the same chunk; if that cannot fit the chunk limits, flag the story for splitting instead of planning chunks that leave the tree broken between boundaries. The plan must also include a ## Acceptance Pre-Flight table - one row per acceptance vehicle, no UNREACHABLE verdicts (see references/acceptance-walkthrough.md). Risk Tags descriptions must name the implementation mechanism - bare threshold values with no mechanism wording are flagged by check #8."
 
-**If the user fixes it by hand:** Acknowledge and end - the user will edit the story file directly and re-invoke planning when ready.
+**If the user fixes it by hand:** Run `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] clear`, acknowledge and end - the user will edit the story file directly and re-invoke planning when ready.
 
 **If going on to triage:** Continue to S-3 with the plan as-is. Note the validation gaps in the triage presentation so the user is aware.
 
@@ -362,6 +382,8 @@ The agent has written the story file and returned flagged concerns, decisions, a
 
 **Before asking any triage question (Steps 1-5), Read `${CLAUDE_PLUGIN_ROOT}/commands/references/question-card.md` once** - it covers every step below. The reference owns the card: the steps below choose which items reach a card, never how a card reads.
 
+Once triage begins, first: `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] triage`.
+
 **Answer-time write:** after each answered triage question (Steps 1-5), apply that answer's edit to the story file immediately - per the write rules in `${CLAUDE_PLUGIN_ROOT}/skills/plan-chunks/references/batch-triage.md` ("Story File Writing") - then print the read-back the reference gives, before the next question renders. A real edit names what changed; a no-op answer reads "kept as planned" and makes no edit. Answers must survive a session that dies mid-triage. Never touch `## Reference Materials` in that write: edit in place, and if the file is written whole, copy it over verbatim, including any `**Tracker context (copied from <KEY>):**` group.
 
 **Step 1 — Critical Blockers:**
@@ -370,7 +392,7 @@ If the concerns summary's Critical Blockers section has entries, surface them im
 
 > "[Story Name] has a blocker: [blocker description]. [Agent's recommendation]."
 
-Ask one card per blocker. If the blocker means the story can't be planned, stop and report why. (A blocker with no live alternatives is a dead end: ask the story-fate question on a card whose options are what the story becomes.)
+Ask one card per blocker. If the blocker means the story can't be planned, run `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] clear`, then stop and report why. (A blocker with no live alternatives is a dead end: ask the story-fate question on a card whose options are what the story becomes.)
 
 **Step 2 - Flagged Concerns:**
 
@@ -458,6 +480,8 @@ The agent already wrote the story file with full detail. Your job depends on the
 
 **If "Yes, mark ready":**
 
+The `update-story-status.sh ... ready` flip below also clears the planning stage, so both handlers here and every S-6 outcome leave with no stage.
+
 Triage answers already landed in the story file at answer time (S-3's answer-time write), so this is a status flip plus final reconciliation - verify nothing answered is missing, then:
 
 ```bash
@@ -535,7 +559,7 @@ This path is triggered when `MODE: batch` is in args. It plans all `status: plan
 3. Read frontmatter of each — filter to `status: planning` only
 4. If no planning stories found → report "No stories need planning in this cycle." and exit
 5. If only 1 planning story → switch to single-story path (no batch overhead needed)
-6. **Content spark check:** For each planning story, check whether it has a `## Content Direction` section with non-empty content. If ANY stories are missing it, report them: "These stories haven't been through content-spark yet: [list]." Use **AskUserQuestion**:
+6. **Content spark check:** For each planning story, first `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] content-check`, then check whether it has a `## Content Direction` section with non-empty content. If ANY stories are missing it, report them: "These stories haven't been through content-spark yet: [list]." Use **AskUserQuestion**:
    ```
    question: "[N] stories are missing Content Direction. Run content-spark on them before planning?"
    header: "Prerequisite"
@@ -563,7 +587,7 @@ This path is triggered when `MODE: batch` is in args. It plans all `status: plan
 Parse dependencies from each planning story to determine which can plan in parallel.
 
 1. For each planning story, read the `## Dependencies` section:
-   - **HARD BLOCK:** If any story is missing the `## Dependencies` section entirely, or has no `**Blocked by:**` line, STOP. Do not proceed with batch planning. Report: "Story [name] has no dependency declaration. Dependencies must be filled in before batch planning - without them, stories may plan in parallel when they share files, causing stale plans that require full replan and reimplement." Use AskUserQuestion to let the user fill them in or cancel.
+   - **HARD BLOCK:** If any story is missing the `## Dependencies` section entirely, or has no `**Blocked by:**` line, STOP. Do not proceed with batch planning. Report: "Story [name] has no dependency declaration. Dependencies must be filled in before batch planning - without them, stories may plan in parallel when they share files, causing stale plans that require full replan and reimplement." Use AskUserQuestion to let the user fill them in or cancel; on cancel, run `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] clear` on every batch story.
    - Extract the `**Blocked by:**` line
    - Parse story names and statuses. Handle all real-world variations:
      - `"none"` or `"None"` → no blockers
@@ -587,7 +611,7 @@ Parse dependencies from each planning story to determine which can plan in paral
        description: "Fix story files manually before batch planning"
    ```
    - **If "Scan now":** Read the story's Spark and Scope, grep/glob the codebase for matching files, write the `## Likely Files` section to the story file (same format as story-new: dated, action-tagged). Then continue.
-   - **If "Cancel batch":** Stop. Do not proceed with batch planning.
+   - **If "Cancel batch":** Run `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] clear` on every batch story, then stop. Do not proceed with batch planning.
 
 3. **Verify "Blocked by: None" declarations via file overlap:**
 
@@ -614,7 +638,7 @@ Parse dependencies from each planning story to determine which can plan in paral
    - **Level 0:** Stories with zero in-set blockers → plan first (all parallel)
    - **Level 1:** Stories blocked only by Level 0 stories → plan after Level 0 completes
    - **Level N:** Stories blocked only by Level N-1 or earlier → plan after Level N-1 completes
-   - **Circular dependency:** If any story can't be assigned to a level (mutual blocking), flag it: "Stories [A] and [B] have a circular dependency — resolve before planning." Exclude from batching and report to user.
+   - **Circular dependency:** If any story can't be assigned to a level (mutual blocking), flag it: "Stories [A] and [B] have a circular dependency — resolve before planning." Run `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] clear` on each excluded story, exclude them from batching and report to user.
    - **No `## Dependencies` section:** Treat as zero blockers (Level 0)
 
    **WHY levels must plan sequentially - this is NOT about implementation order:**
@@ -641,7 +665,7 @@ Parse dependencies from each planning story to determine which can plan in paral
 
 1. Use the dependency graph levels from M-1b as your batches
 2. For each level (starting from Level 0):
-   - Create agent team teammates, one per story in this level
+   - Create agent team teammates, one per story in this level; as each launches, `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] planner` for its story
    - Each teammate receives: planning instructions (reference plan-chunks-agent approach), story path, cycle context (goal + all sibling names/sparks), project root, **sibling Likely Files** (for each other story in this level, include its name and `## Likely Files` content so the agent can detect file overlap)
    - **Each teammate's prompt MUST include:** "After planning, WRITE the updated story file directly using the Write tool. Keep status: planning — the orchestrator handles approval. Then return ONLY your concerns summary as your final output — do NOT include the full plan report."
    - Teammates can coordinate via messaging (file overlap, dependency awareness)
@@ -654,7 +678,7 @@ Parse dependencies from each planning story to determine which can plan in paral
 
 1. Use the dependency graph levels from M-1b as your batches
 2. For each level (starting from Level 0):
-3. For each story in the current level, launch plan-chunks-agent subagents via Task tool. **CRITICAL: Always use `run_in_background: true`** so each agent's full output is persisted to a file on disk. This is essential — concerns summaries MUST survive context compaction.
+3. For each story in the current level, run `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] planner` as it launches, then launch plan-chunks-agent subagents via Task tool. **CRITICAL: Always use `run_in_background: true`** so each agent's full output is persisted to a file on disk. This is essential — concerns summaries MUST survive context compaction.
    ```
    Task tool:
      subagent_type: "craft:plan-chunks-agent"
@@ -751,7 +775,7 @@ Validate each agent's output **one at a time** by reading from output files. Do 
 
 For each story in your output file registry:
 1. **Read the output file** using the Read tool (the path from M-2 step 4) — this is the concerns summary
-2. **Validate concerns summary:** non-empty, has `## Overview` section with `Story file:` path
+2. **Validate concerns summary** (first `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] plan-check` for this story): non-empty, has `## Overview` section with `Story file:` path
 3. **Validate story file was written:** Read the story file path from the `Story file:` field. Use Read tool to check it has a `## Chunks` section and `chunks_total > 0` in frontmatter. If the story file wasn't updated (no `## Chunks` section), mark as failed — "agent didn't write story file". While the story file is open, run the S-2 Step 2 structural check table against it (one story at a time - do not hold multiple plans in context). A plan that fails any structural check (including check #6, the green-tree Done When criterion) is marked failed with the check's failure text
 4. **Extract lightweight metadata** from concerns summary — story name, chunk count, file count, concern count, and the `## File Impact` table. Do NOT hold the full plan in memory — you'll read the story file fresh in BT-5.
 5. Note any failures with reason
@@ -788,9 +812,9 @@ If any agents failed:
       description: "Re-plan everything from scratch"
   ```
 
-If "Retry failed stories" → queue for single-story planning (S-1 through S-6) after batch triage
-If "Skip them for now" → proceed with successful plans only
-If "Retry all" → re-launch the full batch (M-2)
+If "Retry failed stories" → run `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] clear` on each queued story, then queue for single-story planning (S-1 through S-6) after batch triage
+If "Skip them for now" → run `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] clear` on each failed story, then proceed with successful plans only
+If "Retry all" → run `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] clear` on each story in the batch, then re-launch the full batch (M-2)
 
 ### M-5: Hand Off to Batch Triage
 
@@ -822,7 +846,10 @@ The batch triage flow (BT-1 through BT-7) reviews all plans with the user after 
 
 - **BT-5: Read story files fresh** - use the Read tool, not memory or concerns summaries
 - **BT-5: Sequential only** - present one story, wait for response, then read the next
-- **BT-6: "Approve"** runs `update-story-status.sh [story-file] ready`
+- **BT-1: stage** - `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] triage` for each planned story as triage begins
+- **BT-5: "Reject"** runs `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] clear` for that story
+- **BT-5: "Adjust"** runs `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] clear` for that story; its queued re-plan writes from S-1 again
+- **BT-6: "Approve"** runs `update-story-status.sh [story-file] ready`, which also clears the planning stage
 - **BT-7: "Start implementing"** applies the hand-back rule from S-5: when cycle-start is waiting to resume, return to it with the first ready story; otherwise invoke `craft:craft-story-implement` via Skill tool (never implement directly)
 
 ---

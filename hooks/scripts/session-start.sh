@@ -299,7 +299,7 @@ fi
 # sits in an if-condition, exempt from set -e.
 taste_enabled=""
 if [ -f "${PROJECT_ROOT}.craft/settings.yaml" ]; then
-  taste_enabled=$(grep -m1 '^taste_pass_enabled:' "${PROJECT_ROOT}.craft/settings.yaml" 2>/dev/null | sed 's/^taste_pass_enabled:[[:space:]]*//' | tr -d '"' | tr -d "'")
+  taste_enabled=$(grep -m1 '^taste_pass_enabled:' "${PROJECT_ROOT}.craft/settings.yaml" 2>/dev/null | sed -e 's/^taste_pass_enabled:[[:space:]]*//' -e 's/[[:space:]][[:space:]]*#.*$//' | tr -d '"' | tr -d "'")
 fi
 if [ "$taste_enabled" != "false" ]; then
   taste_threshold=$(CRAFT_PROJECT_ROOT="${PROJECT_ROOT%/}" "$SCRIPT_DIR/taste-pass-state.sh" effective-threshold 2>/dev/null || echo 3)

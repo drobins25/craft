@@ -254,6 +254,30 @@ rm -f "$ENV_FILE"
 cleanup_test_dir
 echo ""
 
+# Test 7b: a trailing comment after false still disables
+begin_test "no ripe line when taste_pass_enabled is false with a trailing comment"
+
+TEST_DIR=$(create_minimal_craft)
+ENV_FILE=$(mktemp)
+cat > "$TEST_DIR/.craft/.global-state" << 'EOF'
+ACTIVE_CYCLE=""
+CURRENT_STORY=""
+PLANNING_CYCLE=""
+LAST_ACTIVITY=""
+EOF
+seed_loved_tweaks "$TEST_DIR" 3
+printf 'taste_pass_enabled: false  # off for now\n' > "$TEST_DIR/.craft/settings.yaml"
+
+set +e
+RESULT=$(cd "$TEST_DIR" && unset PROJECT_ROOT && unset CRAFT_PROJECT_ROOT && unset CRAFT_MULTI_PROJECT && export CLAUDE_ENV_FILE="$ENV_FILE" && bash "$SESSION_SCRIPT" 2>/dev/null)
+set -e
+
+assert_not_contains "no ripe line when disabled with a comment" "Taste: >=" "$RESULT"
+
+rm -f "$ENV_FILE"
+cleanup_test_dir
+echo ""
+
 # Test 8: no ripe line when count is below the effective threshold
 begin_test "no ripe line when count < effective threshold"
 
