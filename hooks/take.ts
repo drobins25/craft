@@ -64,9 +64,10 @@ export function stateField(text: string, key: string): string {
 }
 
 // The sheen is on unless the project's settings file says `progress_band_motion: false`;
-// a missing file or key, or any other value, leaves it on.
+// a missing file or key, or any other value, leaves it on. A trailing ` # comment`
+// is not part of the value.
 export function motionOn(settings: string): boolean {
-  return field(settings, 'progress_band_motion') !== 'false'
+  return field(settings, 'progress_band_motion').replace(/\s+#.*$/, '') !== 'false'
 }
 
 async function readOr($: EngineInterface, path: string): Promise<string> {
