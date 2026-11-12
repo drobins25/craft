@@ -51,8 +51,13 @@ type Latch = { gate: Promise<void> | null; active: number; most: number }
 // A file system made of absolute paths. Every folder implied by a path exists.
 // Returns the calls made, so a test can show what was (not) read.
 function stubFiles(on: On, files: Files, sessionRoot: string, latch?: Latch) {
-  const calls = { read: [] as string[], exists: [] as string[], list: [] as string[] }
+  const calls = { read: [] as string[], exists: [] as string[], list: [] as string[], write: [] as string[] }
   const isDir = (path: string) => [...files.keys()].some(key => key.startsWith(`${path}/`))
+  on('fs.write', (_, e) => {
+    calls.write.push(e.path)
+    files.set(e.path, e.text)
+    return { value: undefined }
+  })
   on('fs.read', async (_, e) => {
     calls.read.push(e.path)
     if (latch?.gate && e.path.endsWith('/.global-state')) {
@@ -744,7 +749,7 @@ test('a -p session reads nothing and starts no timer', async ($, on) => {
   await world.clock.settle()
   await endTurn($)
 
-  expect(world.calls).toEqual({ read: [], exists: [], list: [] })
+  expect(world.calls).toEqual({ read: [], exists: [], list: [], write: [] })
   expect(world.writes.filter(k => k.startsWith('progress'))).toEqual([])
   const answer = await runCommand($, 'craft-progress')
   expect(answer.text).toBe('Craft progress hidden.')
@@ -1214,6 +1219,7 @@ test('the module never writes the motion key into a settings file', async ($, on
   await world.clock.advance(3000)
 
   expect(files.has(`${ROOT}/.craft/settings.yaml`)).toBe(false)
+  expect(world.calls.write).toEqual([])
 })
 
 test('hidden stays hidden while the story changes', async ($, on) => {
@@ -1565,7 +1571,7 @@ test('a -p session reads nothing when its own story goes ready', async ($, on) =
   files.set(T_FILE, storyFile({ status: 'ready' }))
   await world.clock.advance(6000)
 
-  expect(world.calls).toEqual({ read: [], exists: [], list: [] })
+  expect(world.calls).toEqual({ read: [], exists: [], list: [], write: [] })
   expect(ownWrites(world)).toBe(0)
   expect(world.writes.filter(k => k.startsWith('progress'))).toEqual([])
 })
