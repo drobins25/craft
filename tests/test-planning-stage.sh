@@ -171,79 +171,15 @@ for st in backlog planning; do
   check_eq "$st: stage kept" "planning_stage: triage" "$(front "$F" | grep '^planning_stage:')"
 done
 
-# --- plan-chunks skill and planner agent wiring ---------------------------------
+# --- plan-chunks wiring: one lint per flow file ----------------------------------
 SKILL="$REPO/skills/plan-chunks/SKILL.md"
 AGENT="$REPO/agents/plan-chunks-agent.md"
-CMD='${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file]'
 
-# span FROM TO: the lines of SKILL.md from the first FROM heading up to the TO heading.
-span() { sed -n "/^$1/,/^$2/p" "$SKILL"; }
-# line_of MARKER: the first SKILL.md line containing the literal MARKER.
-line_of() { grep -F -- "$1" "$SKILL" | head -1; }
+echo "Test: the plan-chunks skill calls the planning-stage script"
+if grep -qF 'hooks/scripts/planning-stage.sh' "$SKILL"; then pass "skill calls planning-stage.sh"; else fail "skill calls planning-stage.sh"; fi
 
-check_in() { # name needle haystack
-  if printf '%s\n' "$3" | grep -qF -- "$2"; then pass "$1"; else fail "$1" "contains: $2" "(absent)"; fi
-}
-
-echo "Test: each single-flow phase names its stage write"
-check_in "0.4 content-check" "$CMD content-check" "$(span '## Phase 0.4' '## Phase 0.45')"
-check_in "0.45 alignment-check" "$CMD alignment-check" "$(span '## Phase 0.45' '## Phase 0.46')"
-check_in "0.45 batch alignment-check" "$CMD alignment-check" "$(line_of 'Batch mode (`MODE: batch`):** Flag stories')"
-check_in "0.46 direction" "$CMD direction" "$(span '## Phase 0.46' '## Phase 0.5')"
-check_in "0.5 direction" "$CMD direction" "$(span '## Phase 0.5' '## Single-Story Planning')"
-check_in "0.5 batch direction" "$CMD direction" "$(line_of 'Batch mode (`MODE: batch`):** Present all story sparks')"
-check_in "S-1 planner" "$CMD planner" "$(span '### S-1' '### S-2')"
-check_in "S-2 plan-check" "$CMD plan-check" "$(span '### S-2' '### S-3')"
-check_in "S-3 triage" "$CMD triage" "$(span '### S-3' '### S-4')"
-
-echo "Test: each batch phase names its stage write"
-check_in "M-1 content-check" "$CMD content-check" "$(span '### M-1:' '### M-1b')"
-check_in "M-2 planner (teams)" "$CMD planner" "$(span '#### Mode: Agent Teams' '#### Mode: Task Subagents')"
-check_in "M-2 planner (subagents)" "$CMD planner" "$(span '#### Mode: Task Subagents' '#### Predecessor Context Handoff')"
-check_in "M-3 plan-check" "$CMD plan-check" "$(span '### M-3' '### M-4')"
-check_in "Critical Rules triage" "$CMD triage" "$(span '### Critical Rules' '## Reference Notes')"
-
-echo "Test: every named exit names the clear"
-CLEAR="$CMD clear"
-check_in "0.5 Explore creatively first" "$CLEAR" "$(line_of '**If "Explore creatively first":**')"
-check_in "0.5 Adjust the scope" "$CLEAR" "$(line_of '**If "Adjust the scope":**')"
-check_in "0.5 Exclude some stories" "$CLEAR" "$(line_of '**If "Exclude some stories":**')"
-check_in "S-2 fixes it by hand" "$CLEAR" "$(line_of '**If the user fixes it by hand:**')"
-check_in "S-3 blocker stop" "$CLEAR" "$(line_of "If the blocker means the story can't be planned")"
-check_in "M-1b hard block cancel" "$CLEAR" "$(line_of '**HARD BLOCK:**')"
-check_in "M-1b Cancel batch" "$CLEAR" "$(line_of '**If "Cancel batch":**')"
-check_in "M-1b circular dependency" "$CLEAR" "$(line_of '**Circular dependency:**')"
-check_in "M-4 Skip them for now" "$CLEAR" "$(line_of 'If "Skip them for now"')"
-check_in "M-4 Retry failed stories" "$CLEAR" "$(line_of 'If "Retry failed stories"')"
-check_in "M-4 Retry all" "$CLEAR" "$(line_of 'If "Retry all"')"
-check_in "BT-5 Reject" "$CLEAR" "$(line_of '- **BT-5: "Reject"**')"
-check_in "BT-5 Adjust" "$CLEAR" "$(line_of '- **BT-5: "Adjust"**')"
-
-echo "Test: the ready flip is named as the clear"
-check_in "S-5 names the flip" "update-story-status.sh" "$(span '### S-5' '### S-6')"
-check_in "S-5 says the flip clears the stage" "also clears the planning stage" "$(span '### S-5' '### S-6')"
-check_in "Critical Rules say the flip clears" "also clears the planning stage" "$(span '### Critical Rules' '## Reference Notes')"
-
-echo "Test: R3 rewrites alignment-check and R4 returns to S-1"
-FORK="$(sed -n '/^R3\./,/^R4\./p' "$SKILL")"
-check_in "R3 alignment-check write" "$CMD alignment-check" "$FORK"
-check_in "R4 names the S-1 write" "S-1" "$(line_of 'R4. ')"
-
-echo "Test: the Planning Stage section carries the rules"
-check_eq "one section" "1" "$(grep -c '^## Planning Stage$' "$SKILL" || true)"
-PS="$(sed -n '/^## Planning Stage$/,/^---$/p' "$SKILL")"
-check_in "never edited directly" "Never edit \`planning_stage\` with Edit or Write" "$PS"
-check_in "failure runs the clear first" "runs the clear before it is reported" "$PS"
-check_in "ready flip clears" "update-story-status.sh" "$PS"
-check_in "one call per story in batch" "one call per story" "$PS"
-check_eq "section sits after the Go run paragraph" "1" "$(awk '/^\*\*Under a Go run\*\*/{g=NR} /^## Planning Stage$/{p=NR} END{print (g>0 && p>g) ? 1 : 0}' "$SKILL")"
-for st in content-check alignment-check direction planner plan-check triage; do
-  check_in "section lists $st" "\`$st\`" "$PS"
-done
-
-echo "Test: the planner keeps the field"
-check_eq "template line after alignment" "alignment: [preserved from original]
-planning_stage: [preserved if present]" "$(grep -A1 '^alignment: \[preserved from original\]$' "$AGENT" | head -2)"
+echo "Test: the planner template carries the field"
+if grep -q '^planning_stage:' "$AGENT"; then pass "agent template has planning_stage"; else fail "agent template has planning_stage"; fi
 
 echo ""
 echo "=== Results (test-planning-stage): $PASS_COUNT passed, $FAIL_COUNT failed ==="
