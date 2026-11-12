@@ -2170,6 +2170,24 @@ test('a double start runs once', async ($, on) => {
   expect(runs).toHaveLength(1)
 })
 
+test('start works again in a fresh session after a start', async ($, on) => {
+  const files: Files = new Map()
+  const { world, runs } = await chooserRow($, on, files)
+  let ui = await mountBand($)
+  await pressInto($, ui, READY, 'story-1', 'start')
+  await world.clock.settle()
+  await ui.unmount()
+
+  await $.session.start({ cwd: ROOT, surface: 'terminal', isInteractive: true })
+  await world.clock.settle()
+  ui = await mountBand($)
+  await pressInto($, ui, READY, 'story-1', 'start')
+  await world.clock.settle()
+  await ui.unmount()
+
+  expect(runs).toHaveLength(2)
+})
+
 test('start with the slot set runs nothing and can start again once it frees', async ($, on) => {
   const files: Files = new Map()
   const { world, runs } = await chooserRow($, on, files)

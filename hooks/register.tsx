@@ -265,6 +265,7 @@ export const register: Register = on => {
     validators.clear()
     lastFacts = null
     starting = false
+    pressLocked = false
     stop(refreshTicker)
     stop(frameTicker)
     live = e.surface !== null
