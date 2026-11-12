@@ -1,7 +1,21 @@
 import { expect, test } from 'claude-code/testing'
-import { compose, field, frontmatter, motionOn, parseStageLines, stageOf, stateField, take } from '../hooks/take'
+import {
+  blockReason,
+  compose,
+  describeChoice,
+  field,
+  frontmatter,
+  motionOn,
+  orderChoices,
+  parseStageLines,
+  readyToStart,
+  stageOf,
+  stateField,
+  take,
+  whoHolds,
+} from '../hooks/take'
 import type { BuildingFacts, DiskFacts, SessionFlags, StagedStory } from '../hooks/take'
-import type { ProgressSnapshot } from '../types'
+import type { Choice, ProgressSnapshot } from '../types'
 import { CLEARED_LINE, SET_LINE } from './fixtures/planning-stage-stdout'
 
 const IDLE: SessionFlags = { waiting: 0, validating: false }
@@ -368,4 +382,88 @@ test('compose: an own story that plans again wins over its ready row', () => {
   )
 
   expect(snap).toMatchObject({ stage: 'planner', owned: true })
+})
+
+const story = (status: string, extra = ''): string => `---\nstatus: ${status}\n${extra}---\nbody\n`
+const choice = (file: string, number = '', dir = '/work/p/.craft/cycles/c/stories'): Choice => ({
+  path: `${dir}/${file}`,
+  label: number ? `Story ${number}` : file.replace(/\.md$/, ''),
+  title: '',
+})
+const labels = (list: Choice[]): string[] => list.map(c => c.label)
+
+test('orderChoices puts the row\'s own story first, then by story number', () => {
+  const own = choice('6-own.md', '6')
+  const list = orderChoices(own, [choice('9-b.md', '9'), choice('2-a.md', '2')])
+  expect(labels(list)).toEqual(['Story 6', 'Story 2', 'Story 9'])
+})
+
+test('orderChoices lists the own story once when it is also in the cycle', () => {
+  const own = choice('6-own.md', '6')
+  const list = orderChoices(own, [choice('2-a.md', '2'), choice('6-own.md', '6')])
+  expect(labels(list)).toEqual(['Story 6', 'Story 2'])
+})
+
+test('orderChoices puts unnumbered stories last, by file name', () => {
+  const list = orderChoices(null, [choice('zeta.md'), choice('10-x.md', '10'), choice('alpha.md'), choice('3-y.md', '3')])
+  expect(labels(list)).toEqual(['Story 3', 'Story 10', 'alpha', 'zeta'])
+})
+
+test('orderChoices falls back to the file name\'s leading digits', () => {
+  const list = orderChoices(null, [choice('12-b.md'), choice('4-a.md')])
+  expect(labels(list)).toEqual(['4-a', '12-b'])
+})
+
+test('orderChoices with no own story starts at the lowest number', () => {
+  const list = orderChoices(null, [choice('5-e.md', '5'), choice('1-a.md', '1')])
+  expect(list[0]?.label).toBe('Story 1')
+})
+
+test('readyToStart: ready with no stage is true; planning, active, or ready with a stage is false', () => {
+  expect(readyToStart(story('ready'))).toBe(true)
+  expect(readyToStart(story('ready', 'planning_stage:\n'))).toBe(true)
+  expect(readyToStart(story('planning'))).toBe(false)
+  expect(readyToStart(story('active'))).toBe(false)
+  expect(readyToStart(story('ready', 'planning_stage: triage\n'))).toBe(false)
+  expect(readyToStart('')).toBe(false)
+})
+
+test('describeChoice falls back to the file name as label', () => {
+  const plain = describeChoice('/work/p/.craft/backlog/idea.md', story('ready', 'title: "An idea"\n'))
+  expect(plain).toEqual({ path: '/work/p/.craft/backlog/idea.md', label: 'idea', title: 'An idea' })
+  const numbered = describeChoice('/work/p/x/2-a.md', story('ready', 'story_number: 2\ntitle: T\x1b[31m\n'))
+  expect(numbered.label).toBe('Story 2')
+  expect(numbered.title).toBe('T[31m')
+})
+
+const CYCLE = '/work/p/.craft/cycles/c/stories'
+
+test('blockReason: a held slot wins over every other reason', () => {
+  const c = choice('2-a.md', '2')
+  expect(blockReason(c, '', '/other', '', '7-next')).toBe('Story 7 is building')
+})
+
+test('blockReason: a cycle story outside the active cycle or unreadable is out of the cycle', () => {
+  const moved = choice('2-a.md', '2', '/work/p/.craft/cycles/d/stories')
+  expect(blockReason(moved, story('ready'), '/other', CYCLE, '')).toBe('Story 2 isn\'t in the active cycle anymore')
+  const gone = choice('2-a.md', '2')
+  expect(blockReason(gone, '', '/other', CYCLE, '')).toBe('Story 2 isn\'t in the active cycle anymore')
+  expect(blockReason(gone, story('ready'), '/other', '', '')).toBe('Story 2 isn\'t in the active cycle anymore')
+})
+
+test('blockReason: the row\'s own story is exempt from the cycle check', () => {
+  const own = choice('x.md', '', '/work/p/.craft/backlog')
+  expect(blockReason(own, story('ready'), own.path, '', '')).toBe('')
+  expect(blockReason(own, story('ready'), own.path, CYCLE, '')).toBe('')
+})
+
+test('blockReason: not ready', () => {
+  const c = choice('2-a.md', '2')
+  expect(blockReason(c, story('active'), '/other', CYCLE, '')).toBe('Story 2 isn\'t ready anymore')
+  expect(blockReason(c, story('ready'), '/other', CYCLE, '')).toBe('')
+})
+
+test('whoHolds still renders `Story 29` for `29-build-progress-band` and the raw name otherwise', () => {
+  expect(whoHolds('29-build-progress-band')).toBe('Story 29')
+  expect(whoHolds('build-it')).toBe('build-it')
 })

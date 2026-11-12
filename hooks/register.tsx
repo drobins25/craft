@@ -1,8 +1,11 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, Timer } from 'claude-code'
 
-import { draw, FRAME_MS, FRAMES, moves } from './draw'
-import { compose, findRoot, parseStageLines, readSlot, take } from './take'
+import type { Chooser } from '../types'
+
+import { draw, drawChooser, FRAME_MS, FRAMES, moves } from './draw'
+import type { ChooserActions } from './draw'
+import { compose, findRoot, parseStageLines, readChoices, take, whyNotStart } from './take'
 import type { DiskFacts, ScanEntry } from './take'
 
 // The band's session-only values: whether the user hid it, the snapshot it
@@ -17,6 +20,12 @@ export const ownPlanning = atom({ plugin: 'craft', key: 'ownPlanning' } as const
   shape: 'progress-2',
 })
 export const progressFrame = atom({ plugin: 'craft', key: 'progressFrame' } as const, 0)
+
+// The story chooser the ready row opens: the stories it lists, the page, the
+// pick, and why the last start was refused. Session memory only, so a stored
+// value an older version left reads as absent.
+const CLOSED: Chooser = { mode: '', own: '', choices: [], picked: 0, start: 0, earlier: [], reason: '' }
+export const chooser = atom({ plugin: 'craft', key: 'chooser' } as const, CLOSED, { shape: 'chooser-1' })
 
 const REFRESH_MS = 3000
 // A timer that has not ticked in this many periods is taken for dead and restarted.
@@ -37,10 +46,14 @@ let live = false
 let waiting = 0
 const validators = new Set<string>()
 let lastFacts: DiskFacts | null = null
-// Set by a press on the ready row's control and cleared when the band next
-// redraws or the main turn the press started ends, so a double press submits
-// once and a picker closed with no pick leaves the control pressable.
+// Set by a press on the chooser's start and cleared when the band next redraws
+// or the main turn the start began ends, so a double press submits once and a
+// story-implement that ends with no story picked leaves start pressable.
 let pressLocked = false
+// Set while start checks the story and the slot, cleared only when that check
+// ends: a redraw or a turn end during the file reads must not let a second
+// start through.
+let starting = false
 
 let inFlight: Promise<void> | null = null
 let readsBegan = false
@@ -146,23 +159,65 @@ async function dropEndedValidators($: EngineInterface): Promise<void> {
   }
 }
 
-// The ready row's control: starts craft's own story picker. It names no story
-// and asks nothing; the slot is read again so a row left up while a story runs
-// never submits.
-async function press($: EngineInterface): Promise<void> {
-  if (pressLocked) return
+// The ready row's control: turns the band into the story chooser, listing the
+// row's own story first and then the active cycle's ready stories. It runs
+// nothing; the list is read here, on the press, never on the band's refresh.
+async function openChooser($: EngineInterface): Promise<void> {
+  try {
+    const snap = await read($, progress)
+    if (!snap || snap.stage !== 'ready' || snap.slotHolder !== '') return
+    const root = lastFacts?.root || (await findRoot($))
+    if (!root) return
+    const choices = await readChoices($, root, snap.path)
+    if (choices.length === 0) return
+    await update($, chooser, (): Chooser => ({ mode: 'list', own: snap.path, choices, picked: 0, start: 0, earlier: [], reason: '' }))
+  } catch {
+    // A failed read leaves the ready row as it was.
+  }
+}
+
+// The chooser's start: checks the picked story and the slot against the disk
+// once more, closes the chooser, then runs /craft:story-implement on the
+// story's project-relative path so the command opens that story and no other.
+async function startChosen($: EngineInterface): Promise<void> {
+  if (starting || pressLocked) return
+  starting = true
   pressLocked = true
   try {
-    if (await readSlot($, lastFacts?.root)) {
+    const held = await read($, chooser)
+    const choice = held.mode === 'confirm' ? held.choices[held.picked] : undefined
+    const root = lastFacts?.root || (await findRoot($))
+    if (!choice || !root || !choice.path.startsWith(`${root}/`)) {
       pressLocked = false
       return
     }
-    await $.command.run({ command: 'craft:story-implement' })
+    const reason = await whyNotStart($, root, held.own, choice)
+    if (reason) {
+      // Nothing runs: the list is read again from page one so it shows what is startable now.
+      const choices = await readChoices($, root, held.own)
+      await update($, chooser, (): Chooser => ({ mode: 'list', own: held.own, choices, picked: 0, start: 0, earlier: [], reason }))
+      pressLocked = false
+      return
+    }
+    await update($, chooser, () => CLOSED)
+    await $.command.run({ command: 'craft:story-implement', args: choice.path.slice(root.length + 1) })
   } catch {
-    // A rejected run leaves the control pressable again.
+    // A rejected run leaves start pressable again.
     pressLocked = false
+  } finally {
+    starting = false
   }
 }
+
+const chooserActions = ($: EngineInterface): ChooserActions => ({
+  pick: index => void update($, chooser, (v): Chooser => ({ ...v, mode: 'confirm', picked: index, reason: '' })),
+  page: start => void update($, chooser, (v): Chooser => ({ ...v, start, earlier: [...v.earlier, v.start] })),
+  earlier: () =>
+    void update($, chooser, (v): Chooser => ({ ...v, start: v.earlier[v.earlier.length - 1] ?? 0, earlier: v.earlier.slice(0, -1) })),
+  cancel: () => void update($, chooser, () => CLOSED),
+  back: () => void update($, chooser, (v): Chooser => ({ ...v, mode: 'list' })),
+  start: () => void startChosen($),
+})
 
 // Remembers the stories the planning-stage script names, so the band knows which
 // are this session's. The set is written only when it changes.
@@ -209,6 +264,7 @@ export const register: Register = on => {
     waiting = 0
     validators.clear()
     lastFacts = null
+    starting = false
     stop(refreshTicker)
     stop(frameTicker)
     live = e.surface !== null
@@ -216,6 +272,7 @@ export const register: Register = on => {
       await Promise.all([startRefresh($), startFrames($)])
       await requestRefresh($)
     }
+    await update($, chooser, () => CLOSED)
 
     return next(e)
   })
@@ -284,10 +341,14 @@ export const register: Register = on => {
   }).catch(($, e, next) => next(e))
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+    if (e.props.hasSurvey || (await read($, progressHidden))) return next(e)
+    // An open chooser draws until start or cancel, even when the band's own view has moved on.
+    const held = await read($, chooser)
+    if (held.mode !== '') return drawChooser($.ui.resolve(e), held, e.props.bodyColumns, chooserActions($))
     const snap = await read($, progress)
-    if (e.props.hasSurvey || !snap || (await read($, progressHidden))) return next(e)
+    if (!snap) return next(e)
     return draw($.ui.resolve(e), snap, await read($, progressFrame), () => {
-      void press($)
+      void openChooser($)
     })
   })
 }

@@ -1,6 +1,6 @@
 import type { EngineInterface } from 'claude-code'
 
-import type { PlanStage, ProgressChunk, ProgressSnapshot } from '../types'
+import type { Choice, PlanStage, ProgressChunk, ProgressSnapshot } from '../types'
 
 const MAX_CHUNKS = 99
 
@@ -279,6 +279,90 @@ export async function readSlot($: EngineInterface, known?: string): Promise<stri
   const cycleName = stateField(await readOr($, `${root}/.craft/.global-state`), 'ACTIVE_CYCLE')
   if (!cycleName) return ''
   return stateField(await readOr($, `${root}/.craft/cycles/${cycleName}/.state`), 'CURRENT_STORY')
+}
+
+// The story a held slot names: its leading digits as `Story <n>`, else the
+// slot's own name.
+export function whoHolds(slotHolder: string): string {
+  const number = slotHolder.match(/^\d+/)?.[0]
+  return number ? `Story ${number}` : slotHolder
+}
+
+// Ready means the triage flip has happened: status `ready` and no planning stage.
+export function readyToStart(text: string): boolean {
+  const meta = frontmatter(text)
+  return field(meta, 'status') === 'ready' && field(meta, 'planning_stage') === ''
+}
+
+export function describeChoice(path: string, text: string): Choice {
+  const meta = frontmatter(text)
+  const number = field(meta, 'story_number')
+  const basename = fileName(path).replace(/\.md$/, '')
+  return { path, label: number ? `Story ${number}` : basename, title: field(meta, 'title') }
+}
+
+// The number a story sorts by: its story number, else its file name's leading digits.
+function sortNumber(choice: Choice): number {
+  const digits = choice.label.match(/^Story (\d+)$/)?.[1] ?? fileName(choice.path).match(/^\d+/)?.[0]
+  return digits === undefined ? Infinity : Number(digits)
+}
+
+// The row's own story first, then the rest by story number; unnumbered stories
+// come after every numbered one, by file name.
+export function orderChoices(own: Choice | null, others: Choice[]): Choice[] {
+  const rest = others
+    .filter(choice => choice.path !== own?.path)
+    .sort((a, b) => {
+      const [x, y] = [sortNumber(a), sortNumber(b)]
+      return x === y ? byFileName(a, b) : x < y ? -1 : 1
+    })
+  return own ? [own, ...rest] : rest
+}
+
+async function activeCycle($: EngineInterface, root: string): Promise<string> {
+  return stateField(await readOr($, `${root}/.craft/.global-state`), 'ACTIVE_CYCLE')
+}
+
+async function cycleStoriesDir($: EngineInterface, root: string): Promise<string> {
+  const cycle = await activeCycle($, root)
+  return cycle ? `${root}/.craft/cycles/${cycle}/stories` : ''
+}
+
+// The stories the chooser offers: the row's own story when it still reads ready,
+// then every ready story in the active cycle. Read only when the person asks.
+export async function readChoices($: EngineInterface, root: string, ownPath: string): Promise<Choice[]> {
+  const ownText = await readOr($, ownPath)
+  const own = ownText && readyToStart(ownText) ? describeChoice(ownPath, ownText) : null
+  const dir = await cycleStoriesDir($, root)
+  const others: Choice[] = []
+  if (dir) {
+    const listing = await $.fs.list(dir).catch(() => [])
+    for (const entry of listing) {
+      if (entry.kind !== 'file' || !entry.name.endsWith('.md')) continue
+      const path = `${dir}/${entry.name}`
+      const text = await readOr($, path)
+      if (text && readyToStart(text)) others.push(describeChoice(path, text))
+    }
+  }
+  return orderChoices(own, others)
+}
+
+// Why a chosen story cannot start now; '' when it can. A held slot wins, then
+// the cycle (the row's own story may live outside it), then readiness.
+export function blockReason(choice: Choice, text: string, ownPath: string, cycleStories: string, slot: string): string {
+  if (slot) return `${whoHolds(slot)} is building`
+  if (choice.path !== ownPath && (!cycleStories || !choice.path.startsWith(`${cycleStories}/`) || !text)) {
+    return `${choice.label} isn't in the active cycle anymore`
+  }
+  if (!text || !readyToStart(text)) return `${choice.label} isn't ready anymore`
+  return ''
+}
+
+export async function whyNotStart($: EngineInterface, root: string, ownPath: string, choice: Choice): Promise<string> {
+  const slot = await readSlot($, root)
+  const cycleStories = await cycleStoriesDir($, root)
+  const text = await readOr($, choice.path)
+  return blockReason(choice, text, ownPath, cycleStories, slot)
 }
 
 // What the project's files say, read lazily in precedence order: this session's

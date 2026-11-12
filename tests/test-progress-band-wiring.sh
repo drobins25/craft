@@ -8,7 +8,8 @@
 #   4. the engine-written types folder is never tracked
 #   5. the module's three files carry no planning citation and no absolute home path
 #   6. the module draws the band above the prompt, with props every build from 2.1.287 draws,
-#      and reads the project-root setting by a literal name
+#      and reads the project-root setting by a literal name; the ready row's button opens the
+#      story chooser, whose start runs the chosen story's path once and whose only hotkeys are x and n
 #   7. the README names the 2.1.287 requirement once and keeps its 2.1+ badge
 
 set -euo pipefail
@@ -142,12 +143,15 @@ if grep -q "planning_stage" "$TAKE"; then pass "take.ts reads the planning_stage
 # A step is never chosen from the chunk count, the progress counter or the story's status.
 STAGE_FN=$(sed -n '/^export function stageOf/,/^}/p' "$TAKE")
 if [ -n "$STAGE_FN" ] && ! echo "$STAGE_FN" | grep -qE "chunks_total|chunks_complete|'status'"; then pass "stageOf reads no chunk count and no status"; else fail "stageOf reads no chunk count and no status"; fi
-if grep -qF "\$.command.run({ command: 'craft:story-implement' })" "$MODULE"; then pass "the ready row's press runs /craft:story-implement with no story named"; else fail "the ready row's press runs /craft:story-implement with no story named"; fi
-if ! grep -nE "story-implement.*args|args:.*story-implement" $BAND_FILES >/dev/null; then pass "no press names a story"; else fail "no press names a story"; fi
+if grep -qF "\$.command.run({ command: 'craft:story-implement', args:" "$MODULE" && ! grep -qF "command: 'craft:story-implement' })" $BAND_FILES; then pass "start runs /craft:story-implement with the chosen story's path, never bare"; else fail "start runs /craft:story-implement with the chosen story's path, never bare"; fi
+RUN_CALLS=$(cat $BAND_FILES | grep -c '\$\.command\.run(' || true)
+if [ "$RUN_CALLS" -eq 1 ]; then pass "the band files make exactly one command run"; else fail "the band files make exactly one command run" "1" "$RUN_CALLS"; fi
 if ! grep -nE "plan-band|'◐'|◐" $BAND_FILES >/dev/null; then pass "no plan-band text and no half circle in the module's files"; else fail "no plan-band text and no half circle in the module's files" "none" "$(grep -nE "plan-band|◐" $BAND_FILES | head -3)"; fi
-if ! grep -nE '\b(autoFocus|hotkey|action|dimColor|hover|variant)=|<(Input|Select)\b|ui\.focus' $BAND_FILES >/dev/null; then pass "the band draws nothing that keeps focus and the ready control carries no style prop"; else fail "the band draws nothing that keeps focus and the ready control carries no style prop" "none" "$(grep -nE '\b(autoFocus|hotkey|action|dimColor|hover|variant)=|<(Input|Select)\b|ui\.focus' $BAND_FILES | head -3)"; fi
+if ! grep -nE '\b(autoFocus|action|variant)=|<(Input|Select)\b|ui\.focus' $BAND_FILES >/dev/null; then pass "the band draws no input, select, action, variant or focus call"; else fail "the band draws no input, select, action, variant or focus call" "none" "$(grep -nE '\b(autoFocus|action|variant)=|<(Input|Select)\b|ui\.focus' $BAND_FILES | head -3)"; fi
+HOTKEYS=$(cat $BAND_FILES | grep -oE 'hotkey=[^ ]+' | sort | tr '\n' ' ')
+if [ "$HOTKEYS" = 'hotkey="n" hotkey="x" ' ]; then pass "the chooser's only hotkeys are x (cancel) and n (back), one each"; else fail "the chooser's only hotkeys are x (cancel) and n (back), one each" 'hotkey="n" hotkey="x"' "$HOTKEYS"; fi
 if grep -q "<Button label={READY} plain onPress={onPress}>" "$DRAW"; then pass "the ready control is a plain Button with its label"; else fail "the ready control is a plain Button with its label"; fi
-if grep -q "pressLocked" "$MODULE" && grep -q "readSlot" "$MODULE"; then pass "a press is locked and re-reads the story slot"; else fail "a press is locked and re-reads the story slot"; fi
+if grep -q "pressLocked" "$MODULE" && grep -q "starting" "$MODULE" && grep -q "whyNotStart" "$MODULE" && sed -n '/^export async function whyNotStart/,/^}/p' "$TAKE" | grep -q "readSlot"; then pass "start is locked, guarded while it checks, and re-reads the story slot"; else fail "start is locked, guarded while it checks, and re-reads the story slot"; fi
 
 echo "=== the validator agents the band watches exist ==="
 if grep -q 'chunk-validator|claims-auditor' "$MODULE"; then pass "register.tsx names both validator agent types"; else fail "register.tsx names both validator agent types"; fi

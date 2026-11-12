@@ -430,8 +430,23 @@ test('the ball row is indented two columns', async ($, on) => {
 
   const indented = boxes.filter(b => b.props.paddingLeft === 2)
   expect(indented).toHaveLength(1)
-  expect(indented[0]?.props.gap).toBe(1)
+  const fixed = boxes.filter(b => b.props.gap === 1 && b.props.flexShrink === 0)
+  expect(fixed).toHaveLength(1)
+  expect(fixed[0]?.text).toBe('○○○ chunk 1 of 3')
   expect(indented[0]?.text).toBe('○○○ chunk 1 of 3')
+})
+
+test('the building view\'s line two is all fixed', async ($, on) => {
+  const files: Files = new Map()
+  buildingWorld(files)
+  await open($, on, files)
+
+  const ui = await mountBand($)
+  const boxes = await ui.findAll({ type: 'Box' })
+  await ui.unmount()
+
+  const line = boxes.find(b => b.props.paddingLeft === 2)
+  expect(line?.children).toHaveLength(1)
 })
 
 test('a long title can give way, but the label and status never shrink', async ($, on) => {
@@ -451,7 +466,7 @@ test('a long title can give way, but the label and status never shrink', async (
   const title = await ui.findAll({ type: 'Text' })
   await ui.unmount()
 
-  const fixed = boxes.filter(b => b.props.flexShrink === 0)
+  const fixed = boxes.filter(b => b.props.flexShrink === 0 && b.text.startsWith('✶'))
   expect(fixed).toHaveLength(1)
   expect(fixed[0]?.text).toBe('✶ Building Story 5 · building')
   expect(fixed[0]?.children.every(c => typeof c !== 'string' && (c as { type: string }).type === 'Text')).toBe(true)
@@ -1223,7 +1238,7 @@ const PLAN_SWEEP = 'claudeBlueShimmer_FOR_SYSTEM_SPINNER'
 const PLAN_WORD = ['P', 'l', 'a', 'n', 'n', 'i', 'n', 'g']
 const SCRIPT = '/plugin/hooks/scripts/planning-stage.sh'
 const READY = 'ready to implement'
-const HINT = ' · enter to implement (ctrl+x tab to focus)'
+const HINT = ' · enter to choose a story (ctrl+x tab to focus)'
 const T_FILE = `${CYCLE}/stories/t.md`
 const U_FILE = `${CYCLE}/stories/u.md`
 
@@ -1650,6 +1665,56 @@ async function mountBand($: Engine) {
   })
 }
 
+test('the ready hint reads the new copy', async ($, on) => {
+  const files: Files = new Map()
+  await readyRow($, on, files)
+
+  const drawn = await draw($)
+
+  expect(drawn[drawn.length - 1]?.text).toBe(' · enter to choose a story (ctrl+x tab to focus)')
+})
+
+// Line two's balls and words never shrink; only the grey hint gives way.
+async function lineTwoOf($: Engine) {
+  const ui = await mountBand($)
+  const boxes = await ui.findAll({ type: 'Box' })
+  const text = await ui.findAll({ type: 'Text' })
+  await ui.unmount()
+  const line = boxes.find(b => b.props.paddingLeft === 2)
+  const inner = boxes.filter(b => b.props.gap === 1 && b.props.flexShrink === 0 && line?.text.startsWith(b.text))
+  expect(inner).toHaveLength(1)
+  return { line, fixed: inner[0] as (typeof boxes)[number], last: text[text.length - 1] }
+}
+
+test('line two\'s balls and words never shrink; the hint truncates (ready row)', async ($, on) => {
+  const files: Files = new Map()
+  await readyRow($, on, files)
+
+  const { line, fixed, last } = await lineTwoOf($)
+
+  expect(fixed.props.gap).toBe(1)
+  expect(fixed.props.flexShrink).toBe(0)
+  expect(fixed.text).toBe('●●●●●● all 6 steps done')
+  expect(line?.children).toHaveLength(2)
+  expect(last?.text).toBe(HINT)
+  expect(last?.props.wrap).toBe('truncate-end')
+  expect(last?.props.color).toBe('inactive')
+})
+
+test('line two\'s balls and words never shrink; the hint truncates (step row)', async ($, on) => {
+  const files: Files = new Map()
+  planningWorld(files, { t: { number: '5', stage: 'planner' } })
+  await open($, on, files)
+
+  const { fixed, last } = await lineTwoOf($)
+
+  expect(fixed.props.flexShrink).toBe(0)
+  expect(fixed.text).toBe('●●●○○○ step 4 of 6 · 0m')
+  expect(last?.text).toBe(' · next: plan check')
+  expect(last?.props.wrap).toBe('truncate-end')
+  expect(last?.props.color).toBe('inactive')
+})
+
 test('the held ready row appears when this session\'s story goes ready', async ($, on) => {
   const files: Files = new Map()
   await readyRow($, on, files)
@@ -1809,72 +1874,388 @@ test('the ready row leaves when planning starts elsewhere', async ($, on) => {
   expect(texts(await draw($))).toEqual(ENGINE)
 })
 
-test('a press runs the bare command once', async ($, on) => {
+// ---- The story chooser: open, list, page, confirm, start ----
+
+const BACKLOG_X = `${ROOT}/.craft/backlog/x.md`
+
+// The mounted band on the band's own props, optionally narrower.
+async function mountAt($: Engine, bodyColumns = BAND_PROPS.bodyColumns) {
+  return $.ui.mount({
+    plugin: 'craft',
+    surface: 'terminal',
+    component: 'AbovePrompt',
+    props: { hasSurvey: false, ...BAND_PROPS, bodyColumns },
+  })
+}
+
+const labelsOf = (found: { props: Record<string, unknown> }[]) => found.map(b => b.props.label)
+
+// A ready row beside two more ready stories (2 and 9), one still planning (3)
+// and a ready backlog story that is not the row's own.
+async function chooserRow($: Engine, on: On, files: Files, o: { slot?: string } = {}) {
+  files.set(`${CYCLE}/stories/a.md`, storyFile({ number: '2', status: 'ready', title: 'Second' }))
+  files.set(`${CYCLE}/stories/b.md`, storyFile({ number: '9', status: 'ready', title: 'Ninth' }))
+  files.set(`${CYCLE}/stories/p.md`, storyFile({ number: '3', status: 'planning' }))
+  files.set(BACKLOG_X, storyFile({ number: '8', status: 'ready' }))
+  return readyRow($, on, files, o)
+}
+
+async function pressInto($: Engine, ui: Awaited<ReturnType<typeof mountBand>>, ...keys: string[]) {
+  for (const key of keys) await ui.press({ key })
+  return ui
+}
+
+test("the open chooser's tree draws with its hover, reveal and hotkey props", async ($, on) => {
   const files: Files = new Map()
-  const { world, runs } = await readyRow($, on, files)
+  await chooserRow($, on, files)
+  const ui = await mountBand($)
+
+  await ui.press({ key: READY })
+  const text = await ui.findAll({ type: 'Text' })
+  const buttons = await ui.findAll({ type: 'Button' })
+  const tree = await ui.drawn()
+  const nodes: { type?: string; props?: Record<string, unknown>; hover?: unknown }[] = []
+  const walk = (node: unknown) => {
+    if (typeof node !== 'object' || node === null) return
+    const el = node as { type?: string; props?: { children?: unknown }; hover?: unknown; children?: unknown }
+    if (el.type) nodes.push(el)
+    const kids = el.children ?? el.props?.children
+    for (const kid of Array.isArray(kids) ? kids : [kids]) walk(kid)
+  }
+  walk(tree)
+
+  expect(text.map(t => t.text).slice(0, 4)).toEqual(['✶ ', 'Implement', ' which story?', ' · 3 ready'])
+  const rings = nodes.filter(n => n.type === 'Box' && n.props?.position === 'absolute')
+  expect(rings.map(r => [r.props?.display, r.hover])).toEqual([
+    ['none', { scope: 'choose-0', display: 'flex' }],
+    ['none', { scope: 'choose-1', display: 'flex' }],
+    ['none', { scope: 'choose-2', display: 'flex' }],
+  ])
+  const hovers = nodes.filter(n => n.type === 'Button' && n.hover).map(n => n.hover)
+  expect(hovers).toEqual([{ scope: 'choose-0' }, { scope: 'choose-1' }, { scope: 'choose-2' }])
+  expect(buttons.find(b => b.key === 'cancel')?.props.hotkey).toBe('x')
+
+  await ui.press({ key: 'story-0' })
+  const confirm = await ui.findAll({ type: 'Text' })
+  await ui.unmount()
+  expect(confirm.map(t => t.text).slice(0, 5)).toEqual(['✶ ', 'Start', ' Story 6', ' · First title', '?'])
+})
+
+test('pressing ready opens the chooser and runs nothing', async ($, on) => {
+  const files: Files = new Map()
+  const { world, runs } = await chooserRow($, on, files)
   const ui = await mountBand($)
 
   await ui.press({ key: READY })
   await world.clock.settle()
+  const text = await ui.findAll({ type: 'Text' })
+  const buttons = await ui.findAll({ type: 'Button' })
   await ui.unmount()
 
-  expect(runs).toEqual([{ command: 'craft:story-implement', args: '' }])
+  expect(runs).toEqual([])
+  expect(text.slice(0, 4).map(t => t.text)).toEqual(['✶ ', 'Implement', ' which story?', ' · 3 ready'])
+  expect(text.slice(0, 3).every(t => t.props.bold === true)).toBe(true)
+  expect(text[3]?.props.color).toBe('subtle')
+  expect(labelsOf(buttons)).toEqual(['Story 6', 'Story 2', 'Story 9', 'cancel'])
 })
 
-test('a double press runs it once', async ($, on) => {
+test("the row's own story is first and bold, then the cycle's ready stories by number", async ($, on) => {
   const files: Files = new Map()
-  const { world, runs } = await readyRow($, on, files)
+  await chooserRow($, on, files)
   const ui = await mountBand($)
 
-  await Promise.all([ui.press({ key: READY }), ui.press({ key: READY })])
   await ui.press({ key: READY })
+  const buttons = await ui.findAll({ type: 'Button' })
+  const text = await ui.findAll({ type: 'Text' })
+  await ui.unmount()
+
+  expect(buttons.filter(b => b.key?.startsWith('story-')).map(b => b.key)).toEqual(['story-0', 'story-1', 'story-2'])
+  expect(text.find(t => t.text === 'Story 6')?.props.bold).toBe(true)
+  expect(text.find(t => t.text === 'Story 2')?.props.bold).not.toBe(true)
+  expect(text.find(t => t.text === 'Story 9')?.props.color).toBe('success')
+})
+
+test('planning, active and backlog stories are never listed', async ($, on) => {
+  const files: Files = new Map()
+  await chooserRow($, on, files)
+  files.set(`${CYCLE}/stories/q.md`, storyFile({ number: '4', status: 'active' }))
+  const ui = await mountBand($)
+
+  await ui.press({ key: READY })
+  const buttons = await ui.findAll({ type: 'Button' })
+  await ui.unmount()
+
+  expect(labelsOf(buttons)).not.toContain('Story 3')
+  expect(labelsOf(buttons)).not.toContain('Story 4')
+  expect(labelsOf(buttons)).not.toContain('Story 8')
+})
+
+// A story planned from the backlog with no active cycle: the row names it.
+async function backlogOwnRow($: Engine, on: On, files: Files) {
+  files.set(`${ROOT}/.craft/.global-state`, 'LAST_ACTIVITY="x"\n')
+  files.set(BACKLOG_X, storyFile({ number: '4', stage: 'triage' }))
+  const runs: { command: string; args: string }[] = []
+  const world = await open($, on, files, {
+    beforeStart: () => {
+      on('command.run', { command: 'craft:story-implement' }, (_, e) => {
+        runs.push({ command: e.command, args: e.args })
+        return { text: '' }
+      })
+    },
+  })
+  await stageCall($, world, BACKLOG_X)
+  files.set(BACKLOG_X, storyFile({ number: '4', status: 'ready' }))
+  await world.clock.advance(3000)
+  return { world, runs }
+}
+
+test("with no active cycle the list is the row's own story", async ($, on) => {
+  const files: Files = new Map()
+  await backlogOwnRow($, on, files)
+  const ui = await mountBand($)
+
+  await ui.press({ key: READY })
+  const buttons = await ui.findAll({ type: 'Button' })
+  const text = await ui.findAll({ type: 'Text' })
+  await ui.unmount()
+
+  expect(labelsOf(buttons)).toEqual(['Story 4', 'cancel'])
+  expect(text[3]?.text).toBe(' · 1 ready')
+})
+
+test('a narrow band pages with +M more and ‹ back, every story once', async ($, on) => {
+  const files: Files = new Map()
+  planningWorld(files, { t: { number: '6', stage: 'triage' } })
+  for (const n of [1, 2, 3, 4, 5]) files.set(`${CYCLE}/stories/n${n}.md`, storyFile({ number: String(n), status: 'ready' }))
+  const runs: unknown[] = []
+  const world = await open($, on, files)
+  await stageCall($, world, T_FILE)
+  files.set(T_FILE, storyFile({ number: '6', status: 'ready' }))
+  await world.clock.advance(3000)
+  void runs
+  const ui = await mountAt($, 40)
+
+  await ui.press({ key: READY })
+  const seen: unknown[] = []
+  let page = await ui.findAll({ type: 'Button' })
+  expect(page.find(b => b.key === 'earlier')).toBeUndefined()
+  expect(page.find(b => b.key === 'more')?.text).toBe('+5 more ›')
+  for (let guard = 0; guard < 10; guard++) {
+    seen.push(...page.filter(b => b.key?.startsWith('story-')).map(b => b.props.label))
+    if (!page.some(b => b.key === 'more')) break
+    await ui.press({ key: 'more' })
+    page = await ui.findAll({ type: 'Button' })
+    expect(page[0]?.key).toBe('earlier')
+  }
+  expect(seen).toEqual(['Story 6', 'Story 1', 'Story 2', 'Story 3', 'Story 4', 'Story 5'])
+
+  await ui.press({ key: 'earlier' })
+  const back = await ui.findAll({ type: 'Button' })
+  await ui.unmount()
+  expect(back.some(b => b.key === 'earlier')).toBe(true)
+  expect(labelsOf(back).filter(l => String(l).startsWith('Story'))).toEqual(['Story 4'])
+})
+
+test('cancel returns the ready row', async ($, on) => {
+  const files: Files = new Map()
+  await chooserRow($, on, files)
+  const ui = await mountBand($)
+
+  await ui.press({ key: READY })
+  await ui.press({ key: 'cancel' })
+  const text = await ui.findAll({ type: 'Text' })
+  await ui.unmount()
+
+  expect(text.map(t => t.text)).toContain(READY)
+  expect(text.map(t => t.text)).not.toContain('Implement')
+})
+
+test('picking shows Start Story N with the title in normal color', async ($, on) => {
+  const files: Files = new Map()
+  await chooserRow($, on, files)
+  const ui = await mountBand($)
+
+  await ui.press({ key: READY })
+  await ui.press({ key: 'story-1' })
+  const text = await ui.findAll({ type: 'Text' })
+  const buttons = await ui.findAll({ type: 'Button' })
+  await ui.unmount()
+
+  expect(text.slice(0, 5).map(t => t.text)).toEqual(['✶ ', 'Start', ' Story 2', ' · Second', '?'])
+  expect(text[3]?.props).not.toHaveProperty('color')
+  expect(text[3]?.props.wrap).toBe('truncate-end')
+  expect(text[2]?.props.bold).toBe(true)
+  expect(buttons.map(b => b.key)).toEqual(['start', 'back'])
+  expect(text.find(t => t.text === 'start')?.props.color).toBe('success')
+})
+
+test('back returns the list on the same page', async ($, on) => {
+  const files: Files = new Map()
+  planningWorld(files, { t: { number: '6', stage: 'triage' } })
+  for (const n of [1, 2, 3, 4, 5]) files.set(`${CYCLE}/stories/n${n}.md`, storyFile({ number: String(n), status: 'ready' }))
+  const world = await open($, on, files)
+  await stageCall($, world, T_FILE)
+  files.set(T_FILE, storyFile({ number: '6', status: 'ready' }))
+  await world.clock.advance(3000)
+  const ui = await mountAt($, 40)
+
+  await ui.press({ key: READY })
+  await ui.press({ key: 'more' })
+  const before = (await ui.findAll({ type: 'Button' })).find(b => b.key?.startsWith('story-'))?.key
+  await ui.press({ key: before ?? '' })
+  expect((await ui.findAll({ type: 'Button' })).map(b => b.key)).toEqual(['start', 'back'])
+  await ui.press({ key: 'back' })
+  const after = (await ui.findAll({ type: 'Button' })).find(b => b.key?.startsWith('story-'))?.key
+  await ui.unmount()
+
+  expect(after).toBe(before)
+})
+
+test('only x and n are hotkeys; start has none', async ($, on) => {
+  const files: Files = new Map()
+  await chooserRow($, on, files)
+  const ui = await mountBand($)
+
+  await ui.press({ key: READY })
+  const list = await ui.findAll({ type: 'Button' })
+  await ui.press({ key: 'story-0' })
+  const confirm = await ui.findAll({ type: 'Button' })
+  await ui.unmount()
+
+  const hotkeys = [...list, ...confirm].filter(b => 'hotkey' in b.props).map(b => [b.key, b.props.hotkey])
+  expect(hotkeys).toEqual([
+    ['cancel', 'x'],
+    ['back', 'n'],
+  ])
+  expect(confirm.find(b => b.key === 'start')?.props).not.toHaveProperty('hotkey')
+  expect(confirm.find(b => b.key === 'back')?.props.dimColor).toBe(true)
+})
+
+test("start runs story-implement with the story's .craft/ path", async ($, on) => {
+  const files: Files = new Map()
+  const { world, runs } = await chooserRow($, on, files)
+  const ui = await mountBand($)
+
+  await pressInto($, ui, READY, 'story-1', 'start')
+  await world.clock.settle()
+  const text = await ui.findAll({ type: 'Text' })
+  await ui.unmount()
+
+  expect(runs).toEqual([{ command: 'craft:story-implement', args: '.craft/cycles/c/stories/a.md' }])
+  expect(text.map(t => t.text)).not.toContain('Start')
+})
+
+test("start runs a backlog own story with its .craft/backlog path", async ($, on) => {
+  const files: Files = new Map()
+  const { world, runs } = await backlogOwnRow($, on, files)
+  const ui = await mountBand($)
+
+  await pressInto($, ui, READY, 'story-0', 'start')
+  await world.clock.settle()
+  await ui.unmount()
+
+  expect(runs).toEqual([{ command: 'craft:story-implement', args: '.craft/backlog/x.md' }])
+})
+
+test('a double start runs once', async ($, on) => {
+  const files: Files = new Map()
+  const { world, runs } = await chooserRow($, on, files)
+  const ui = await mountBand($)
+
+  await pressInto($, ui, READY, 'story-1')
+  await Promise.all([ui.press({ key: 'start' }), ui.press({ key: 'start' })])
   await world.clock.settle()
   await ui.unmount()
 
   expect(runs).toHaveLength(1)
 })
 
-test('the press lock clears on the next publish, so a later press runs again', async ($, on) => {
+test('start with the slot set runs nothing and can start again once it frees', async ($, on) => {
   const files: Files = new Map()
-  const { world, runs } = await readyRow($, on, files)
+  const { world, runs } = await chooserRow($, on, files)
+  const ui = await mountBand($)
+  await pressInto($, ui, READY, 'story-1')
+
+  files.set(`${CYCLE}/stories/7-next.md`, storyFile({ number: '7' }))
+  setCycleState(files, ROOT, { story: '7-next' })
+  await ui.press({ key: 'start' })
+  await world.clock.settle()
+  expect(runs).toEqual([])
+
+  setCycleState(files, ROOT, { story: '' })
+  await pressInto($, ui, 'story-1', 'start')
+  await world.clock.settle()
+  await ui.unmount()
+
+  expect(runs).toHaveLength(1)
+})
+
+test('the chooser stays open while files, the slot and the snapshot change', async ($, on) => {
+  const files: Files = new Map()
+  const { world } = await chooserRow($, on, files)
   const ui = await mountBand($)
   await ui.press({ key: READY })
+
+  files.set(`${CYCLE}/stories/7-next.md`, storyFile({ number: '7' }))
+  setCycleState(files, ROOT, { story: '7-next' })
+  await world.clock.advance(3000)
+  const stillOpen = (await ui.findAll({ type: 'Text' })).map(t => t.text)
+
+  expect(stillOpen).toContain('Implement')
+  expect(texts(await draw($))).toContain('Implement')
+
+  await ui.press({ key: 'cancel' })
+  const closed = (await ui.findAll({ type: 'Text' })).map(t => t.text)
+  await ui.unmount()
+  expect(closed).toContain('building')
+  expect(closed).not.toContain('Implement')
+})
+
+// Holds start's file re-check open on the cycle's global state, so the test can
+// do what the engine does meanwhile and then press start again.
+async function startHeld($: Engine, world: World, ui: Awaited<ReturnType<typeof mountBand>>) {
+  await pressInto($, ui, READY, 'story-1')
+  let release = () => {}
+  world.latch.gate = new Promise<void>(resolve => {
+    release = resolve
+  })
+  await ui.press({ key: 'start' })
+  return () => {
+    world.latch.gate = null
+    release()
+  }
+}
+
+test("a publish during start's check does not let a second start run", async ($, on) => {
+  const files: Files = new Map()
+  const { world, runs } = await chooserRow($, on, files)
+  const ui = await mountBand($)
+  const free = await startHeld($, world, ui)
+  const before = count(world.writes, 'progress')
 
   await startTurn($)
+  const card = openCard($, world.cards)
   await world.clock.settle()
+  expect(count(world.writes, 'progress')).toBeGreaterThan(before)
+  await ui.press({ key: 'start' })
+  free()
+  await world.clock.settle()
+  await card.close()
+  await ui.unmount()
+
+  expect(runs).toHaveLength(1)
+})
+
+test("a turn ending during start's check does not let a second start run", async ($, on) => {
+  const files: Files = new Map()
+  const { world, runs } = await chooserRow($, on, files)
+  const ui = await mountBand($)
+  const free = await startHeld($, world, ui)
+
+  await startTurn($)
   await endTurn($)
-  await ui.press({ key: READY })
-  await world.clock.settle()
-  await ui.unmount()
-
-  expect(runs).toHaveLength(2)
-})
-
-test('a press with the slot set runs nothing', async ($, on) => {
-  const files: Files = new Map()
-  const { world, runs } = await readyRow($, on, files)
-  const ui = await mountBand($)
-  expect(await ui.findAll({ type: 'Button' })).toHaveLength(1)
-
-  files.set(`${CYCLE}/stories/s.md`, storyFile())
-  setCycleState(files, ROOT, { story: 's' })
-  await ui.press({ key: READY })
-  await world.clock.settle()
-  await ui.unmount()
-
-  expect(runs).toEqual([])
-})
-
-test('a press that finds the slot set can be pressed again once it frees', async ($, on) => {
-  const files: Files = new Map()
-  const { world, runs } = await readyRow($, on, files)
-  const ui = await mountBand($)
-
-  files.set(`${CYCLE}/stories/s.md`, storyFile())
-  setCycleState(files, ROOT, { story: 's' })
-  await ui.press({ key: READY })
-  setCycleState(files, ROOT, { story: '' })
-  await ui.press({ key: READY })
+  await ui.press({ key: 'start' })
+  free()
   await world.clock.settle()
   await ui.unmount()
 
@@ -1950,4 +2331,99 @@ test('a planning view draws no control', async ($, on) => {
   await ui.unmount()
 
   expect(buttons).toEqual([])
+})
+
+// ---- A refused start explains itself ----
+
+const lineOne = async (ui: Awaited<ReturnType<typeof mountBand>>) => (await ui.findAll({ type: 'Text' })).map(t => t.text)
+
+test("a story that stopped being ready: nothing runs, the list re-reads, line 1 says Story 2 isn't ready anymore", async ($, on) => {
+  const files: Files = new Map()
+  const { world, runs } = await chooserRow($, on, files)
+  const ui = await mountBand($)
+  await pressInto($, ui, READY, 'story-1')
+
+  files.set(`${CYCLE}/stories/a.md`, storyFile({ number: '2', status: 'planning' }))
+  await ui.press({ key: 'start' })
+  await world.clock.settle()
+  const text = await lineOne(ui)
+  const buttons = labelsOf(await ui.findAll({ type: 'Button' }))
+  await ui.unmount()
+
+  expect(runs).toEqual([])
+  expect(text).toContain("Story 2 isn't ready anymore")
+  expect(text).toContain(' · 2 ready')
+  expect(text).not.toContain('Implement')
+  expect(text).not.toContain('Start')
+  expect(buttons).not.toContain('Story 2')
+})
+
+test("a story moved out of the active cycle: line 1 says it isn't in the active cycle anymore", async ($, on) => {
+  const files: Files = new Map()
+  const { world, runs } = await chooserRow($, on, files)
+  const ui = await mountBand($)
+  await pressInto($, ui, READY, 'story-1')
+
+  files.delete(`${CYCLE}/stories/a.md`)
+  await ui.press({ key: 'start' })
+  await world.clock.settle()
+  const text = await lineOne(ui)
+  await ui.unmount()
+
+  expect(runs).toEqual([])
+  expect(text).toContain("Story 2 isn't in the active cycle anymore")
+})
+
+test('another story took the slot: line 1 says Story 7 is building', async ($, on) => {
+  const files: Files = new Map()
+  const { world, runs } = await chooserRow($, on, files)
+  const ui = await mountBand($)
+  await pressInto($, ui, READY, 'story-1')
+
+  files.set(`${CYCLE}/stories/7-next.md`, storyFile({ number: '7' }))
+  setCycleState(files, ROOT, { story: '7-next' })
+  await ui.press({ key: 'start' })
+  await world.clock.settle()
+  const text = await lineOne(ui)
+  await ui.unmount()
+
+  expect(runs).toEqual([])
+  expect(text).toContain('Story 7 is building')
+  expect(text).toContain(' · 3 ready')
+})
+
+test('the own story no longer ready drops from the refreshed list', async ($, on) => {
+  const files: Files = new Map()
+  const { world } = await chooserRow($, on, files)
+  const ui = await mountBand($)
+  await pressInto($, ui, READY, 'story-1')
+
+  files.set(T_FILE, storyFile({ number: '6', status: 'planning' }))
+  files.set(`${CYCLE}/stories/a.md`, storyFile({ number: '2', status: 'planning' }))
+  await ui.press({ key: 'start' })
+  await world.clock.settle()
+  const buttons = labelsOf(await ui.findAll({ type: 'Button' }))
+  await ui.unmount()
+
+  expect(buttons).toEqual(['Story 9', 'cancel'])
+  expect(buttons).not.toContain('Story 6')
+  expect(buttons).not.toContain('Story 2')
+})
+
+test('an empty refreshed list draws only cancel, with 0 ready', async ($, on) => {
+  const files: Files = new Map()
+  const { world } = await chooserRow($, on, files)
+  const ui = await mountBand($)
+  await pressInto($, ui, READY, 'story-1')
+
+  for (const file of ['a', 'b']) files.set(`${CYCLE}/stories/${file}.md`, storyFile({ number: '2', status: 'planning' }))
+  files.set(T_FILE, storyFile({ number: '6', status: 'planning' }))
+  await ui.press({ key: 'start' })
+  await world.clock.settle()
+  const text = await lineOne(ui)
+  const buttons = labelsOf(await ui.findAll({ type: 'Button' }))
+  await ui.unmount()
+
+  expect(text).toContain(' · 0 ready')
+  expect(buttons).toEqual(['cancel'])
 })

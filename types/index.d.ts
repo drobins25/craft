@@ -30,6 +30,22 @@ export type ProgressSnapshot = {
   error: string
 }
 
+// One story the chooser offers; `path` is absolute, `label` is `Story <n>` or the file's name.
+export type Choice = { path: string; label: string; title: string }
+
+// The story chooser's session memory. `own` is the ready row's story path;
+// `picked` and `start` index `choices`; `earlier` holds the first index of each
+// page before this one; `reason` is why the last start was refused, or ''.
+export type Chooser = {
+  mode: '' | 'list' | 'confirm'
+  own: string
+  choices: Choice[]
+  picked: number
+  start: number
+  earlier: number[]
+  reason: string
+}
+
 declare module 'claude-code' {
   interface PluginState {
     craft: {
@@ -37,6 +53,7 @@ declare module 'claude-code' {
       ownPlanning: Shaped<string[]>
       progressHidden: boolean
       progressFrame: number
+      chooser: Shaped<Chooser>
     }
   }
 }
