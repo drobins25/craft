@@ -163,6 +163,9 @@ test('motionOn: only a first key of exactly false turns motion off', () => {
   expect(motionOn('# progress_band_motion: false\n')).toBe(true)
   expect(motionOn('progress_band_motion: false  # keep still\n')).toBe(false)
   expect(motionOn('progress_band_motion: true # on\n')).toBe(true)
+  expect(motionOn('progress_band_motion: "false" # keep still\n')).toBe(false)
+  expect(motionOn("progress_band_motion: 'false'  # keep still\n")).toBe(false)
+  expect(motionOn('progress_band_motion: "true" # on\n')).toBe(true)
 })
 
 const T_PATH = '/work/p/.craft/cycles/c/stories/t.md'
