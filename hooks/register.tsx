@@ -144,14 +144,13 @@ function stop(ticker: Ticker): void {
   ticker.timer = null
 }
 
-// A validator the engine no longer lists as pending, running or waiting (held on
-// its own background work) ended without its turn reaching this module, so it must
-// not hold the band on `validating`.
+// A validator the engine no longer lists as running ended without its turn
+// reaching this module, so it must not hold the band on `validating`.
 async function dropEndedValidators($: EngineInterface): Promise<void> {
   if (validators.size === 0) return
   try {
     const running = new Set(
-      (await $.agent.list()).filter(a => a.status === 'pending' || a.status === 'running' || a.status === 'waiting').map(a => a.id),
+      (await $.agent.list()).filter(a => a.status === 'pending' || a.status === 'running').map(a => a.id),
     )
     const before = validators.size
     for (const id of [...validators]) if (!running.has(id)) validators.delete(id)
@@ -202,17 +201,9 @@ async function startChosen($: EngineInterface): Promise<void> {
       return
     }
     await update($, chooser, () => CLOSED)
-    try {
-      await $.command.run({ command: 'craft:story-implement', args: choice.path.slice(root.length + 1) })
-    } catch {
-      // A rejected run reopens the list, read again, with line 1 saying so, and start is pressable again.
-      pressLocked = false
-      const choices = await readChoices($, root, held.own)
-      const reason = `${choice.label} didn't start, try again`
-      await update($, chooser, (): Chooser => ({ mode: 'list', own: held.own, choices, picked: 0, start: 0, earlier: [], reason }))
-    }
+    await $.command.run({ command: 'craft:story-implement', args: choice.path.slice(root.length + 1) })
   } catch {
-    // A failed read or write leaves start pressable again.
+    // A rejected run leaves start pressable again.
     pressLocked = false
   } finally {
     starting = false

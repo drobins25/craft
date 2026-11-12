@@ -1,6 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
-import type { AgentStatus, On, RenderElement } from 'claude-code'
+import type { On, RenderElement } from 'claude-code'
 import { CLEARED_LINE, SET_LINE } from './fixtures/planning-stage-stdout'
 type Files = Map<string, string>
 declare function setTimeout(run: () => void, ms: number): unknown
@@ -50,6 +50,9 @@ type Latch = { gate: Promise<void> | null; active: number; most: number }
 
 // A file system made of absolute paths. Every folder implied by a path exists.
 // Returns the calls made, so a test can show what was (not) read.
+// Paths whose next read fails once, the way a busy disk may.
+const failOnce = new Set<string>()
+
 function stubFiles(on: On, files: Files, sessionRoot: string, latch?: Latch) {
   const calls = { read: [] as string[], exists: [] as string[], list: [] as string[], write: [] as string[] }
   const isDir = (path: string) => [...files.keys()].some(key => key.startsWith(`${path}/`))
@@ -66,6 +69,7 @@ function stubFiles(on: On, files: Files, sessionRoot: string, latch?: Latch) {
       await latch.gate
       latch.active -= 1
     }
+    if (failOnce.delete(e.path)) return { deny: `busy ${e.path}` }
     const text = files.get(e.path)
     return text === undefined ? { deny: `no such file ${e.path}` } : { value: text }
   })
@@ -173,9 +177,8 @@ async function open(
     return next(e)
   })
   const running: string[] = []
-  const statusOf = new Map<string, AgentStatus>()
   on('agent.list', () => ({
-    value: running.map(id => ({ id, description: '', type: 'x', status: statusOf.get(id) ?? ('running' as const) })),
+    value: running.map(id => ({ id, description: '', type: 'x', status: 'running' as const })),
   }))
   // Beneath the plugin, standing for the engine's own drawing of the band's place.
   on('ui.render', ($e, e) => {
@@ -190,7 +193,7 @@ async function open(
   options.beforeStart?.()
   const surface = options.surface === undefined ? 'terminal' : options.surface
   await $.session.start({ cwd: options.sessionRoot ?? ROOT, surface, isInteractive: surface !== null })
-  return { clock, calls, writes, ids, cards, latch, running, statusOf, bash }
+  return { clock, calls, writes, ids, cards, latch, running, bash }
 }
 
 type Drawn = { text: string; color: unknown; bold: unknown }[]
@@ -840,20 +843,6 @@ test('a validator the agent list no longer reports is dropped on the next period
   expect((await draw($))[STATE]?.text).toBe('building')
 })
 
-test('a validator held waiting on its own background work stays validating', async ($, on) => {
-  const files: Files = new Map()
-  buildingWorld(files)
-  const world = await open($, on, files)
-  world.ids.push('v1')
-  world.running.push('v1')
-  await spawn($, 'craft:chunk-validator')
-
-  world.statusOf.set('v1', 'waiting')
-  await world.clock.advance(3000)
-
-  expect((await draw($))[STATE]?.text).toBe('validating')
-})
-
 test('event hooks read no disk', async ($, on) => {
   const files: Files = new Map()
   buildingWorld(files)
@@ -970,6 +959,10 @@ function stubClock(on: On) {
   return {
     refuse,
     live: (ms: number) => held.filter(h => h.ms === ms && !h.aborted).length,
+    // Moves the time on without firing a period, the way a stalled timer looks.
+    jump(ms: number) {
+      now += ms
+    },
     async tick(ms: number) {
       const target = now + ms
       for (;;) {
@@ -985,6 +978,27 @@ function stubClock(on: On) {
     },
   }
 }
+
+test('reviving a stalled ticker leaves one refresh interval and one frame interval, not two', async ($, on) => {
+  const files: Files = new Map()
+  buildingWorld(files)
+  stubEngine(on)
+  stubFiles(on, files, ROOT)
+  stubAgents(on)
+  const clock = stubClock(on)
+  mock.env(on, {})
+  on('ui.render', ($e, e) => h($e.ui.resolve(e).Text, null, 'engine') as RenderElement)
+  await $.session.start({ cwd: ROOT, surface: 'terminal', isInteractive: true })
+  expect(clock.live(3000)).toBe(1)
+  expect(clock.live(200)).toBe(1)
+
+  clock.jump(10000)
+  await startTurn($)
+  await clock.tick(0)
+
+  expect(clock.live(3000)).toBe(1)
+  expect(clock.live(200)).toBe(1)
+})
 
 test('a refused period does not freeze the band', async ($, on) => {
   const files: Files = new Map()
@@ -1561,6 +1575,58 @@ test('a cleared line forgets the story', async ($, on) => {
   expect(frameWrites(world)).toBe(before)
 })
 
+test('a staged story whose read failed once is read again on the next pass', async ($, on) => {
+  const files: Files = new Map()
+  planningWorld(files, { t: { number: '5', stage: 'planner' } })
+  failOnce.add(T_FILE)
+  const world = await open($, on, files)
+  expect(failOnce.has(T_FILE)).toBe(false)
+  expect(texts(await draw($))).toEqual(ENGINE)
+
+  await world.clock.advance(3000)
+
+  expect(texts(await draw($))[STATE]).toBe('planner')
+})
+
+test('a staged file that vanished and came back is read again', async ($, on) => {
+  const files: Files = new Map()
+  planningWorld(files, { t: { number: '5', stage: 'planner' } })
+  const world = await open($, on, files)
+  const text = files.get(T_FILE) ?? ''
+  files.delete(T_FILE)
+  await world.clock.advance(3000)
+  const before = world.calls.read.filter(p => p === T_FILE).length
+
+  files.set(T_FILE, text)
+  await world.clock.advance(3000)
+
+  expect(world.calls.read.filter(p => p === T_FILE).length).toBe(before + 1)
+})
+
+test('a story cleared from the own set draws no held ready row when it goes ready', async ($, on) => {
+  const files: Files = new Map()
+  planningWorld(files, { t: { number: '6', stage: 'triage' } })
+  const world = await open($, on, files)
+  await stageCall($, world, T_FILE)
+
+  files.set(T_FILE, storyFile({ number: '6', status: 'ready' }))
+  await stageCall($, world, T_FILE, CLEARED_LINE)
+
+  expect(texts(await draw($))).not.toContain(READY)
+})
+
+test("another session's planning story draws no held ready row here when it goes ready", async ($, on) => {
+  const files: Files = new Map()
+  planningWorld(files, { t: { number: '6', stage: 'triage' } })
+  const world = await open($, on, files)
+  expect(texts(await draw($))[STATE]).toBe('triage')
+
+  files.set(T_FILE, storyFile({ number: '6', status: 'ready' }))
+  await stageCall($, world, T_FILE)
+
+  expect(texts(await draw($))).not.toContain(READY)
+})
+
 test('the own set survives a fresh session.start', async ($, on) => {
   const files: Files = new Map()
   planningWorld(files, { t: { stage: 'planner' } })
@@ -1668,7 +1734,7 @@ test('a planning view freezes while a card is up', async ($, on) => {
 // ---- The held ready row and its control ----
 
 // This session's story reaches triage, then the flip clears its stage and marks it ready.
-async function readyRow($: Engine, on: On, files: Files, o: { slot?: string; reject?: number } = {}) {
+async function readyRow($: Engine, on: On, files: Files, o: { slot?: string } = {}) {
   planningWorld(files, { t: { number: '6', stage: 'triage' } })
   if (o.slot) {
     setCycleState(files, ROOT, { story: o.slot })
@@ -1677,12 +1743,7 @@ async function readyRow($: Engine, on: On, files: Files, o: { slot?: string; rej
   const runs: { command: string; args: string }[] = []
   const world = await open($, on, files, {
     beforeStart: () => {
-      let rejects = o.reject ?? 0
       on('command.run', { command: 'craft:story-implement' }, (_, e) => {
-        if (rejects > 0) {
-          rejects--
-          throw new Error('rejected')
-        }
         runs.push({ command: e.command, args: e.args })
         return { text: '' }
       })
@@ -1930,7 +1991,7 @@ const labelsOf = (found: { props: Record<string, unknown> }[]) => found.map(b =>
 
 // A ready row beside two more ready stories (2 and 9), one still planning (3)
 // and a ready backlog story that is not the row's own.
-async function chooserRow($: Engine, on: On, files: Files, o: { slot?: string; reject?: number } = {}) {
+async function chooserRow($: Engine, on: On, files: Files, o: { slot?: string } = {}) {
   files.set(`${CYCLE}/stories/a.md`, storyFile({ number: '2', status: 'ready', title: 'Second' }))
   files.set(`${CYCLE}/stories/b.md`, storyFile({ number: '9', status: 'ready', title: 'Ninth' }))
   files.set(`${CYCLE}/stories/p.md`, storyFile({ number: '3', status: 'planning' }))
@@ -2208,6 +2269,45 @@ test('a double start runs once', async ($, on) => {
   expect(runs).toHaveLength(1)
 })
 
+test('after a start, start stays locked until the main turn ends, then runs again', async ($, on) => {
+  const files: Files = new Map()
+  const { world, runs } = await chooserRow($, on, files)
+  const ui = await mountBand($)
+  await startTurn($)
+  await pressInto($, ui, READY, 'story-1', 'start')
+  await world.clock.settle()
+
+  await pressInto($, ui, READY, 'story-1', 'start')
+  await world.clock.settle()
+  const locked = runs.length
+
+  await endTurn($)
+  await ui.press({ key: 'start' })
+  await world.clock.settle()
+  await ui.unmount()
+
+  expect(locked).toBe(1)
+  expect(runs).toHaveLength(2)
+})
+
+test('a band redraw after a start makes start pressable again', async ($, on) => {
+  const files: Files = new Map()
+  const { world, runs } = await chooserRow($, on, files)
+  const ui = await mountBand($)
+  await pressInto($, ui, READY, 'story-1', 'start')
+  await world.clock.settle()
+
+  const card = openCard($, world.cards)
+  await world.clock.settle()
+  await card.close()
+  await world.clock.settle()
+  await pressInto($, ui, READY, 'story-1', 'start')
+  await world.clock.settle()
+  await ui.unmount()
+
+  expect(runs).toHaveLength(2)
+})
+
 test('start works again in a fresh session after a start', async ($, on) => {
   const files: Files = new Map()
   const { world, runs } = await chooserRow($, on, files)
@@ -2389,25 +2489,25 @@ test('a planning view draws no control', async ($, on) => {
   expect(buttons).toEqual([])
 })
 
-// ---- A refused start explains itself ----
-
-test("a rejected start: the list re-reads, line 1 says Story 2 didn't start, and start runs on the next try", async ($, on) => {
+// The project root moves to a sub-project after the chooser opened: this session's
+// own story now sits outside the root, so start runs nothing.
+test('start runs nothing for a story outside the project root it would run in', async ($, on) => {
   const files: Files = new Map()
-  const { world, runs } = await chooserRow($, on, files, { reject: 1 })
+  const { world, runs } = await chooserRow($, on, files)
   const ui = await mountBand($)
-  await pressInto($, ui, READY, 'story-1', 'start')
-  await world.clock.settle()
-  const text = await lineOne(ui)
-  const buttons = labelsOf(await ui.findAll({ type: 'Button' }))
+  await pressInto($, ui, READY, 'story-0')
 
-  await pressInto($, ui, 'story-1', 'start')
+  files.set(`${ROOT}/.craft/projects/sub.md`, '---\npath: sub\n---\n')
+  files.set(`${ROOT}/sub/.craft/.global-state`, 'ACTIVE_CYCLE="c"\n')
+  await world.clock.advance(3000)
+  await ui.press({ key: 'start' })
   await world.clock.settle()
   await ui.unmount()
 
-  expect(text).toContain("Story 2 didn't start, try again")
-  expect(buttons).toContain('Story 2')
-  expect(runs).toHaveLength(1)
+  expect(runs).toEqual([])
 })
+
+// ---- A refused start explains itself ----
 
 const lineOne = async (ui: Awaited<ReturnType<typeof mountBand>>) => (await ui.findAll({ type: 'Text' })).map(t => t.text)
 
