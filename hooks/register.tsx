@@ -46,13 +46,14 @@ let live = false
 let waiting = 0
 const validators = new Set<string>()
 let lastFacts: DiskFacts | null = null
-// Set by a press on the chooser's start and cleared when the band next redraws
-// or the main turn the start began ends, so a double press submits once and a
-// story-implement that ends with no story picked leaves start pressable.
+// Set by a press on the chooser's start and cleared when the band next redraws,
+// the main turn the start began ends, or a new session starts, so a double press
+// submits once and a story-implement that ends with no story picked leaves start
+// pressable.
 let pressLocked = false
-// Set while start checks the story and the slot, cleared only when that check
-// ends: a redraw or a turn end during the file reads must not let a second
-// start through.
+// Set while start checks the story and the slot and runs story-implement, cleared
+// only when the start handler returns: a redraw or a turn end during the file
+// reads must not let a second start through.
 let starting = false
 
 let inFlight: Promise<void> | null = null
