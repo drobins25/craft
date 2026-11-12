@@ -83,6 +83,11 @@ BEFORE="$(sum "$S")"
 bash "$STAGE" "$S" clear >/dev/null; RC=$?
 check_eq "exits 0" "0" "$RC"
 check_eq "bytes unchanged" "$BEFORE" "$(sum "$S")"
+printf -- '---\nname: n\nstatus: planning\n---\nbody no newline' > "$ROOT/nonl.md"
+BEFORE="$(sum "$ROOT/nonl.md")"
+OUT="$(bash "$STAGE" "$ROOT/nonl.md" clear)"
+check_eq "no final newline: cleared line printed" "Planning stage cleared: $ROOT/nonl.md" "$(printf '%s\n' "$OUT" | tail -1)"
+check_eq "no final newline: bytes unchanged" "$BEFORE" "$(sum "$ROOT/nonl.md")"
 
 echo "Test: write then clear restores the file byte for byte"
 make_story "$ROOT/orig.md"; make_story "$ROOT/ref.md"

@@ -47,6 +47,12 @@ if [ "$(head -n 1 "$STORY_FILE" | tr -d '\r')" != "---" ]; then
   exit 1
 fi
 
+# A clear with no field in the first block has nothing to remove: leave the file as it is
+if [ "$STAGE" = "clear" ] && ! awk 'NR == 1 { next } /^---[[:space:]]*$/ { exit } /^planning_stage:/ { f = 1; exit } END { exit !f }' "$STORY_FILE"; then
+  echo "Planning stage cleared: $STORY_FILE"
+  exit 0
+fi
+
 TMP_FILE="$(mktemp "$(dirname "$STORY_FILE")/.planning-stage.XXXXXX")"
 trap 'rm -f "$TMP_FILE"' EXIT
 
