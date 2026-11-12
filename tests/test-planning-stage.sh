@@ -101,6 +101,16 @@ planning_stage: direction
 body
 ---" "$(cat "$ROOT/nostatus.md")"
 
+echo "Test: a story with CRLF line endings is set and cleared"
+printf -- '---\r\nname: w\r\nstatus: planning\r\n---\r\nbody\r\n' > "$ROOT/crlf.md"
+cp "$ROOT/crlf.md" "$ROOT/crlf-ref.md"
+set +e; OUT="$(bash "$STAGE" "$ROOT/crlf.md" planner 2>&1)"; RC=$?; set -e
+check_eq "CRLF set exits 0" "0" "$RC"
+check_eq "CRLF stage line written" "1" "$(grep -c '^planning_stage: planner' "$ROOT/crlf.md" || true)"
+set +e; bash "$STAGE" "$ROOT/crlf.md" clear >/dev/null 2>&1; RC=$?; set -e
+check_eq "CRLF clear exits 0" "0" "$RC"
+check_eq "CRLF round trip is identical" "$(sum "$ROOT/crlf-ref.md")" "$(sum "$ROOT/crlf.md")"
+
 echo "Test: rejects an unknown stage"
 BEFORE="$(sum "$S")"
 for bad in ready idle ""; do

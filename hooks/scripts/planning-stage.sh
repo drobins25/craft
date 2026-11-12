@@ -42,7 +42,7 @@ if [ ! -f "$STORY_FILE" ]; then
   exit 1
 fi
 
-if [ "$(head -n 1 "$STORY_FILE")" != "---" ]; then
+if [ "$(head -n 1 "$STORY_FILE" | tr -d '\r')" != "---" ]; then
   echo "Error: Story file has no frontmatter block: $STORY_FILE"
   exit 1
 fi
