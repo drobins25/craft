@@ -134,7 +134,7 @@ BEFORE="$(sum "$ROOT/bare.md")"
 set +e; bash "$STAGE" "$ROOT/bare.md" planner >/dev/null 2>&1; RC=$?; set -e
 check_eq "no frontmatter exits 1" "1" "$RC"
 check_eq "no-frontmatter file unchanged" "$BEFORE" "$(sum "$ROOT/bare.md")"
-check_eq "no temp files left behind" "0" "$(find "$ROOT" -name '*.tmp*' | wc -l | tr -d ' ')"
+check_eq "no temp files left behind" "0" "$(find "$ROOT" -name '.planning-stage.*' | wc -l | tr -d ' ')"
 
 echo "Test: relative path resolves from PWD"
 OUT="$(cd "$STORIES" && bash "$STAGE" 1-t.md planner)"
