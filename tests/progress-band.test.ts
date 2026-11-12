@@ -1,6 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
-import type { On, RenderElement } from 'claude-code'
+import type { AgentStatus, On, RenderElement } from 'claude-code'
 import { CLEARED_LINE, SET_LINE } from './fixtures/planning-stage-stdout'
 type Files = Map<string, string>
 declare function setTimeout(run: () => void, ms: number): unknown
@@ -173,8 +173,9 @@ async function open(
     return next(e)
   })
   const running: string[] = []
+  const statusOf = new Map<string, AgentStatus>()
   on('agent.list', () => ({
-    value: running.map(id => ({ id, description: '', type: 'x', status: 'running' as const })),
+    value: running.map(id => ({ id, description: '', type: 'x', status: statusOf.get(id) ?? ('running' as const) })),
   }))
   // Beneath the plugin, standing for the engine's own drawing of the band's place.
   on('ui.render', ($e, e) => {
@@ -189,7 +190,7 @@ async function open(
   options.beforeStart?.()
   const surface = options.surface === undefined ? 'terminal' : options.surface
   await $.session.start({ cwd: options.sessionRoot ?? ROOT, surface, isInteractive: surface !== null })
-  return { clock, calls, writes, ids, cards, latch, running, bash }
+  return { clock, calls, writes, ids, cards, latch, running, statusOf, bash }
 }
 
 type Drawn = { text: string; color: unknown; bold: unknown }[]
@@ -837,6 +838,20 @@ test('a validator the agent list no longer reports is dropped on the next period
   await world.clock.advance(3000)
 
   expect((await draw($))[STATE]?.text).toBe('building')
+})
+
+test('a validator held waiting on its own background work stays validating', async ($, on) => {
+  const files: Files = new Map()
+  buildingWorld(files)
+  const world = await open($, on, files)
+  world.ids.push('v1')
+  world.running.push('v1')
+  await spawn($, 'craft:chunk-validator')
+
+  world.statusOf.set('v1', 'waiting')
+  await world.clock.advance(3000)
+
+  expect((await draw($))[STATE]?.text).toBe('validating')
 })
 
 test('event hooks read no disk', async ($, on) => {

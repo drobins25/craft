@@ -144,13 +144,14 @@ function stop(ticker: Ticker): void {
   ticker.timer = null
 }
 
-// A validator the engine no longer lists as running ended without its turn
-// reaching this module, so it must not hold the band on `validating`.
+// A validator the engine no longer lists as pending, running or waiting (held on
+// its own background work) ended without its turn reaching this module, so it must
+// not hold the band on `validating`.
 async function dropEndedValidators($: EngineInterface): Promise<void> {
   if (validators.size === 0) return
   try {
     const running = new Set(
-      (await $.agent.list()).filter(a => a.status === 'pending' || a.status === 'running').map(a => a.id),
+      (await $.agent.list()).filter(a => a.status === 'pending' || a.status === 'running' || a.status === 'waiting').map(a => a.id),
     )
     const before = validators.size
     for (const id of [...validators]) if (!running.has(id)) validators.delete(id)
