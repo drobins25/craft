@@ -46,10 +46,10 @@ export function frontmatter(text: string): string {
   return text.match(/^---\r?\n([\s\S]*?)\r?\n---/)?.[1] ?? ''
 }
 
-// Drawn text never carries a control character, so a crafted title or state
-// value cannot reach the terminal as an escape sequence.
+// Drawn text never carries a control character (C0, DEL or C1): the engine
+// refuses a Text holding one, and the whole band would then draw nothing.
 function clean(value: string): string {
-  return value.replace(/[\u0000-\u001f\u007f]/g, '')
+  return value.replace(/[\u0000-\u001f\u007f-\u009f]/g, '')
 }
 
 export function field(block: string, key: string): string {
@@ -177,7 +177,7 @@ function describeStory(path: string, text: string, currentChunk: number): Buildi
   // every refresh allocate and draw an unbounded row of balls.
   const total = Math.min(parseInt(field(meta, 'chunks_total'), 10) || headings, MAX_CHUNKS)
   const chunksComplete = parseInt(field(meta, 'chunks_complete'), 10) || 0
-  const basename = (path.split('/').pop() ?? '').replace(/\.md$/, '')
+  const basename = clean((path.split('/').pop() ?? '').replace(/\.md$/, ''))
 
   return {
     path,
@@ -192,7 +192,7 @@ function describeStory(path: string, text: string, currentChunk: number): Buildi
 function describeStaged(path: string, text: string, stage: PlanStage): StagedStory {
   const meta = frontmatter(text)
   const number = field(meta, 'story_number')
-  const basename = (path.split('/').pop() ?? '').replace(/\.md$/, '')
+  const basename = clean((path.split('/').pop() ?? '').replace(/\.md$/, ''))
   return { path, label: number ? `Story ${number}` : basename, title: field(meta, 'title'), stage }
 }
 
@@ -297,7 +297,7 @@ export function readyToStart(text: string): boolean {
 export function describeChoice(path: string, text: string): Choice {
   const meta = frontmatter(text)
   const number = field(meta, 'story_number')
-  const basename = fileName(path).replace(/\.md$/, '')
+  const basename = clean(fileName(path).replace(/\.md$/, ''))
   return { path, label: number ? `Story ${number}` : basename, title: field(meta, 'title') }
 }
 

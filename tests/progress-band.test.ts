@@ -1338,6 +1338,18 @@ test('an unknown stage value is no stage', async ($, on) => {
   expect(texts(await draw($))).toEqual(ENGINE)
 })
 
+test('a control character in a file name or title is dropped and the band still draws', async ($, on) => {
+  const files: Files = new Map()
+  seedProject(files, ROOT, { story: '' })
+  files.set(`${CYCLE}/stories/e\u001b[31mx.md`, storyFile({ number: '', stage: 'planner', title: 'T\u009b31mred' }))
+  await open($, on, files)
+
+  const drawn = texts(await draw($))
+
+  expect(drawn).toContain('e[31mx')
+  expect(drawn).toContain(' · T31mred')
+})
+
 test('several staged, none own: Planning N stories', async ($, on) => {
   const files: Files = new Map()
   planningWorld(files, { t: { number: '5', stage: 'planner' }, u: { number: '6', stage: 'triage' } })
