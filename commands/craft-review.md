@@ -124,10 +124,9 @@ PLUGIN_ROOT: ${CLAUDE_PLUGIN_ROOT}
 - Read each changed file in full (not just the diff) to understand surrounding context
 - Check imports/callers of changed functions for cross-file issues
 - Respect locked decisions - do not flag patterns that are explicitly locked
-- Report every issue you find that could cause wrong results, a crash, lost data, a slowdown or failure under load, a doc that no longer matches the code, or a break of a locked decision you can quote. Include the ones you are unsure of and the ones that need a specific input, timing or state to happen: name that condition and what happens when it occurs, and say in Actual what you could not confirm. Your job here is coverage, not filtering: the orchestrator checks every finding against the project before anyone reads it and drops the ones that are not real, so an issue you leave out is one nobody checks.
-- Leave out code style, naming, pedantic nitpicks a senior engineer would not raise, issues a linter will catch, and pre-existing issues. None of them changes whether this change is safe to merge, and each one costs the reader time.
-- Categorize each finding: security, logic, performance, consistency, or doc-drift
-- doc-drift = stale references in docs/comments, terminology that doesn't match current code, outdated examples, references to renamed/removed symbols
+- Report every issue you find that could cause wrong results, a crash, lost data, a slowdown or failure under load, or a break of a locked decision you can quote. Include the ones you are unsure of and the ones that need a specific input, timing or state to happen: name that condition and what happens when it occurs, and say in Actual what you could not confirm. Your job here is coverage, not filtering: the orchestrator checks every finding against the project before anyone reads it and drops the ones that are not real, so an issue you leave out is one nobody checks.
+- Leave out missing tests, tests that are weak or cannot fail, docs and code comments that no longer match the code (a prompt or config file the product reads or runs is code, not a doc), code style, naming, pedantic nitpicks a senior engineer would not raise, issues a linter will catch, and pre-existing issues. None of them changes whether this change is safe to merge, and each one costs the reader time.
+- Categorize each finding: security, logic, performance, or consistency
 - Lead with the finding. Every finding carries Symptom, Expected (requirement quoted), Actual (observed, or read in code and not run), Consequences, Reproduce from a named starting state, Evidence (raw), and the fix diff with file:line and category
 - Focus on: [focus areas]
 - Do NOT comment on formatting/style if linters exist
@@ -249,9 +248,9 @@ from the codebase. You have full context - use it.
 - You may also record BREADCRUMB findings - issues you notice along the way that aren't
   part of the architect's questions. List these separately at the end. They are
   side-effects of your investigation, not your mission.
-- Report every issue you find that could cause wrong results, a crash, lost data, a slowdown or failure under load, a doc that no longer matches the code, or a break of a locked decision you can quote. Include the ones you are unsure of and the ones that need a specific input, timing or state to happen: name that condition and what happens when it occurs, and say in Actual what you could not confirm. Your job here is coverage, not filtering: the orchestrator checks every finding against the project before anyone reads it and drops the ones that are not real, so an issue you leave out is one nobody checks.
-- Leave out code style, naming, pedantic nitpicks a senior engineer would not raise, issues a linter will catch, and pre-existing issues. None of them changes whether this change is safe to merge, and each one costs the reader time.
-- Categorize each finding: security, logic, performance, consistency, or doc-drift
+- Report every issue you find that could cause wrong results, a crash, lost data, a slowdown or failure under load, or a break of a locked decision you can quote. Include the ones you are unsure of and the ones that need a specific input, timing or state to happen: name that condition and what happens when it occurs, and say in Actual what you could not confirm. Your job here is coverage, not filtering: the orchestrator checks every finding against the project before anyone reads it and drops the ones that are not real, so an issue you leave out is one nobody checks.
+- Leave out missing tests, tests that are weak or cannot fail, docs and code comments that no longer match the code (a prompt or config file the product reads or runs is code, not a doc), code style, naming, pedantic nitpicks a senior engineer would not raise, issues a linter will catch, and pre-existing issues. None of them changes whether this change is safe to merge, and each one costs the reader time.
+- Categorize each finding: security, logic, performance, or consistency
 - Do NOT free-roam beyond the questions + breadcrumbs. When you've answered all questions, stop.
 - Do NOT comment on formatting/style if linters exist
 - Report in this shape: a `Gates run:` line (what you ran on your own initiative and the result, or `none`), a `## Verified` list with one line per NO answer (the check you made, in your words), then `## Findings` with one finding per YES or breadcrumb under `### N. (<category>): <title>`, and `**Withdrawn.** <why>` on any finding you raised and then disproved
@@ -291,7 +290,7 @@ Run the runner against any cross-slice questions the same way as Step 4b.4.
 
 The reviewer's report is a claim, not a result. Check every finding before anyone sees it, and print nothing to the user while you do.
 
-**If the report has no findings** (across every batch, slice and the cross-slice pass), print exactly: "No issues found. Checked for bugs, doc drift and locked decisions." Under it, print the line on the state of the branch and the lines on changes to what a reviewer read, was told or was allowed to do, as the close-out reference's message section describes them. This matters because a clean result is the one the reader trusts without a second look, and a gate nobody ran or a reviewer told less is what could make it wrong. Then continue to Step 5b.
+**If the report has no findings** (across every batch, slice and the cross-slice pass), print exactly: "No issues found. Checked for bugs and locked decisions." Under it, print the line on the state of the branch and the lines on changes to what a reviewer read, was told or was allowed to do, as the close-out reference's message section describes them. This matters because a clean result is the one the reader trusts without a second look, and a gate nobody ran or a reviewer told less is what could make it wrong. Then continue to Step 5b.
 
 **If findings exist:**
 
@@ -304,13 +303,12 @@ The reviewer's report is a claim, not a result. Check every finding before anyon
 3. End each finding on what a user of the product would meet, because its ending decides what the developer reading the close-out does next (fix it, judge it, or let it close), and a finding ended for any other reason hides a real problem behind a correct-sounding one. Take the first of these that fits:
    - **not real** - no user path reaches it, it has the same cause as an earlier finding, or you ran its failure scenario and the symptom did not happen.
    - **reproduced, blocking** - you saw the symptom happen, and the failure scenario is wrong output, a crash, lost data or a failure the product's user sees.
-   - **reproduced, non-blocking** - you saw the symptom happen, and the failure scenario is cleanup, efficiency, conventions or doc drift, including a doc a developer follows into an error.
+   - **reproduced, non-blocking** - you saw the symptom happen, and the failure scenario is cleanup, efficiency or conventions.
    - **unresolved** - anything else, including a finding you argued away by reading without running it.
    Disproving one consequence of a reproduced finding leaves it reproduced; the message names that consequence with its output.
 4. Set blocking or non-blocking by the failure scenario alone, never by whether you ran it. Say "reproduced" about a finding only with its command and output kept beside it. A path you read but did not run is recorded as read, not reproduced.
    A finding whose symptom a user still reaches is real whether or not this branch introduced it; say it predates the branch and route it like any other.
-5. A doc-drift finding is checked like any other. Nothing is written to a docs file.
-6. In maze mode, run the check over the concatenated findings of every slice and the cross-slice pass, before the record is written.
+5. In maze mode, run the check over the concatenated findings of every slice and the cross-slice pass, before the record is written.
 
 Keep, for each finding, what the close-out message needs: the failure scenario (the inputs and state, then the wrong output), the command and output, each path read but not run, the complete fix with one `file:line` and its size, and for every not-real finding the reason. The message itself is shaped by `${CLAUDE_PLUGIN_ROOT}/commands/references/review-record.md`.
 

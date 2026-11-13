@@ -27,7 +27,7 @@ findings
 outcome (clean | findings)
 ```
 
-The body is `## Verified`, one line per check the reviewer made and found clean, then `## Findings`: `None.` when clean, otherwise each finding under `### N. (<category>): <title>`, numbered 1..N in the order Step 5 numbered them. The category is one of security, logic, performance, consistency, doc-drift. A finding keeps the reviewer's seven fields (Symptom, Expected, Actual, Consequences, Reproduce, Evidence, Fix) verbatim, plus `**Withdrawn.** <why>` when the reviewer raised it and then disproved it.
+The body is `## Verified`, one line per check the reviewer made and found clean, then `## Findings`: `None.` when clean, otherwise each finding under `### N. (<category>): <title>`, numbered 1..N in the order Step 5 numbered them. The category is one of security, logic, performance, consistency. A finding keeps the reviewer's seven fields (Symptom, Expected, Actual, Consequences, Reproduce, Evidence, Fix) verbatim, plus `**Withdrawn.** <why>` when the reviewer raised it and then disproved it.
 
 The record name is the file name without `.md`. It is the value every `review:` back-link and every graduate call uses.
 
@@ -176,7 +176,7 @@ The example is invented and owns nothing in this codebase: mirror the shape, not
 ```
 **Request changes: 2 blocking, 1 non-blocking.**
 
-First review of this branch. Six findings: two are bugs a customer hits, one is a doc line, two do not reach a user and one has the same cause as the first.
+First review of this branch. Six findings: two are bugs a customer hits, one is leftover code, two do not reach a user and one has the same cause as the first.
 
 `1. blocking: a refund larger than the invoice goes through`
 
@@ -208,15 +208,15 @@ Proposed: fix now, adhoc.
 
 Proposed: fix now, adhoc.
 
-`3. non-blocking: the setup guide names a flag that no longer exists`
+`3. non-blocking: the old receipt builder still runs on every payment`
 
-**A new developer following the setup guide gets an error on the first command.** The guide still says `--legacy-db`, and that flag was removed last month.
+**Every payment builds its receipt twice, and the second copy is thrown away.** This branch adds the new receipt builder and sends its output, but the call to the old builder was left in place and still runs, though the customer gets one correct receipt.
 
-> **Checked.** I ran the guide's first command on this branch as written.
-> `billing-db init --legacy-db`
-> `error: unknown option --legacy-db`
+> **Checked.** I recorded one test payment on this branch with the receipt log on.
+> `python -m billing.payments.record --fixture card-ok --log receipts`
+> `receipt built (new), sent; receipt built (old), discarded`
 
-**Fix: drop the flag from the command line in `docs/setup.md:12`, one line.**
+**Fix: remove the old builder's call in `billing/payments.py:112`, two lines.**
 
 Proposed: fix now, adhoc.
 
