@@ -5,6 +5,7 @@ Notable, user-facing changes per version. Internal changes (tests, refactors, co
 ## 2.18.1 - 2026-11-12
 
 - Changed `/craft:review` to report only problems in what your code does. Missing tests, weak tests, and docs or comments that have fallen behind the code no longer come back as findings or proposed fixes, so every item on the list you answer is a bug, a security hole, a slowdown or a break of a decision you locked.
+- Fixed the progress band's story chooser coming back after you closed it. If you cancelled while a start was still being checked and that start was refused, the chooser reopened with the refusal message; it now stays closed.
 
 ## 2.18.0 - 2026-11-10
 
