@@ -195,8 +195,11 @@ async function startChosen($: EngineInterface): Promise<void> {
     const reason = await whyNotStart($, root, held.own, choice)
     if (reason) {
       // Nothing runs: the list is read again from page one so it shows what is startable now.
+      // A chooser the user closed during the check stays closed.
       const choices = await readChoices($, root, held.own)
-      await update($, chooser, (): Chooser => ({ mode: 'list', own: held.own, choices, picked: 0, start: 0, earlier: [], reason }))
+      await update($, chooser, (v): Chooser =>
+        v.mode === '' ? v : { mode: 'list', own: held.own, choices, picked: 0, start: 0, earlier: [], reason },
+      )
       pressLocked = false
       return
     }

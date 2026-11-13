@@ -2,6 +2,11 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.18.1 - 2026-11-12
+
+- Changed `/craft:review` to report only problems in what your code does. Missing tests, weak tests, and docs or comments that have fallen behind the code no longer come back as findings or proposed fixes, so every item on the list you answer is a bug, a security hole, a slowdown or a break of a decision you locked.
+- Fixed the progress band's story chooser coming back after you closed it. If you cancelled while a start was still being checked and that start was refused, the chooser reopened with the refusal message; it now stays closed.
+
 ## 2.18.0 - 2026-11-10
 
 - Added a planning view to the progress band. While craft plans a story, the band shows which of the six steps it is on, how long it has been planning, what comes next and when it is waiting on you, in every terminal open on the project. When planning ends the row leaves; when a story is approved, the terminal that planned it keeps a "ready to implement" row whose button asks, right in the band, which ready story to build and confirms it before starting.

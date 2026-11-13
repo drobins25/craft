@@ -2382,6 +2382,27 @@ async function startHeld($: Engine, world: World, ui: Awaited<ReturnType<typeof 
   }
 }
 
+test("a chooser cancelled during start's check stays closed when the start is refused", async ($, on) => {
+  const files: Files = new Map()
+  const { world, runs } = await chooserRow($, on, files)
+  const ui = await mountBand($)
+  const free = await startHeld($, world, ui)
+  files.set(`${CYCLE}/stories/7-next.md`, storyFile({ number: '7' }))
+  setCycleState(files, ROOT, { story: '7-next' })
+
+  await ui.press({ key: 'back' })
+  await ui.press({ key: 'cancel' })
+  free()
+  await world.clock.settle()
+  const buttons = (await ui.findAll({ type: 'Button' })).map(b => b.key)
+  const text = await lineOne(ui)
+  await ui.unmount()
+
+  expect(runs).toEqual([])
+  expect(buttons).not.toContain('cancel')
+  expect(text).not.toContain('Story 7 is building')
+})
+
 test("a publish during start's check does not let a second start run", async ($, on) => {
   const files: Files = new Map()
   const { world, runs } = await chooserRow($, on, files)
