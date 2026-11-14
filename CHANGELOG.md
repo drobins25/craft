@@ -2,6 +2,10 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.18.2 - 2026-11-14
+
+- Fixed the progress band saying nothing when a story start doesn't go through. If Claude Code turns the start away, the chooser now comes back saying the story didn't start, so you can try again.
+
 ## 2.18.1 - 2026-11-12
 
 - Changed `/craft:review` to report only problems in what your code does. Missing tests, weak tests, and docs or comments that have fallen behind the code no longer come back as findings or proposed fixes, so every item on the list you answer is a bug, a security hole, a slowdown or a break of a decision you locked.

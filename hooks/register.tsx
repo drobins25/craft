@@ -180,6 +180,7 @@ async function openChooser($: EngineInterface): Promise<void> {
 // The chooser's start: checks the picked story and the slot against the disk
 // once more, closes the chooser, then runs /craft:story-implement on the
 // story's project-relative path so the command opens that story and no other.
+// A run Claude Code rejects reopens the list saying the story didn't start.
 async function startChosen($: EngineInterface): Promise<void> {
   if (starting || pressLocked) return
   starting = true
@@ -204,9 +205,17 @@ async function startChosen($: EngineInterface): Promise<void> {
       return
     }
     await update($, chooser, () => CLOSED)
-    await $.command.run({ command: 'craft:story-implement', args: choice.path.slice(root.length + 1) })
+    try {
+      await $.command.run({ command: 'craft:story-implement', args: choice.path.slice(root.length + 1) })
+    } catch {
+      // A rejected run reopens the list, read again, with line 1 saying so, and start is pressable again.
+      pressLocked = false
+      const choices = await readChoices($, root, held.own)
+      const reason = `${choice.label} didn't start, try again`
+      await update($, chooser, (): Chooser => ({ mode: 'list', own: held.own, choices, picked: 0, start: 0, earlier: [], reason }))
+    }
   } catch {
-    // A rejected run leaves start pressable again.
+    // A failed read or write leaves start pressable again.
     pressLocked = false
   } finally {
     starting = false

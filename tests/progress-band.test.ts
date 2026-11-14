@@ -1734,7 +1734,7 @@ test('a planning view freezes while a card is up', async ($, on) => {
 // ---- The held ready row and its control ----
 
 // This session's story reaches triage, then the flip clears its stage and marks it ready.
-async function readyRow($: Engine, on: On, files: Files, o: { slot?: string } = {}) {
+async function readyRow($: Engine, on: On, files: Files, o: { slot?: string; reject?: number } = {}) {
   planningWorld(files, { t: { number: '6', stage: 'triage' } })
   if (o.slot) {
     setCycleState(files, ROOT, { story: o.slot })
@@ -1743,7 +1743,12 @@ async function readyRow($: Engine, on: On, files: Files, o: { slot?: string } = 
   const runs: { command: string; args: string }[] = []
   const world = await open($, on, files, {
     beforeStart: () => {
+      let rejects = o.reject ?? 0
       on('command.run', { command: 'craft:story-implement' }, (_, e) => {
+        if (rejects > 0) {
+          rejects--
+          throw new Error('rejected')
+        }
         runs.push({ command: e.command, args: e.args })
         return { text: '' }
       })
@@ -1991,7 +1996,7 @@ const labelsOf = (found: { props: Record<string, unknown> }[]) => found.map(b =>
 
 // A ready row beside two more ready stories (2 and 9), one still planning (3)
 // and a ready backlog story that is not the row's own.
-async function chooserRow($: Engine, on: On, files: Files, o: { slot?: string } = {}) {
+async function chooserRow($: Engine, on: On, files: Files, o: { slot?: string; reject?: number } = {}) {
   files.set(`${CYCLE}/stories/a.md`, storyFile({ number: '2', status: 'ready', title: 'Second' }))
   files.set(`${CYCLE}/stories/b.md`, storyFile({ number: '9', status: 'ready', title: 'Ninth' }))
   files.set(`${CYCLE}/stories/p.md`, storyFile({ number: '3', status: 'planning' }))
@@ -2531,6 +2536,24 @@ test('start runs nothing for a story outside the project root it would run in', 
 // ---- A refused start explains itself ----
 
 const lineOne = async (ui: Awaited<ReturnType<typeof mountBand>>) => (await ui.findAll({ type: 'Text' })).map(t => t.text)
+
+test("a rejected start: the list re-reads, line 1 says Story 2 didn't start, and start runs on the next try", async ($, on) => {
+  const files: Files = new Map()
+  const { world, runs } = await chooserRow($, on, files, { reject: 1 })
+  const ui = await mountBand($)
+  await pressInto($, ui, READY, 'story-1', 'start')
+  await world.clock.settle()
+  const text = await lineOne(ui)
+  const buttons = labelsOf(await ui.findAll({ type: 'Button' }))
+
+  await pressInto($, ui, 'story-1', 'start')
+  await world.clock.settle()
+  await ui.unmount()
+
+  expect(text).toContain("Story 2 didn't start, try again")
+  expect(buttons).toContain('Story 2')
+  expect(runs).toHaveLength(1)
+})
 
 test("a story that stopped being ready: nothing runs, the list re-reads, line 1 says Story 2 isn't ready anymore", async ($, on) => {
   const files: Files = new Map()
