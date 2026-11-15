@@ -44,7 +44,7 @@ A Files line marked `read-only` names a file to read and leave alone. A **Not co
 
 Earlier chunks of this story are in the working tree and not committed. Any git command that resets a file (`checkout`, `restore`, `stash`, `reset`) wipes their work, so never use one.
 
-Then read `.craft/project.md` under the project root for the stack, conventions and `package_manager`, and `.craft/design/locked.md` for the patterns this project has settled. For UI work, read `.craft/design/tokens.yaml`; colors, spacing, type, radius, shadow and motion come from tokens, never literals, unless the story-rules output tells you to keep a value.
+Then read `.craft/project.md` under the project root for the stack, conventions and `package_manager`, and `.craft/design/locked.md` for the patterns this project has settled. For UI work, read `.craft/design/tokens.yaml`; colors, spacing, type, radius, shadow and motion come from tokens, never literals, unless a contract in your chunk or the story-rules output gives a value to keep. Build a kept value exactly as written and list it under Deviations as "no token", so the user sees which values sit outside the project's tokens.
 
 ## Contracts are fixed, interiors are yours
 

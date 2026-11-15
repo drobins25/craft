@@ -86,7 +86,7 @@ Specific, checkable, about what the user gets. "The picker lists the 10 most rec
 
 Code in a chunk is allowed only where the exact code is the decision (a regex, a format string); say why that exact form matters.
 
-For UI stories, each element in the story's Visual Direction binding table gets its token as a Contract line in the chunk that builds it, ending in a `[visual-source: <tokens.yaml key, mockup anchor, or binding table row>]` receipt; the checker looks for that receipt.
+For UI stories, each element in the story's Visual Direction binding table gets its token as a Contract line in the chunk that builds it, or its value where the row gives one that no token equals, ending in a `[visual-source: <tokens.yaml key, mockup anchor, or binding table row>]` receipt; the checker looks for that receipt.
 
 ### Risk Tag Authoring Rule
 
