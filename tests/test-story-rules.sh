@@ -199,9 +199,11 @@ run_rules "$STORIES/11-motion.md" planner
 assert_contains "falls back to the plugin's catalog when the project has none" "motion catalog: .*templates/craft/design/animations.md" "$OUT"
 assert_contains_literal "carries the planner's motion rules" "$(first_rule motion-story-rules.md planner)" "$OUT"
 echo "# catalog" > "$TEST_DIR/.craft/design/animations.md"
-run_rules "$STORIES/11-motion.md" builder
+run_rules "$STORIES/11-motion.md" planner
 assert_contains_literal "prefers the project's own catalog" "- motion catalog: $TEST_DIR/.craft/design/animations.md" "$OUT"
+run_rules "$STORIES/11-motion.md" builder
 assert_contains_literal "carries the builder's motion rules" "$(first_rule motion-story-rules.md builder)" "$OUT"
+assert_not_contains "leaves the catalog to the planner" "motion catalog" "$OUT"
 write_story "$STORIES/11b-motion-bullet.md" "" '## Visual Direction
 
 - **Motion:** card lifts on hover'
@@ -220,7 +222,7 @@ assert_eq "a Motion line that says none prints nothing" "" "$OUT"
 write_story "$STORIES/12-motion-mockup.md" "mockup: 2026-01-02-hero" '## Visual Direction
 
 **Motion:** card lifts on hover'
-run_rules "$STORIES/12-motion-mockup.md" builder
+run_rules "$STORIES/12-motion-mockup.md" planner
 assert_not_contains "a mockup story gets no catalog rules" "motion catalog" "$OUT"
 
 begin_test "planning sources bring the citation rules"

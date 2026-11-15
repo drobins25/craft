@@ -319,14 +319,21 @@ motion_block() {
   fi
 
   open_block
-  echo "This story has a Motion line. Follow the rules below. Facts checked first:"
-  catalog=""
-  [ -n "$ROOT" ] && [ -f "$ROOT/.craft/design/animations.md" ] && catalog="$ROOT/.craft/design/animations.md"
-  [ -z "$catalog" ] && [ -f "$PLUGIN/templates/craft/design/animations.md" ] && catalog="$PLUGIN/templates/craft/design/animations.md"
-  if [ -n "$catalog" ]; then
-    echo "- motion catalog: $catalog"
+  # Only the planner picks from the catalog, so only the planner is shown it.
+  # The project's own catalog comes first; the plugin's general one stands in.
+  if [ "$ROLE" = "planner" ]; then
+    echo "This story has a Motion line. Follow the rules below. Facts checked first:"
+    catalog=""
+    [ -n "$ROOT" ] && [ -f "$ROOT/.craft/design/animations.md" ] && catalog="$ROOT/.craft/design/animations.md"
+    if [ -n "$catalog" ]; then
+      echo "- motion catalog: $catalog"
+    elif [ -f "$PLUGIN/templates/craft/design/animations.md" ]; then
+      echo "- motion catalog: $PLUGIN/templates/craft/design/animations.md (the plugin's general catalog; this project has none of its own)"
+    else
+      echo "- NO MOTION CATALOG FOUND"
+    fi
   else
-    echo "- NO MOTION CATALOG FOUND: say so in your report"
+    echo "This story has a Motion line. Follow the rules below."
   fi
   echo ""
   printf '%s\n' "$rules"
