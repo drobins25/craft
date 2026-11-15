@@ -1733,8 +1733,12 @@ test('a planning view freezes while a card is up', async ($, on) => {
 
 // ---- The held ready row and its control ----
 
+// `reject` is how many runs of story-implement throw before one goes through;
+// `hold` keeps each run pending until its gate resolves.
+type RowOptions = { slot?: string; reject?: number; hold?: { gate: Promise<void> } }
+
 // This session's story reaches triage, then the flip clears its stage and marks it ready.
-async function readyRow($: Engine, on: On, files: Files, o: { slot?: string; reject?: number } = {}) {
+async function readyRow($: Engine, on: On, files: Files, o: RowOptions = {}) {
   planningWorld(files, { t: { number: '6', stage: 'triage' } })
   if (o.slot) {
     setCycleState(files, ROOT, { story: o.slot })
@@ -1744,7 +1748,8 @@ async function readyRow($: Engine, on: On, files: Files, o: { slot?: string; rej
   const world = await open($, on, files, {
     beforeStart: () => {
       let rejects = o.reject ?? 0
-      on('command.run', { command: 'craft:story-implement' }, (_, e) => {
+      on('command.run', { command: 'craft:story-implement' }, async (_, e) => {
+        if (o.hold) await o.hold.gate
         if (rejects > 0) {
           rejects--
           throw new Error('rejected')
@@ -1996,7 +2001,7 @@ const labelsOf = (found: { props: Record<string, unknown> }[]) => found.map(b =>
 
 // A ready row beside two more ready stories (2 and 9), one still planning (3)
 // and a ready backlog story that is not the row's own.
-async function chooserRow($: Engine, on: On, files: Files, o: { slot?: string; reject?: number } = {}) {
+async function chooserRow($: Engine, on: On, files: Files, o: RowOptions = {}) {
   files.set(`${CYCLE}/stories/a.md`, storyFile({ number: '2', status: 'ready', title: 'Second' }))
   files.set(`${CYCLE}/stories/b.md`, storyFile({ number: '9', status: 'ready', title: 'Ninth' }))
   files.set(`${CYCLE}/stories/p.md`, storyFile({ number: '3', status: 'planning' }))
@@ -2553,6 +2558,87 @@ test("a rejected start: the list re-reads, line 1 says Story 2 didn't start, and
   expect(text).toContain("Story 2 didn't start, try again")
   expect(buttons).toContain('Story 2')
   expect(runs).toHaveLength(1)
+})
+
+test("a chooser cancelled during start's check stays closed when the run is rejected", async ($, on) => {
+  const files: Files = new Map()
+  const { world, runs } = await chooserRow($, on, files, { reject: 1 })
+  const ui = await mountBand($)
+  const free = await startHeld($, world, ui)
+
+  await ui.press({ key: 'back' })
+  await ui.press({ key: 'cancel' })
+  free()
+  await world.clock.settle()
+  const buttons = (await ui.findAll({ type: 'Button' })).map(b => b.key)
+  const text = await lineOne(ui)
+  await ui.unmount()
+
+  expect(runs).toEqual([])
+  expect(buttons).not.toContain('cancel')
+  expect(text).not.toContain("Story 2 didn't start, try again")
+})
+
+// A run that stays pending until the test lets it go, and a wait for start to close the chooser.
+function heldRun() {
+  let release = () => {}
+  const gate = new Promise<void>(resolve => {
+    release = resolve
+  })
+  return { hold: { gate }, release: () => release() }
+}
+
+async function untilClosed(ui: Awaited<ReturnType<typeof mountBand>>) {
+  for (let i = 0; i < 200; i++) {
+    const keys = (await ui.findAll({ type: 'Button' })).map(b => b.key)
+    if (!keys.includes('start') && !keys.includes('cancel')) return
+    await new Promise<void>(resolve => setTimeout(resolve, 0))
+  }
+  throw new Error('start never closed the chooser')
+}
+
+test('a chooser opened again while a start waits keeps its pick when the run is rejected', async ($, on) => {
+  const files: Files = new Map()
+  const { hold, release } = heldRun()
+  const { world, runs } = await chooserRow($, on, files, { reject: 1, hold })
+  const ui = await mountBand($)
+  await pressInto($, ui, READY, 'story-1', 'start')
+  await untilClosed(ui)
+
+  await pressInto($, ui, READY, 'story-2')
+  release()
+  await world.clock.settle()
+  const text = await lineOne(ui)
+  const buttons = labelsOf(await ui.findAll({ type: 'Button' }))
+  await ui.unmount()
+
+  expect(runs).toEqual([])
+  expect(text).toContain(' Story 9')
+  expect(text).not.toContain("Story 2 didn't start, try again")
+  expect(buttons).toEqual(['start', 'back'])
+})
+
+test("a start rejected after a new session began leaves the new session's ready row", async ($, on) => {
+  const files: Files = new Map()
+  const { hold, release } = heldRun()
+  const { world, runs } = await chooserRow($, on, files, { reject: 1, hold })
+  let ui = await mountBand($)
+  await pressInto($, ui, READY, 'story-1', 'start')
+  await untilClosed(ui)
+  await ui.unmount()
+
+  await $.session.start({ cwd: ROOT, surface: 'terminal', isInteractive: true })
+  await world.clock.settle()
+  ui = await mountBand($)
+  release()
+  await world.clock.settle()
+  const text = await lineOne(ui)
+  const buttons = labelsOf(await ui.findAll({ type: 'Button' }))
+  await ui.unmount()
+
+  expect(runs).toEqual([])
+  expect(text).not.toContain("Story 2 didn't start, try again")
+  expect(buttons).toEqual([READY])
 })
 
 test("a story that stopped being ready: nothing runs, the list re-reads, line 1 says Story 2 isn't ready anymore", async ($, on) => {

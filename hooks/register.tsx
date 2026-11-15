@@ -55,6 +55,8 @@ let pressLocked = false
 // only when the start handler returns: a redraw or a turn end during the file
 // reads must not let a second start through.
 let starting = false
+// Counts session starts, so a start that began in an earlier session leaves this one's chooser alone.
+let session = 0
 
 let inFlight: Promise<void> | null = null
 let readsBegan = false
@@ -180,11 +182,14 @@ async function openChooser($: EngineInterface): Promise<void> {
 // The chooser's start: checks the picked story and the slot against the disk
 // once more, closes the chooser, then runs /craft:story-implement on the
 // story's project-relative path so the command opens that story and no other.
-// A run Claude Code rejects reopens the list saying the story didn't start.
+// A run Claude Code rejects reopens the list saying the story didn't start,
+// unless the user closed the chooser during the check, opened it again since,
+// or a new session began.
 async function startChosen($: EngineInterface): Promise<void> {
   if (starting || pressLocked) return
   starting = true
   pressLocked = true
+  const began = session
   try {
     const held = await read($, chooser)
     const choice = held.mode === 'confirm' ? held.choices[held.picked] : undefined
@@ -204,15 +209,20 @@ async function startChosen($: EngineInterface): Promise<void> {
       pressLocked = false
       return
     }
+    const cancelled = (await read($, chooser)).mode === ''
     await update($, chooser, () => CLOSED)
     try {
       await $.command.run({ command: 'craft:story-implement', args: choice.path.slice(root.length + 1) })
     } catch {
       // A rejected run reopens the list, read again, with line 1 saying so, and start is pressable again.
+      // A chooser the user cancelled during the check, one open again by now, and a new session's are left as they are.
       pressLocked = false
+      if (cancelled || began !== session) return
       const choices = await readChoices($, root, held.own)
       const reason = `${choice.label} didn't start, try again`
-      await update($, chooser, (): Chooser => ({ mode: 'list', own: held.own, choices, picked: 0, start: 0, earlier: [], reason }))
+      await update($, chooser, (v): Chooser =>
+        v.mode !== '' ? v : { mode: 'list', own: held.own, choices, picked: 0, start: 0, earlier: [], reason },
+      )
     }
   } catch {
     // A failed read or write leaves start pressable again.
@@ -279,6 +289,7 @@ export const register: Register = on => {
     lastFacts = null
     starting = false
     pressLocked = false
+    session += 1
     stop(refreshTicker)
     stop(frameTicker)
     live = e.surface !== null
