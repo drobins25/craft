@@ -9,7 +9,7 @@ allowed-tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Task", "Skill"
 
 You coordinate planning. The plan-chunks-agent researches the codebase and writes the plan into the story file. Your job: make sure the story is fit to plan, launch the planner, check what it wrote, take the decisions that belong to the user to the user, and mark the story ready when they approve.
 
-The user builds products from these plans and does not read them line by line, so three things matter most: a wrong line in the story never reaches the planner, the user sees every decision that was theirs to make, and nothing reaches implementation that would leave the implementer guessing.
+The user builds products from these plans and does not read them line by line, so two things matter most: the user sees every decision that was theirs to make, and nothing reaches implementation that would leave the implementer guessing.
 
 Never start this skill on your own initiative. The user must have asked to plan, through a command, a flow that offered it, or their own words.
 
@@ -27,7 +27,7 @@ Callers may pass labeled fields; use them to skip rediscovery, and work without 
 
 **Under a Go run** (only when `${CLAUDE_PLUGIN_ROOT}/commands/references/go-run.md` is in force for this conversation): at the start run `python3 "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/go-brief.py" <cycle-dir>`. On `prompts=answer`, every prompt and card here follows go-run.md's `## Known prompts` and `## Planning`, and the implementation hand-offs go to its `## At the stage ceiling`. Any other verdict ends the Go run as go-run.md says, and this skill asks everything as written.
 
-**Autonomous mode** (invoked from `craft:story-implement-auto`): skip the content, alignment, visual and direction checks; nobody is there to answer them. The story check still runs and takes its recommended answer, because a wrong line in the story costs more when nobody is watching.
+**Autonomous mode** (invoked from `craft:story-implement-auto`): skip the content, alignment, visual and direction checks; nobody is there to answer them.
 
 ## The planning stage
 
@@ -45,24 +45,6 @@ Stages: `content-check`, `alignment-check`, `direction`, `planner`, `plan-check`
 Read the story file. For a story in a cycle, read its `cycle.yaml`; if it has a non-empty `source_issue`, Read `${CLAUDE_PLUGIN_ROOT}/commands/references/tracker-follow.md` with that cycle's directory and continue only through its `## Continue`.
 
 Sibling stories: use `SIBLINGS:` if given; otherwise look at the cycle's other stories and keep the ones that share files, components or terms with this one. Their names, files and decisions go to the agent so it reuses instead of rebuilding. (Details: `${CLAUDE_PLUGIN_ROOT}/skills/plan-chunks/references/research-integration.md`.)
-
-### Phase 0.3: Story check
-
-Before anything else is asked or planned, read the story the way a reviewer reads a pull request, against the code it names. The planner plans what the story says and the builder builds what the plan says, so a wrong line here ships. This is a short read (the story, then the files and lines it cites). It finds problems; it does not solve them. The planner does the research.
-
-Look for three things:
-
-- **Code handed over as the product.** The story tells the builder to ship, copy or port existing code (a trial, a prototype, an earlier version, "as-is", "exactly as it works today") and does not say what that code must handle. Code written to try a look or a flow has only met the inputs its author tried. Whether it survives odd input, its own limits or a restart is unknown until someone asks.
-- **Claims about the code that are no longer true.** Something the story calls missing has already landed; a file, function, step or line it cites has moved or gone; callers exist that it does not list.
-- **Lines that contradict each other,** where a builder would have to pick one.
-
-Nothing found: say so in one line and go on. Otherwise write stage `content-check` and ask one card per finding, headed `Story check`. Show the story's line, what you found in the code, and the wording you propose. Options: `Fix the story first (Recommended)`, `Plan it as written`, `Stop here`.
-
-- **Fix:** reword only the words that are wrong, and keep everything else in the line. For handed-over code, that means the words that make the old code itself the product: the story keeps saying what the feature must look like and do, keeps citing the old code as the reference for that, and stops saying its code ships unchanged. Do not write what the code must handle; you have not done that research. Record it in a `## Story Check` section instead: the date, the old line, the new line, and the open question for the planner ("what must this code survive that the trial never met?"). For a stale claim, correct the claim and record the old line. For a contradiction the user has to settle, the card asks which line wins.
-- **Plan it as written:** change no line. Record each finding in `## Story Check` as an open risk for the planner.
-- **Stop here:** clear the stage and stop.
-
-In batch, run it per story before the first launch.
 
 ### Phase 0.4: Content direction
 
@@ -112,7 +94,7 @@ Write stage `planner` (every launch, including re-launches). Invoke the Task too
 5. `## The Pitch` has a sell and a `| Condition | Secured by |` table, every row tagged `verified`, `system-owned` or `unverifiable`.
 6. `## Acceptance` lists specific, checkable criteria.
 7. For a UI story with a filled-in Visual Direction binding table, every non-`TBD` row is pinned in some chunk's Contracts with a `[visual-source:]` receipt.
-8. Every Spark requirement has a home in some chunk. Read the Spark, list what it asks for, and find each one. Every open question in `## Story Check` is answered by a contract or a named test, or sits on a **Not covered** line with its reason.
+8. Every Spark requirement has a home in some chunk. Read the Spark, list what it asks for, and find each one.
 9. No **Not covered** line leaves out a risk that a file some chunk creates or modifies could guard against, or gives as its reason that another program, script or person will behave. Those are covered by a contract and a named test.
 
 If check 1 fails, the agent did not plan: plan inline yourself, following `${CLAUDE_PLUGIN_ROOT}/agents/plan-chunks-agent.md`, rather than blocking the user. If any other check fails, show the user the numbered failures and ask on a card: `Re-plan with the failure list` (re-launch S-1 with it), fix the story file by hand (clear the stage and stop), or go on to triage with the gaps named. Re-plan is the proposed option until the planner has been re-launched once for failed checks on this story. After that, whichever check fails, the card is still asked and its proposed option is to go on to triage, with each failure still standing printed at the top of triage's settled list, so a run never loops.
@@ -155,7 +137,7 @@ With nothing waiting:
 ## Batch Planning (`MODE: batch`)
 
 1. **Find the stories.** List `[cycle]/stories/*.md` with `status: planning`. None: say so and stop. One: plan it as a single story.
-2. **Story check and content direction.** Run the story check on each (Phase 0.3). Then write stage `content-check` per story; if any lack `## Content Direction`, ask once whether to run content-spark on them first (inline, as in Phase 0.4) or plan anyway.
+2. **Content direction.** Write stage `content-check` per story; if any lack `## Content Direction`, ask once whether to run content-spark on them first (inline, as in Phase 0.4) or plan anyway.
 3. **Dependencies decide the order.** Every story needs a `## Dependencies` section with a `**Blocked by:**` line and a `## Likely Files` section; if one is missing, stop and ask the user to fill it in (or scan Likely Files now) or cancel, clearing every stage on cancel. A story that says "Blocked by: None" but shares a modify/create file with another batch story gets one card: which plans first, or truly independent (record that on its Blocked by line so it isn't asked again). Then group stories into levels: level 0 has no blockers in the batch; each later level depends only on earlier ones. A circular pair is excluded and reported.
 4. **Levels plan in order, never together.** Planners decide names, IDs, file ownership and formats; a planner that runs before its predecessor's plan exists invents its own versions, and the stories then disagree. Tell the user the levels and a rough time (about 8 minutes per level).
 5. **Launch each level.** Write stage `planner` per story. With `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`, spawn teammates (details: `${CLAUDE_PLUGIN_ROOT}/skills/plan-chunks/references/team-planning.md`); otherwise launch Task agents with `run_in_background: true` so each summary is saved to disk and survives compaction, and record each story's output file path. Each prompt carries what S-1 lists, plus the other stories' names, sparks and Likely Files, plus: "Batch mode: PLAN FORK and RESEARCH REQUEST are unavailable. Decide down your recommended branch, set its product stake to ask, and list it as a Critical Blocker." Wait for the whole level before launching the next.

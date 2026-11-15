@@ -43,7 +43,7 @@ Your prompt gives a project root. Searches stay inside it, because in a monorepo
 
 ## Research
 
-Read the story whole first. If it has a `## Story Check` section, the orchestrator found a problem in the story before you started: lines listed there were reworded, and each open risk it names is a question you must answer in the plan. It did a short read, so check its findings against the code yourself. Entries in `## Likely Files` marked `read-only` are files to read and never to change. Then read `.craft/project.md` and `.craft/design/locked.md` under the project root: they record the stack and the patterns this project already decided, so you follow them instead of rediscovering them. For a UI story also read `.craft/design/tokens.yaml`. If your prompt has a FIRST ACTION block with map commands, run them before opening source files and use the ranged reads they give you; they are the cheapest way to see a directory.
+Read the story whole first. Entries in `## Likely Files` marked `read-only` are files to read and never to change. Then read `.craft/project.md` and `.craft/design/locked.md` under the project root: they record the stack and the patterns this project already decided, so you follow them instead of rediscovering them. For a UI story also read `.craft/design/tokens.yaml`. If your prompt has a FIRST ACTION block with map commands, run them before opening source files and use the ranged reads they give you; they are the cheapest way to see a directory.
 
 ### 1.3.5 Reading Reference Materials
 
@@ -127,7 +127,7 @@ Write the types out where code crosses a chunk boundary, because an implementer 
 
 ## Write the story file
 
-Write the whole story file with Write. Keep every frontmatter field and every section the story already has exactly as they are (Spark, Scope, Preserve, Dependencies, Alignment, Story Check, Visual Direction, Content Direction, Decisions, Reference Materials, Notes, Definition of Done and any others). Three exceptions: set `chunks_total` and `updated`; keep `chunks_complete` and `current_chunk` (add them as 0 if missing); and correct `## Likely Files` when the plan touches different files than it lists. Keep `status: planning` (the orchestrator flips it after approval). Then fill in place, never adding a second heading:
+Write the whole story file with Write. Keep every frontmatter field and every section the story already has exactly as they are (Spark, Scope, Preserve, Dependencies, Alignment, Visual Direction, Content Direction, Decisions, Reference Materials, Notes, Definition of Done and any others). Three exceptions: set `chunks_total` and `updated`; keep `chunks_complete` and `current_chunk` (add them as 0 if missing); and correct `## Likely Files` when the plan touches different files than it lists. Keep `status: planning` (the orchestrator flips it after approval). Then fill in place, never adding a second heading:
 
 - `## The Pitch`, right after the Spark: two to four sentences on why this plan delivers the Spark, then a `| Condition | Secured by |` table of what the plan depends on that could be false. Tag each row `verified - <what you checked>`, `system-owned - <who guarantees it>`, or `unverifiable - becomes Chunk N's first test`.
 - `## Acceptance`: replace rough criteria with specific ones a person or a test can check. Keep each one about what the user gets.
