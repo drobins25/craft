@@ -1,6 +1,26 @@
 # Batch Triage Reference
 
-Detailed UX patterns, templates, and heuristics for the batch triage flow (BT-1 through BT-7). The orchestrator SKILL.md defines the flow — this reference provides the supporting details.
+The batch triage flow (BT-1 through BT-7): what runs after every story in a batch has a plan. The planning skill hands off here at the end of Batch Planning; this file owns the flow, its cards and its edge cases.
+
+**Every item that is asked gets its own card.** Never fold items into one list with a single "All good?", because a folded list gets approved without being read. Five items across three stories is five cards.
+
+## The flow
+
+| Phase | What | Key behavior |
+|-------|------|-------------|
+| **BT-1** | Overview | Write stage `triage` for each planned story. Count items by tier; the batch settled list prints before Question 1. |
+| **BT-2** | Needs review | One card per item, grouped by story. |
+| **BT-3** | Worth noting | One card per item, grouped by story, with keeping the plan as written as an outcome. |
+| **BT-4** | Cohesion | File overlaps, duplicate components, conflicting decisions. One card per issue. |
+| **BT-5** | Per-story approval | Read each story file fresh with the Read tool, never from memory or a summary. Present one story, wait for the answer, then read the next: never hold two plans in context. Each gets Approve, Adjust or Reject. |
+| **BT-6** | Finalize | Triage answers already landed at answer time; verify nothing is missing and mark approved stories ready. Queue adjusted stories for re-planning. |
+| **BT-7** | Summary | Report counts and offer what comes next. |
+
+The progress band reads each story's planning stage, so keep it true through triage:
+
+- **BT-1:** `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] triage` for each planned story as triage begins.
+- **BT-5 Reject, and BT-5 Adjust:** `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/planning-stage.sh [story-file] clear` for that story. An adjusted story's queued re-plan writes its stages again from S-1.
+- **BT-6 Approve:** `update-story-status.sh [story-file] ready` (see Status Script below), which also clears the stage.
 
 ---
 
@@ -19,11 +39,12 @@ Concerns and decisions from agent plan reports are sorted into three tiers based
 1. Iterate through all successful plan reports
 2. From each report, extract:
    - Flagged Concerns table entries (concern, confidence, recommendation)
-   - Decisions Made table entries routed by the Product-stake column as in SKILL.md S-3 Step 4: `ask` rows are BT-2 items regardless of confidence, `mention` rows join the batch settled list; with no Product-stake column, low-confidence rows are BT-2 items
+   - Decisions Made table entries routed by the Product-stake column as S-3's Decisions Made step does: `ask` rows are BT-2 items regardless of confidence, `mention` rows join the batch settled list; with no Product-stake column, low-confidence rows are BT-2 items
    - Design Decision Validation entries where status is `concern` or `invalid`
-   - Critical Blockers (always treated as needs-review, except type `research`, next bullet)
-   - Critical Blockers of type `research` are not asked as BT-2 questions: before BT-2, run each through S-2 Step 0's RESEARCH REQUEST steps R1-R3 in SKILL.md (the user is at the desk now; the request block is in that story's `output_file` from the registry), comparing its "plan assumes" line against the story's Reference Materials entry `_plan.md -> "Convergence Points"` that the run landed. Premise held: retag the story's class-claim conditions row `verified - research: <slug> -> "Convergence Points"`, print "kept as planned - research confirmed <premise> (<the Convergence Point matched>)" and drop the item. Premise overturned: queue the story through "Adjusted Story Re-Planning" with the research citations as BINDING context. Gap still open after the run, or R1 stopped on an existing planner door run: one BT-2 item; triage never asks it directly, and the answer retags that same row `verified - user ruled at triage: <answer>` (see the answer-time write rule below).
-   - Cycle Impact rows that are not `none` (story size, new dependencies, scope creep, new story needed): BT-2 items, one card per row with the two outcomes S-3 Step 5 gives that row
+   - Critical Blockers (always needs-review). In batch the planner cannot stop for a plan fork or a research request, so it decides down its recommended branch and lists the decision here; the card is where the user gets that decision back.
+   - Not Covered table entries: every risk the planner named and left out joins the batch settled list by name with its reason, so nothing is dropped unseen. A row marked as one a user would see is a BT-2 item: accept it as it stands (proposed), or adjust this story, which queues it through "Adjusted Story Re-Planning". Never re-launch a planner from inside triage, because it rewrites the story file and the answers already applied would be lost.
+   - Plan checks that still fail: when batch step 7 found a failed check on a story and the story went on to triage anyway, each failure still standing is printed at the top of that story's group in the batch settled list.
+   - Cycle Impact rows that are not `none` (story size, new dependencies, scope creep, new story needed): BT-2 items, one card per row with the two outcomes S-3's Cycle Impact step gives that row
 3. Tag each item with its source story name
 4. Sort BT-2 items first, then BT-3 items, then settled-list items
 5. Within each group, group by story (keeps mental context together)
@@ -31,9 +52,9 @@ Concerns and decisions from agent plan reports are sorted into three tiers based
 ### Counting for BT-1 Overview
 
 ```
-needs_review_count = BT-2 items (ask-tier rows, low-confidence decisions from a summary without a Product-stake column, low-confidence concerns, blockers other than a research blocker the run settled, design checks marked concern or invalid, Cycle Impact rows that are not none)
+needs_review_count = BT-2 items (ask-tier rows, low-confidence decisions from a summary without a Product-stake column, low-confidence concerns, blockers, Not Covered rows a user would see, design checks marked concern or invalid, Cycle Impact rows that are not none)
 worth_noting_count = BT-3 items (medium-confidence concerns)
-informational_count = settled-list items (mention-tier rows, plus high-confidence concerns)
+informational_count = settled-list items (mention-tier rows, high-confidence concerns, Not Covered rows a user would not see, plan checks still failing)
 ```
 
 ---
@@ -56,7 +77,7 @@ One card per item, the same shape as BT-2: the first words of the question parag
 
 ### The batch settled list
 
-The mention-tier decisions and the high-confidence concerns are never asked. They join the batch settled list, grouped by story. An entry is the story name, then the call in product words, then an indented line of code facts - the same shape as the reference's settled list. The list prints once under `Settled without asking - say which to reopen`, before Question 1, or, when BT-2, BT-3 and BT-4 ask no card, at the top of BT-5: above the batch-approve question when that fires, otherwise above the first story's presentation. A listed item is accepted by not reopening it; when the user names one, it is asked on a card in the normal order.
+The mention-tier decisions, the high-confidence concerns and the Not Covered rows a user would not see are never asked. They join the batch settled list, grouped by story. An entry is the story name, then the call in product words, then an indented line of code facts - the same shape as the reference's settled list. The list prints once under `Settled without asking - say which to reopen`, before Question 1, or, when BT-2, BT-3 and BT-4 ask no card, at the top of BT-5: above the batch-approve question when that fires, otherwise above the first story's presentation. A listed item is accepted by not reopening it; when the user names one, it is asked on a card in the normal order.
 
 ### BT-4: Cohesion Issue (per issue)
 
@@ -132,11 +153,16 @@ options:
 - "Re-plan adjusted stories" only appears if there are adjusted stories queued
 - If all stories were approved (none adjusted), show only "Start implementing" and "Done for now"
 
+**What each answer does:**
+- **Start implementing** applies the planning skill's hand-back rule (S-6): when story-implement or cycle-start is up the call chain, say in one line that the stories are ready and return to it with the first ready story. With nothing waiting, invoke the Skill tool with `skill: "craft:craft-story-implement"` and the first ready story's path. Never implement directly.
+- **Re-plan adjusted stories** runs each queued story through "Adjusted Story Re-Planning" below, one at a time.
+- **Done for now** ends the flow; every approved story is already marked ready.
+
 ---
 
 ## Cohesion Check Heuristics
 
-The post-hoc cohesion check (subagent mode, Phase M-3) uses these heuristics to detect cross-story conflicts.
+The cohesion check (the comparison at the end of Batch Planning step 7) uses these heuristics to detect cross-story conflicts.
 
 ### File Overlap Detection
 
@@ -196,10 +222,10 @@ If every agent fails (all stories in the failure queue):
 
 ### All Concerns Are Informational
 
-If no item is a BT-2 or BT-3 item (no `ask` row, no low-confidence decision in a summary without a Product-stake column, no low- or medium-confidence concern, no blocker other than a research blocker the run settled, no design check marked concern or invalid, no Cycle Impact row that is not none):
+If no item is a BT-2 or BT-3 item (no `ask` row, no low-confidence decision in a summary without a Product-stake column, no low- or medium-confidence concern, no blocker, no Not Covered row a user would see, no design check marked concern or invalid, no Cycle Impact row that is not none):
 
 1. BT-1 reports: "Planned [N] stories successfully. No items need review - agents were confident across the board."
-2. Skip BT-2 and BT-3 entirely; the settled list (mention-tier decisions and high-confidence concerns) heads the BT-5 presentation
+2. Skip BT-2 and BT-3 entirely; the settled list heads the BT-5 presentation
 3. Proceed to BT-4 (cohesion check still runs — file overlap isn't about confidence)
 4. BT-5 uses batch approval fast path if 5+ stories
 
@@ -207,9 +233,8 @@ If no item is a BT-2 or BT-3 item (no `ask` row, no low-confidence decision in a
 
 If `MODE: batch` is passed but only one story has `status: planning`:
 
-- Phase M-1 detects this: "Only 1 planning story found"
-- Switch to single-story path (S-1 through S-6) — no batch overhead
-- This is handled in M-1, before batch triage is ever reached
+- Batch Planning step 1 detects this and plans it as a single story (S-1 through S-6), with no batch overhead
+- Batch triage is never reached
 
 ### Many Stories (8+)
 
@@ -247,20 +272,21 @@ If a cohesion issue has no clean resolution (e.g., two stories genuinely need to
 
 ### What Gets Written
 
-1. **The Pitch** — sell + conditions table (every condition tagged `verified` / `system-owned` / `unverifiable -> Chunk N's FIRST test`). Goes between `## Spark` and `## Acceptance Criteria` in the story file. The `## Investigation` narrative (causal, dead ends kept) goes directly before `## Chunks`.
+1. **The Pitch** - the sell plus the conditions table, every condition tagged `verified`, `system-owned` or `unverifiable - becomes Chunk N's first test`. It sits right after `## Spark`.
 
-2. **Acceptance criteria** — From the agent's plan + any additions from triage discussion. Replaces or augments existing acceptance criteria.
+2. **Acceptance** - from the agent's plan plus any additions from triage. Specific, checkable criteria.
 
-3. **Chunks** — **Preserve the agent's chunk specs verbatim. Do NOT summarize.** Each chunk in the story file MUST include:
-   - **Goal:** What the chunk accomplishes
-   - **Files:** Every file created/modified with full paths
-   - **Contracts:** The receipted seams — every line carries `[verified: ...]`, `[owner: Chunk N]`, `[investigation: ...]`, `[visual-source: ...]`, or `[defines]`; a fact from outside the repo is `[verified: web - <source url or doc name> - <what was checked>]`, never `[investigation: ...]`. The implementer holds these as law.
-   - **Approach:** Advisory prose — pattern pointers, ordering, gotchas. No code bodies (decision-code with a receipt is the rare exception).
-   - **Test cases:** Named assertions the implementer writes bodies for.
-   - **Done When:** Checklist of specific, testable criteria (not vague summaries)
-   - **What Could Break:** Every entry `[resolved]` or `[escalated to conditions]`
+3. **Chunks** - **keep the agent's chunks exactly as written. Do NOT summarize.** Each chunk has what `chunk-format-guide.md` shows:
+   - **Goal:** the one outcome the chunk delivers
+   - **Files:** one line per file, `` `path` - create ``, `modify` or `read-only`
+   - **Contracts:** each with its source in a few words (`checked: ...`, `new`, or `from Chunk N`); a binding table row ends in its `[visual-source: ...]` receipt. The implementer matches these exactly.
+   - **Not covered:** optional; a risk the plan leaves open on purpose, with its reason
+   - **Approach:** optional advice in prose
+   - **Test cases:** each named for a behavior and what it proves
+   - **Run:** the commands that show the chunk left the project building and tested
+   - **Done When:** checkable items, including that every Run command passes
 
-   The quality bar: seams locked with receipts, interiors left to the implementer. Compare against single-story plans — batch mode must produce the same depth.
+   A chunk that changes only docs or prompts needs no Test cases or Run. Batch plans are held to the same depth as single-story plans.
 
    With concrete adjustments from triage:
    - **BT-2 decisions:** Find the chunk(s) affected by the resolved concern. Replace the agent's tentative approach with the user's chosen approach in the chunk description. Example: if the agent planned "use modal for confirmation (tentative)" and the user chose "use inline confirmation," update the chunk text to say "use inline confirmation."
@@ -269,7 +295,7 @@ If a cohesion issue has no clean resolution (e.g., two stories genuinely need to
 4. **Frontmatter updates:**
    ```yaml
    status: ready        # was: planning
-   chunks_total: [N]    # from agent's plan
+   chunks_total: [N]    # the number of chunks in the plan
    updated: [YYYY-MM-DD]
    ```
 
