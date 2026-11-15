@@ -342,7 +342,7 @@ The band reads `.craft/.global-state`, the active cycle's `.state`, story files'
 | `update-cycle-state.sh` | Update cycle .state file |
 | `update-story-status.sh` | Change story status in frontmatter; clears the story's planning stage on ready, active and complete |
 | `planning-stage.sh` | Write, rewrite or clear a story's `planning_stage` frontmatter field, the one line the progress band's planning view reads |
-| `story-rules.sh` | Print the extra rules a story's source brings, for the planner or the builder. A story built from a mockup gets the facts checked about it and that reader's part of `mockup-story-rules.md`; any other story prints nothing |
+| `story-rules.sh` | Print the extra rules a story's sources bring, for the planner or the builder. Each source a story carries (a mockup, decisions in its header, planning sources, a Motion line) gets the facts checked about it and that reader's part of the source's `*-story-rules.md` file; a story with none prints nothing |
 | `statusline.sh` | Generate status line display |
 | `find-workshop.sh` | Locate .craft/ directory. Also owns the shared before-init lookup (`craft_before_init_root`: the set-up project, then the git top level, then the current folder) and the monorepo-top refusal (`craft_refuse_monorepo_top`) that bugs and notebook captures use |
 | `discover-projects.sh` | Find all craft projects |
