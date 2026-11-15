@@ -326,5 +326,5 @@ For a verified command gate, the **Check** field is ALWAYS the literal `Verified
 - **Fail open on check errors.** If a check command itself errors (e.g., tool not installed), mark it SKIP with a note, not FAIL. EXCEPTION: a verified command gate that cannot start (exit 127) is a rot-warning WARN, never a silent SKIP — a `verified:` stamp promises measurement, so broken measurement must surface.
 - **Never invent or repair commands.** You run what is written-and-verified in quality.yaml, or what npm auto-detection derives. Nothing else.
 - **No commentary.** Output ONLY the structured result. No explanations, no suggestions, no "I noticed..." text.
-- **Per-chunk mode skips Build and Tests.** These checks produce SKIP in per-chunk mode. They run fully in story-final mode. This is intentional — the implementer runs per-file tests during TDD, and story-final is the comprehensive safety net.
+- **Per-chunk mode skips Build and Tests.** These checks produce SKIP in per-chunk mode. They run fully in story-final mode. This is intentional — the implementer runs and quotes each chunk's Run commands, and story-final is the comprehensive safety net.
 - **NEVER use `run_in_background: true` on Bash commands.** All checks (lint, build, tests) must run synchronously. A backgrounded command orphans its result — validation cannot parse output that never arrives.

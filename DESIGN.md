@@ -196,14 +196,13 @@ The Living Map's structural generator lives in a dedicated top-level `scripts/ma
 
 ## Planned Story Format (contracts model)
 
-Chunk specs lock **seams, not interiors**. The planner pins contracts (signatures, shapes, routes, invariants - each line carrying a receipt: `[verified: attack evidence]`, `[owner: Chunk N]`, `[investigation: reason]`, `[visual-source: where the look was decided]`, `[defines]`); the implementer owns function bodies and test bodies. No copy-pasteable code in plans - code appears only when the code IS the decision.
+Chunk specs lock **seams, not interiors**. The planner pins contracts: anything that has to come out one particular way, whether two pieces of code must agree on it (names, signatures, shapes, routes) or a user would see it (wording, order, limits). Each contract carries its source in a few words (`checked: <what was read>`, `new`, or `from Chunk N`); a visual binding ends in a `[visual-source: ...]` receipt. The implementer owns function bodies and test bodies. Code appears in a plan only when the exact code is the decision.
 
-A planned story carries four planning artifacts (format reference: `skills/plan-chunks/references/chunk-format-guide.md`):
+A planned story carries three planning artifacts (format reference: `skills/plan-chunks/references/chunk-format-guide.md`):
 
-- **`## The Pitch`** - the plan's guarantee plus a conditions table of every load-bearing assumption, tagged `verified` / `system-owned` / `unverifiable -> becomes Chunk N's first test`. Doubles as the implementer's tripwire watchlist.
-- **`## Investigation`** - the planner's causal research narrative, dead ends kept. Transfers the planner's headspace to the implementer and any future re-planner.
-- **`## Acceptance Pre-Flight`** - one row per acceptance vehicle, symbolically walked through the path it exercises using the test's own data shape; any `UNREACHABLE` verdict blocks plan acceptance (walk reference: `skills/plan-chunks/references/acceptance-walkthrough.md`).
-- **`## Chunks`** - cut bottom-up at layer rungs; later chunks cite earlier chunks' real output via `[owner: Chunk N]`, which self-freshens the spec.
+- **`## The Pitch`** - why the plan delivers the Spark, plus a conditions table of what it depends on that could be false, each row tagged `verified` / `system-owned` / `unverifiable - becomes Chunk N's first test`.
+- **`## Acceptance`** - specific, checkable criteria about what the user gets.
+- **`## Chunks`** - the fewest chunks that each leave the project building and tested. Each has Goal, Files, Contracts, Test cases (named for the behavior they prove), Run (the commands the builder runs and quotes) and Done When, and may have Not covered (a risk left open on purpose, with its reason) and Approach.
 
 For `type=ui` stories, per-element visual intent lives as an **Element Binding Table** in `## Visual Direction` (the source of truth); each chunk binds the rows it builds as Contract lines carrying a `[visual-source:]` receipt. Visual token assignment is a seam, not an interior - two implementers can assign different valid tokens to the same element, so it is pinned in Contracts rather than left to the implementer. Verification is two-tier: a plan-time enumerating gate (every non-`TBD` row is bound by some chunk) plus a project-local rendered-fidelity Done-When check.
 

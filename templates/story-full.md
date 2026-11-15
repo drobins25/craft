@@ -94,11 +94,8 @@ risk_tags: []
      - active.md dated entries: `## Recent state changes -> [YYYY-MM-DD entry]`
      Multi-anchor per file is the norm. Absolute paths only (wrapper-vs-nested rule). -->
 
-## Investigation
-<!-- Written during plan-chunks: the planner's causal research narrative, dead ends kept -->
-
 ## Chunks
-<!-- Implementation chunks: Goal / Files / Contracts (receipted) / Approach / Test cases / What Could Break / Done When -->
+<!-- Implementation chunks: Goal / Files / Contracts / Not covered / Approach / Test cases / Run / Done When -->
 
 ## Acceptance
 <!-- Given/When/Then format for testable criteria -->

@@ -502,7 +502,7 @@ fi
    1. **Persist the report first**: write it verbatim to `.craft/checkpoints/[story]-chunk-[N]-mismatch.md`. The implementer's work state must survive the user-question gap and any session restart — orchestrator context is not durable. Then read it: contract, reality, reasoning impact, proposed amendment, work state.
    2. **Interactive (default):** Surface via **AskUserQuestion**. The question text carries the contract-vs-reality delta and the reasoning impact (self-contained — the user judges from the dialog alone). Options: "Amend: [proposed amendment]" / "Different amendment" (discuss, then amend) / "Halt story" (replan needed).
    3. **Autonomous (RUN_MODE=autonomous):** Check the report once before parking. Both mistakes cost: a false alarm parks the whole story, and waving through a real mismatch ships a wrong contract. Open the line the report cites, search the project for code or a test that already relies on what the contract says, and run it. Only if it runs and shows the contract can be met as written, reply to the SAME implementer via SendMessage with what you found ("the contract holds: [file:line] already does this - continue from your work state"), or re-invoke a fresh implementer with the persisted report as step 5 describes when that agent cannot be reached; do this at most once per chunk. In every other case the mismatch holds, and you do not guess: park the story (emit a `contract_mismatch` event via append-event.sh, leave the story `active` at the current chunk, note it for the run summary) and continue to the next ready story. You never rewrite the contract yourself in this mode.
-   4. **On approved amendment, YOU make the edit — never the implementer.** Edit the story file: update the contract line, keeping one receipt on it (a fact from outside the repo is `[verified: web - <source url or doc name> - <what was checked>]`), AND append an `**Amendments:**` entry to the chunk (date, what changed, what the original receipt missed). The plan artifact belongs to planning; an implementer that can amend the contract it tripped over has no tripwire at all.
+   4. **On approved amendment, YOU make the edit — never the implementer.** Edit the story file: update the contract line, keeping its source note (`checked: <what was read>`, `new` or `from Chunk N`), AND append an `**Amendments:**` entry to the chunk (date, what changed, what the plan missed). The plan artifact belongs to planning; an implementer that can amend the contract it tripped over has no tripwire at all.
    5. **Resume the SAME implementer via SendMessage** — it holds the chunk context and a green work state: "Amendment approved and recorded — the contract now reads [X]. Continue from your work state." Only if that agent is no longer reachable (session restart, compaction, or SendMessage unavailable in this environment): re-invoke a fresh implementer using the partial-chunk resume prompt from Resume Support, and include the persisted mismatch report (`.craft/checkpoints/[story]-chunk-[N]-mismatch.md`) in its prompt — a fresh agent has no other access to the prior work state.
    6. **If "Halt story":** stop, leave the story `active`, report. The user decides whether to replan.
 
@@ -840,7 +840,7 @@ After all chunks:
 
    **Steps:**
    1. Re-read the story's `## The Pitch` section (written during planning).
-   2. Verify the conditions table is fully cashed: every `unverifiable -> Chunk N's FIRST test` condition had its test written and passing (the chunk validations already enforced this — this is a final confirmation, not a re-run).
+   2. Verify the conditions table is fully cashed: every `unverifiable - becomes Chunk N's first test` condition had its test written and passing (each builder's report quotes that run; this is a final confirmation, not a re-run).
    3. Present the pitch as a confident summary alongside the completion message.
 
    ```
@@ -1148,7 +1148,7 @@ If `.state` file is corrupted or missing:
 - Quality is pristine by default
 - **Proof is required** - spec-written tests, seen red once, pass quoted
 - **Never skip tests** — set up infrastructure if missing
-- **Edge cases matter** — implementer checks the checklist before marking complete
+- **Edge cases matter** — the implementer handles the inputs the code will really get, and tests the worst of them, before it reports
 - **Strict TypeScript** — enable and fix errors, don't disable
 - **ALL tests must pass** - never dismiss test failures as "unrelated to this story." FAILED means FAILED.
 - **No any types** — use proper types or get explicit approval
