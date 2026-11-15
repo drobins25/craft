@@ -9,7 +9,8 @@
 #   - the mockup field works as a record name or as a path to the record;
 #   - a failed check never looks like "nothing applies";
 #   - a mockup that cannot be read holds the rules back and says what to do;
-#   - the planner, the builder and the build launch still point at the script.
+#   - the planner, the builder and the build launch still point at the script;
+#   - the story check never rewords a mockup's port-it-unchanged line.
 
 set -e
 
@@ -152,6 +153,9 @@ begin_test "the planner, the builder and the build launch still point at the scr
 assert_file_contains "planner runs it as the planner" 'hooks/scripts/story-rules.sh <story file> planner' "$PLUGIN_ROOT/agents/plan-chunks-agent.md"
 assert_file_contains "builder runs it as the builder" 'hooks/scripts/story-rules.sh <STORY_FILE> builder' "$PLUGIN_ROOT/agents/implementer.md"
 assert_file_contains "the build launch hands the builder the plugin root" '\*\*PLUGIN_ROOT:\*\*.*story-rules' "$PLUGIN_ROOT/commands/craft-story-implement.md"
+
+begin_test "the story check leaves a mockup's port-it-unchanged line alone"
+assert_file_contains "the exception sits in the planning skill" 'non-empty `mockup:`, the line telling the builder to port the mockup.s look and motion unchanged is not a finding and is never reworded' "$PLUGIN_ROOT/skills/plan-chunks/SKILL.md"
 
 cleanup_test_dir
 finish_tests

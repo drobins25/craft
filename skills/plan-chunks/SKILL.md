@@ -53,7 +53,7 @@ Before anything else is asked or planned, read the story the way a reviewer read
 
 Look for three things:
 
-- **Code handed over as the product.** The story tells the builder to ship, copy or port existing code (a trial, a prototype, an earlier version, "as-is", "exactly as it works today") and does not say what that code must handle. Code written to try a look or a flow has only met the inputs its author tried. Whether it survives odd input, its own limits or a restart is unknown until someone asks.
+- **Code handed over as the product.** The story tells the builder to ship, copy or port existing code (a trial, a prototype, an earlier version, "as-is", "exactly as it works today") and does not say what that code must handle. Code written to try a look or a flow has only met the inputs its author tried. Whether it survives odd input, its own limits or a restart is unknown until someone asks. One exception: when the story's frontmatter has a non-empty `mockup:`, the line telling the builder to port the mockup's look and motion unchanged is not a finding and is never reworded, because the user approved that look running in their browser. Script in the mockup that handles data still gets this check.
 - **Claims about the code that are no longer true.** Something the story calls missing has already landed; a file, function, step or line it cites has moved or gone; callers exist that it does not list.
 - **Lines that contradict each other,** where a builder would have to pick one.
 
