@@ -307,6 +307,77 @@ write_story "$STORIES/19-backend.md" "type: technical" "## Spark"
 run_rules "$STORIES/19-backend.md" builder
 assert_eq "a story with none of the three prints nothing" "" "$OUT"
 
+begin_test "the orchestrator hears nothing about a story with its table, or with no settled look"
+run_rules "$STORIES/1-plain.md" orchestrator
+assert_eq "a plain story: exit code is 0" "0" "$RC"
+assert_eq "a plain story prints nothing" "" "$OUT"
+write_story "$STORIES/20-mockup-table.md" "mockup: 2026-01-02-hero" "$TABLE"
+run_rules "$STORIES/20-mockup-table.md" orchestrator
+assert_eq "a mockup story that has its table prints nothing" "" "$OUT"
+write_story "$STORIES/20-busy.md" "decisions: [2026-02-01-open-ruling]
+source_concept: thing" "## Visual Direction
+
+**Motion:** fade in
+
+A confirmation dialog before saving."
+run_rules "$STORIES/20-busy.md" orchestrator
+assert_eq "the planner's and builder's blocks never print for it" "" "$OUT"
+assert_eq "exit code is 0" "0" "$RC"
+
+begin_test "a mockup story with no table tells the orchestrator how to build it"
+write_story "$STORIES/21-mockup-bare.md" "mockup: 2026-01-02-hero" "## Visual Direction
+
+**Vibe:** calm"
+run_rules "$STORIES/21-mockup-bare.md" orchestrator
+assert_eq "exit code is 0" "0" "$RC"
+assert_contains "says the table is missing" "^This story was built from a mockup and has no binding table" "$OUT"
+assert_contains "names the mockup file" "^- mockup file: .*/2026-01-02-hero/mockup.html$" "$OUT"
+assert_contains "names the step that builds the table" "^- how the table is built: .*/story-from-mockup.md" "$OUT"
+assert_contains_literal "carries the orchestrator's mockup rules" "$(first_rule settled-look-story-rules.md 'orchestrator, mockup')" "$OUT"
+run_rules "$STORIES/21-mockup-bare.md" planner
+assert_not_contains "the planner never gets the orchestrator's rules" "how the table is built" "$OUT"
+write_story "$STORIES/22-mockup-gone.md" "mockup: 2026-09-09-gone" "## Visual Direction"
+run_rules "$STORIES/22-mockup-gone.md" orchestrator
+assert_contains "a mockup that is gone is called out" "^- MOCKUP FILE MISSING: " "$OUT"
+assert_not_contains "and no build step is offered" "how the table is built" "$OUT"
+
+begin_test "an annotate story with no table tells the orchestrator how to build it"
+mkdir -p "$TEST_DIR/.craft/annotations/2026-04-04-hero-polish"
+echo "# record" > "$TEST_DIR/.craft/annotations/2026-04-04-hero-polish/record.md"
+echo "/* annotate-key 1 */" > "$TEST_DIR/.craft/annotations/2026-04-04-hero-polish/session.css"
+write_story "$STORIES/23-annotate-bare.md" "annotate: 2026-04-04-hero-polish" "## Spark"
+run_rules "$STORIES/23-annotate-bare.md" orchestrator
+assert_eq "exit code is 0" "0" "$RC"
+assert_contains "says the table is missing" "^This story was built from an annotate run and has no binding table" "$OUT"
+assert_contains "names the sheet the user saw" "^- the changes the user saw on the page: .*/2026-04-04-hero-polish/session.css$" "$OUT"
+assert_contains "names the step that builds the table" "^- how the table is built: .*/story-from-annotate.md" "$OUT"
+assert_contains_literal "carries the orchestrator's annotate rules" "$(first_rule settled-look-story-rules.md 'orchestrator, annotate')" "$OUT"
+write_story "$STORIES/24-annotate-table.md" "annotate: 2026-04-04-hero-polish" "$TABLE"
+run_rules "$STORIES/24-annotate-table.md" orchestrator
+assert_eq "an annotate story that has its table prints nothing" "" "$OUT"
+write_story "$STORIES/25-annotate-gone.md" "annotate: 2026-09-09-gone" "## Spark"
+run_rules "$STORIES/25-annotate-gone.md" orchestrator
+assert_contains "a run whose files are gone is called out" "^- ANNOTATE RECORD MISSING: " "$OUT"
+
+begin_test "a story that names a dial record on disk, with no table, is not offered a new look"
+mkdir -p "$TEST_DIR/.craft/dials"
+printf '%s\n' "---" "source: dial" "chose: f" "outcome: story" "---" "let's go B" > "$TEST_DIR/.craft/dials/2026-05-05-warning-on-the-field.md"
+write_story "$STORIES/26-dial-bare.md" "" "## Spark
+
+The look was settled in a dial session, record .craft/dials/2026-05-05-warning-on-the-field.md, position F."
+run_rules "$STORIES/26-dial-bare.md" orchestrator
+assert_eq "exit code is 0" "0" "$RC"
+assert_contains "names the record and the position chosen" "^- dial record: .*/2026-05-05-warning-on-the-field.md .position chosen: f.$" "$OUT"
+assert_contains_literal "carries the orchestrator's dial rules" "$(first_rule settled-look-story-rules.md 'orchestrator, dial')" "$OUT"
+write_story "$STORIES/27-dial-table.md" "dial: .craft/dials/2026-05-05-warning-on-the-field.md" "$TABLE"
+run_rules "$STORIES/27-dial-table.md" orchestrator
+assert_eq "a dial story that has a table prints nothing" "" "$OUT"
+write_story "$STORIES/28-dial-word.md" "" "## Spark
+
+We talked about a dial and a dialog, and no record is named."
+run_rules "$STORIES/28-dial-word.md" orchestrator
+assert_eq "the word alone, with no record named, prints nothing" "" "$OUT"
+
 begin_test "every source a story carries prints, each in its own block"
 write_story "$STORIES/17-both.md" "mockup: 2026-01-02-hero
 decisions: [2026-02-01-open-ruling]" "$TABLE"
@@ -336,7 +407,7 @@ assert_contains "prints the unavailable line" "^STORY RULES UNAVAILABLE: cannot 
 begin_test "an unknown reader is refused out loud"
 run_rules "$STORIES/3-mockup.md" reviewer
 assert_eq "exit code is 1" "1" "$RC"
-assert_contains "prints the unavailable line" "^STORY RULES UNAVAILABLE: the reader must be planner or builder" "$OUT"
+assert_contains "prints the unavailable line" "^STORY RULES UNAVAILABLE: the reader must be planner, builder or orchestrator" "$OUT"
 
 begin_test "every rules file the script reads has a part for a reader"
 for f in mockup-story-rules.md decision-record-story-rules.md citation-story-rules.md motion-story-rules.md empty-project-story-rules.md; do
@@ -345,10 +416,14 @@ done
 assert_file_contains "the mockup rules have a builder part" '^## builder$' "$REFS/mockup-story-rules.md"
 assert_file_contains "the motion rules have a builder part" '^## builder$' "$REFS/motion-story-rules.md"
 assert_file_contains "the interface rules have a builder part" '^## builder$' "$REFS/ui-story-rules.md"
+for part in mockup annotate dial; do
+  assert_file_contains "the settled-look rules have an orchestrator part for $part" "^## orchestrator, $part\$" "$REFS/settled-look-story-rules.md"
+done
 
-begin_test "the planner, the builder and the build launch still reach the script"
+begin_test "the planner, the builder, the orchestrator and the build launch still reach the script"
 assert_file_contains "the planner names the script" 'hooks/scripts/story-rules.sh' "$PLUGIN_ROOT/agents/plan-chunks-agent.md"
 assert_file_contains "the builder names the script" 'hooks/scripts/story-rules.sh' "$PLUGIN_ROOT/agents/implementer.md"
+assert_file_contains "the plan-chunks skill runs the script as the orchestrator" 'hooks/scripts/story-rules.sh.* orchestrator' "$PLUGIN_ROOT/skills/plan-chunks/SKILL.md"
 assert_file_contains "the build launch still hands the builder the plugin root as a fallback" 'PLUGIN_ROOT:.*the implementer cannot resolve' "$PLUGIN_ROOT/commands/craft-story-implement.md"
 
 cleanup_test_dir

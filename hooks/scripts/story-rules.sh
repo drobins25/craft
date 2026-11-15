@@ -1,7 +1,7 @@
 #!/bin/bash
 # story-rules.sh - Print the extra rules a story's sources bring, for one reader.
 #
-# Usage: story-rules.sh <story-file> <planner|builder>
+# Usage: story-rules.sh <story-file> <planner|builder|orchestrator>
 #
 # The planner and the builder each run this before they start. A story with no
 # special source prints nothing, so the common path costs one call and no
@@ -24,6 +24,12 @@
 # The last two are not sources a story carries: one is the state of the
 # project, the other is the kind of story. They ride here because the same two
 # readers need them and most stories need neither.
+#
+# The orchestrator (the plan-chunks skill) is a third reader with one block of
+# its own. It runs this before it plans, and hears only about a story whose
+# look was settled in a mockup, an annotate run or a dial and whose binding
+# table is missing (settled-look-story-rules.md). None of the blocks above
+# print for it.
 #
 # To add one: a block function below, a rules file with a
 # "## planner" and/or "## builder" part, one call at the bottom.
@@ -61,8 +67,8 @@ block_failed() {
 }
 
 case "$ROLE" in
-  planner|builder) ;;
-  *) fatal "the reader must be planner or builder, got '${ROLE}'" ;;
+  planner|builder|orchestrator) ;;
+  *) fatal "the reader must be planner, builder or orchestrator, got '${ROLE}'" ;;
 esac
 [ -n "$STORY" ] || fatal "no story file given"
 [ -f "$STORY" ] && [ -r "$STORY" ] || fatal "cannot read the story file $STORY"
@@ -147,20 +153,12 @@ binding_counts() {
 
 MOCKUP_RAW=$(field mockup)
 
-# --- A story built from a mockup -------------------------------------------
-mockup_block() {
-  [ -n "$MOCKUP_RAW" ] || return 0
-  if [ -z "$ROOT" ]; then
-    block_failed "the story names a mockup but is not under a .craft folder, so the mockup cannot be found: $STORY_ABS"
-    return 0
-  fi
-  local rules found="" missing="" entry name file counts
-  rules=$(part mockup-story-rules.md)
-  if [ -z "$rules" ]; then
-    block_failed "this story names a mockup ($MOCKUP_RAW) but the $ROLE rules could not be read from $REFS/mockup-story-rules.md"
-    return 0
-  fi
-
+# find_mockups - looks up each mockup the story names and sets MOCKUPS_FOUND
+# and MOCKUPS_MISSING, one "- ..." line per mockup.
+find_mockups() {
+  local entry name file
+  MOCKUPS_FOUND=""
+  MOCKUPS_MISSING=""
   for entry in $MOCKUP_RAW; do
     name="${entry%/}"
     name="${name%/mockup.html}"
@@ -168,13 +166,32 @@ mockup_block() {
     [ -n "$name" ] || continue
     file="$ROOT/.craft/mockups/$name/mockup.html"
     if [ -f "$file" ]; then
-      found="${found}- mockup file: $file
+      MOCKUPS_FOUND="${MOCKUPS_FOUND}- mockup file: $file
 "
     else
-      missing="${missing}- MOCKUP FILE MISSING: $file
+      MOCKUPS_MISSING="${MOCKUPS_MISSING}- MOCKUP FILE MISSING: $file
 "
     fi
   done
+}
+
+# --- A story built from a mockup -------------------------------------------
+mockup_block() {
+  [ -n "$MOCKUP_RAW" ] || return 0
+  if [ -z "$ROOT" ]; then
+    block_failed "the story names a mockup but is not under a .craft folder, so the mockup cannot be found: $STORY_ABS"
+    return 0
+  fi
+  local rules found="" missing="" counts
+  rules=$(part mockup-story-rules.md)
+  if [ -z "$rules" ]; then
+    block_failed "this story names a mockup ($MOCKUP_RAW) but the $ROLE rules could not be read from $REFS/mockup-story-rules.md"
+    return 0
+  fi
+
+  find_mockups
+  found="$MOCKUPS_FOUND"
+  missing="$MOCKUPS_MISSING"
 
   open_block
   # A mockup that cannot be read leaves nothing to carry over, so the rules
@@ -406,11 +423,105 @@ ui_block() {
   printf '%s\n' "$rules"
 }
 
-mockup_block
-decisions_block
-citations_block
-motion_block
-empty_project_block
-ui_block
+# --- A look settled elsewhere, with no binding table -------------------------
+# Only the orchestrator is told, before it plans. A mockup, an annotate run or
+# a dial settles how something looks, and the story's binding table is how
+# that reaches the planner. A story that has its table needs nothing said.
+# Without one, the orchestrator would offer to explore a look the user already
+# chose, so it is told where the look came from and what to do about the table.
+settled_look_block() {
+  [ -n "$ROOT" ] || return 0
+  local counts
+  counts=$(binding_counts)
+  [ "${counts%% *}" -eq 0 ] || return 0
+
+  local rules name dir record sheet d chose dials=""
+
+  if [ -n "$MOCKUP_RAW" ]; then
+    find_mockups
+    open_block
+    if [ -n "$MOCKUPS_MISSING" ]; then
+      echo "This story was built from a mockup and has no binding table, and the mockup cannot be read:"
+      printf '%s' "$MOCKUPS_MISSING"
+      echo "The table cannot be built without it. Tell the user before you plan, and never offer to explore a new look in its place."
+    else
+      rules=$(part settled-look-story-rules.md "orchestrator, mockup")
+      if [ -z "$rules" ]; then
+        FAILED=1
+        echo "STORY RULES UNAVAILABLE: this story was built from a mockup and has no binding table, but the rules for that could not be read from $REFS/settled-look-story-rules.md"
+      else
+        echo "This story was built from a mockup and has no binding table. Follow the rules below. Facts checked first:"
+        printf '%s' "$MOCKUPS_FOUND"
+        echo "- how the table is built: $REFS/story-from-mockup.md, its Element Binding Table step"
+        echo ""
+        printf '%s\n' "$rules"
+      fi
+    fi
+  fi
+
+  name=$(field annotate)
+  name="${name%/}"
+  name="${name%/record.md}"
+  name="${name##*annotations/}"
+  if [ -n "$name" ]; then
+    dir="$ROOT/.craft/annotations/$name"
+    record="$dir/record.md"
+    sheet="$dir/session.css"
+    open_block
+    if [ ! -f "$record" ] || [ ! -f "$sheet" ]; then
+      echo "This story was built from an annotate run and has no binding table, and the run's files cannot be read:"
+      [ -f "$record" ] || echo "- ANNOTATE RECORD MISSING: $record"
+      [ -f "$sheet" ] || echo "- ANNOTATE SHEET MISSING: $sheet"
+      echo "The table cannot be built without them. Tell the user before you plan, and never offer to explore a new look in their place."
+    else
+      rules=$(part settled-look-story-rules.md "orchestrator, annotate")
+      if [ -z "$rules" ]; then
+        FAILED=1
+        echo "STORY RULES UNAVAILABLE: this story was built from an annotate run and has no binding table, but the rules for that could not be read from $REFS/settled-look-story-rules.md"
+      else
+        echo "This story was built from an annotate run and has no binding table. Follow the rules below. Facts checked first:"
+        echo "- annotate record: $record"
+        echo "- the changes the user saw on the page: $sheet"
+        echo "- how the table is built: $REFS/story-from-annotate.md, its Element Binding Table step"
+        echo ""
+        printf '%s\n' "$rules"
+      fi
+    fi
+  fi
+
+  # A dial is found by a record on disk whose name the story writes out. The
+  # word alone proves nothing: "dialog" has it too.
+  for d in "$ROOT"/.craft/dials/*.md; do
+    [ -f "$d" ] || continue
+    printf '%s\n' "$BODY" | grep -q -F -- "$(basename "$d" .md)" || continue
+    chose=$(awk '/^chose:/ { sub(/^chose:[[:space:]]*/, ""); print; exit }' "$d" | tr -d '\r')
+    dials="${dials}- dial record: $d (position chosen: ${chose:-not recorded})
+"
+  done
+  if [ -n "$dials" ]; then
+    open_block
+    rules=$(part settled-look-story-rules.md "orchestrator, dial")
+    if [ -z "$rules" ]; then
+      FAILED=1
+      echo "STORY RULES UNAVAILABLE: this story names a dial record and has no binding table, but the rules for that could not be read from $REFS/settled-look-story-rules.md"
+    else
+      echo "This story names a dial record and has no binding table. Follow the rules below. Facts checked first:"
+      printf '%s' "$dials"
+      echo ""
+      printf '%s\n' "$rules"
+    fi
+  fi
+}
+
+if [ "$ROLE" = "orchestrator" ]; then
+  settled_look_block
+else
+  mockup_block
+  decisions_block
+  citations_block
+  motion_block
+  empty_project_block
+  ui_block
+fi
 
 exit "$FAILED"

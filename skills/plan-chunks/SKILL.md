@@ -43,7 +43,7 @@ Stages: `content-check`, `alignment-check`, `direction`, `planner`, `plan-check`
 
 ## Phase 0: Get the story ready
 
-Read the story file. For a story in a cycle, read its `cycle.yaml`; if it has a non-empty `source_issue`, Read `${CLAUDE_PLUGIN_ROOT}/commands/references/tracker-follow.md` with that cycle's directory and continue only through its `## Continue`.
+Read the story file. Then run `bash "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/story-rules.sh" "<story file>" orchestrator` and follow what it prints, in batch once for each story. It speaks only for a story whose look was settled in a mockup, an annotate run or a dial and whose binding table is missing, and prints nothing for every other story. For a story in a cycle, read its `cycle.yaml`; if it has a non-empty `source_issue`, Read `${CLAUDE_PLUGIN_ROOT}/commands/references/tracker-follow.md` with that cycle's directory and continue only through its `## Continue`.
 
 Sibling stories: use `SIBLINGS:` if given; otherwise look at the cycle's other stories and keep the ones that share files, components or terms with this one. Their names, files and decisions go to the agent so it reuses instead of rebuilding. (Details: `${CLAUDE_PLUGIN_ROOT}/skills/plan-chunks/references/research-integration.md`.)
 
@@ -75,7 +75,7 @@ Skip when the frontmatter says `alignment: complete` and the story has an `## Al
 
 ### Phase 0.46: Visual direction
 
-Only for `type: ui` stories, not in batch, and only when `## Visual Direction` has no filled-in binding table (a row for each part of the wireframe). Write stage `direction` and ask on a card headed `Prerequisite`: riff visual options first (recommended), or `Skip - I know what I want`. To riff, Read `${CLAUDE_PLUGIN_ROOT}/commands/references/creative-spark-inline.md` and follow it.
+Only for `type: ui` stories, not in batch, and only when `## Visual Direction` has no filled-in binding table (a row for each part of the wireframe). Skip it for a story the Phase 0 story-rules call printed for, because that story's look is already settled. Write stage `direction` and ask on a card headed `Prerequisite`: riff visual options first (recommended), or `Skip - I know what I want`. To riff, Read `${CLAUDE_PLUGIN_ROOT}/commands/references/creative-spark-inline.md` and follow it.
 
 ### Phase 0.5: Direction confirmation
 
