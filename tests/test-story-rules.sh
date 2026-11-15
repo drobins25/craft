@@ -174,6 +174,12 @@ run_rules "$STORIES/10-records-list.md" planner
 assert_contains "first item found" "2026-02-01-open-ruling.md (ruled 2026-02-01)" "$OUT"
 assert_contains "second item found" "2026-03-01-built-ruling.md (ruled 2026-03-01; frozen, already built)" "$OUT"
 
+begin_test "a record named with its folder or its .md ending is still found"
+write_story "$STORIES/10a-record-path.md" "decisions: [approved/2026-02-01-open-ruling.md]" "## Spark"
+run_rules "$STORIES/10a-record-path.md" planner
+assert_contains "the record is found" "2026-02-01-open-ruling.md (ruled 2026-02-01)" "$OUT"
+assert_not_contains "and not reported missing" "RECORD NOT FOUND" "$OUT"
+
 begin_test "a decision written out in the header is listed, never looked up as a record"
 write_story "$STORIES/10b-written.md" 'decisions:
   - "Both address forms get the field; see Scope"
@@ -196,6 +202,21 @@ echo "# catalog" > "$TEST_DIR/.craft/design/animations.md"
 run_rules "$STORIES/11-motion.md" builder
 assert_contains_literal "prefers the project's own catalog" "- motion catalog: $TEST_DIR/.craft/design/animations.md" "$OUT"
 assert_contains_literal "carries the builder's motion rules" "$(first_rule motion-story-rules.md builder)" "$OUT"
+write_story "$STORIES/11b-motion-bullet.md" "" '## Visual Direction
+
+- **Motion:** card lifts on hover'
+run_rules "$STORIES/11b-motion-bullet.md" planner
+assert_contains "a Motion line written as a bullet is found" "motion catalog:" "$OUT"
+write_story "$STORIES/11c-motion-note.md" "" '## Visual Direction
+
+**Motion (all GPU-safe):** card lifts on hover'
+run_rules "$STORIES/11c-motion-note.md" planner
+assert_contains "a Motion label carrying a note is found" "motion catalog:" "$OUT"
+write_story "$STORIES/11d-motion-none.md" "" '## Visual Direction
+
+- **Motion:** none, the page is static'
+run_rules "$STORIES/11d-motion-none.md" planner
+assert_eq "a Motion line that says none prints nothing" "" "$OUT"
 write_story "$STORIES/12-motion-mockup.md" "mockup: 2026-01-02-hero" '## Visual Direction
 
 **Motion:** card lifts on hover'
@@ -220,6 +241,15 @@ write_story "$STORIES/15-research.md" "" '## Reference Materials
 - `.craft/research/sync/_plan.md` -> "Convergence Points"'
 run_rules "$STORIES/15-research.md" planner
 assert_contains "a research citation alone is enough" "cites research" "$OUT"
+write_story "$STORIES/15b-refs-below-plan.md" "" '## Chunks
+
+### Chunk 1: Thing
+
+## Reference Materials
+
+- `.craft/research/sync/_plan.md` -> "Convergence Points"'
+run_rules "$STORIES/15b-refs-below-plan.md" planner
+assert_contains "citations that sit below the plan are still seen" "cites research" "$OUT"
 write_story "$STORIES/16-plain-refs.md" "" '## Reference Materials
 
 - `src/app.ts:10-20`'

@@ -228,6 +228,9 @@ EOF_ITEMS
       echo "This story carries decision records. Follow the rules below. Facts checked first:"
       while IFS= read -r item; do
         [ -n "$item" ] || continue
+        # A name may be written with its folder or its .md ending.
+        item="${item##*/}"
+        item="${item%.md}"
         file="$ROOT/.craft/decisions/approved/$item.md"
         if [ -f "$file" ]; then
           created=$(sed -n 's/^created:[[:space:]]*//p' "$file" | head -1 | tr -d '\r')
@@ -272,7 +275,8 @@ citations_block() {
   [ "$ROLE" = "planner" ] || return 0
   local concept refs entries log research rules
   concept=$(field source_concept)
-  refs=$(printf '%s\n' "$BODY" | awk '/^## Reference Materials/ { on = 1; next } /^## / { on = 0 } on')
+  # Read from the whole story: on a re-plan the section can sit below the plan.
+  refs=$(awk '/^## Reference Materials/ { on = 1; next } /^## / { on = 0 } on' "$STORY")
   entries=$(printf '%s\n' "$refs" | grep -c '^[[:space:]]*[-*][[:space:]]' || true)
   log=$(printf '%s\n' "$refs" | grep -c 'active\.md' || true)
   research=$(printf '%s\n' "$refs" | grep -c '\.craft/research/' || true)
@@ -302,8 +306,12 @@ citations_block() {
 # catalog rules as well.
 motion_block() {
   [ -z "$MOCKUP_RAW" ] || return 0
-  printf '%s\n' "$BODY" | grep -q '^\*\*Motion:\*\*' || return 0
-  local rules catalog
+  # The label may be a bullet and may carry a note: "- **Motion (GPU-safe):**".
+  # A line that says there is none brings no rules.
+  local line rules catalog
+  line=$(printf '%s\n' "$BODY" | grep -m1 -E '^[[:space:]]*([-*][[:space:]]+)?\*\*Motion([[:space:]]*\([^)]*\))?:\*\*' || true)
+  [ -n "$line" ] || return 0
+  printf '%s\n' "$line" | grep -q -i -E ':\*\*[[:space:]]*(none|n/a)([^a-z]|$)' && return 0
   rules=$(part motion-story-rules.md)
   if [ -z "$rules" ]; then
     block_failed "this story has a Motion line but the $ROLE rules could not be read from $REFS/motion-story-rules.md"
