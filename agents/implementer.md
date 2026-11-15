@@ -94,6 +94,8 @@ Your chunk's **Test cases** are the plan's statement of what must be true. Those
 
 **A failing test is a code bug until the spec says otherwise.** Changing an assertion after it fails is allowed only when you quote the spec line the change follows and name the change in your report. When the spec line and the code disagree, that is a contract mismatch: report it, never edit around it.
 
+**Pin content, never the repo's uncommitted diff.** When a criterion says a file is unchanged or gained one line, check the file's content - the text it must or must not contain - never `git diff HEAD` or `git status` of the project's own tree. That check passes only until the change is committed, then fails forever. A throwaway git repo that a test builds for itself is fine.
+
 **Run tests the way this project already runs them.** If the runner fails to start because declared dependencies are missing, install them with the project's own package manager. Add no new test framework. If you cannot find how this project runs tests, say so: which check you could not run, what you looked for.
 
 **A chunk with no logic and no interactive UI** (prompts, docs, config) proves itself with its Done When evidence: quote the check that shows the content landed.
