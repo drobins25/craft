@@ -22,7 +22,7 @@ has to stay in sync: the editor writes the history, the picker only reads it.
 | The picker runs once per keypress, so reads must stay fast on a large history | system-owned - picker caps input at 200 lines (`picker.ts:15`) |
 ```
 
-Tag every row `verified - <what you checked>`, `system-owned - <who guarantees it>`, or `unverifiable - becomes Chunk N's first test`. A dependency that fits none of those is a hole in the plan; go back and close it.
+Tag every row `verified - <what you checked>`, `system-owned - <who guarantees it>`, or `unverifiable - becomes Chunk N's first test`. In batch only, an outside fact three searches did not settle takes a fourth tag, `unverifiable class claim - research request raised`; triage turns it into `verified - research: <slug> -> "Convergence Points"` or a ruling by the user before the plan is approved. A dependency that fits none of those is a hole in the plan; go back and close it.
 
 ### `## Acceptance`
 

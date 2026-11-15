@@ -3,8 +3,9 @@
 # its sources bring; a story with no special source hands them nothing.
 #
 # story-rules.sh is the one place those two agents learn what a story
-# carries: a mockup, decisions in its header, planning sources, a Motion
-# line. This file checks what the script does, never how a rule is
+# carries (a mockup, decisions in its header, planning sources, a Motion
+# line), plus two things about the work itself: an empty project and a user
+# interface. This file checks what the script does, never how a rule is
 # worded:
 #   - a story with no source prints nothing, so the common path stays silent;
 #   - each source prints its checked facts and only that reader's rules;
@@ -29,6 +30,9 @@ STORIES="$TEST_DIR/.craft/cycles/1-demo/stories"
 mkdir -p "$STORIES" "$TEST_DIR/.craft/mockups/2026-01-02-hero" \
   "$TEST_DIR/.craft/decisions/approved" "$TEST_DIR/.craft/decisions/archive" "$TEST_DIR/.craft/design"
 echo "<html></html>" > "$TEST_DIR/.craft/mockups/2026-01-02-hero/mockup.html"
+# A project with code in it: the empty-project rules stay out of every test
+# below that is about something else.
+echo "{}" > "$TEST_DIR/package.json"
 
 printf '%s\n' "---" "type: decision" "status: accepted" "created: 2026-02-01" "---" "# Open ruling" \
   > "$TEST_DIR/.craft/decisions/approved/2026-02-01-open-ruling.md"
@@ -43,7 +47,6 @@ write_story() {
   {
     echo "---"
     echo "name: demo"
-    echo "type: ui"
     [ -n "$extra" ] && printf '%s\n' "$extra"
     echo "status: planning"
     echo "---"
@@ -258,6 +261,52 @@ write_story "$STORIES/16-plain-refs.md" "" '## Reference Materials
 run_rules "$STORIES/16-plain-refs.md" planner
 assert_eq "ordinary code citations print nothing" "" "$OUT"
 
+begin_test "an empty project tells the planner to set it up first, and only then"
+EMPTY_DIR=$(mktemp -d)
+mkdir -p "$EMPTY_DIR/.craft/backlog" "$EMPTY_DIR/.craft/mockups/2026-01-02-hero"
+echo "<html></html>" > "$EMPTY_DIR/.craft/mockups/2026-01-02-hero/mockup.html"
+echo "# readme" > "$EMPTY_DIR/README.md"
+write_story "$EMPTY_DIR/.craft/backlog/a.md" "" "## Spark"
+run_rules "$EMPTY_DIR/.craft/backlog/a.md" planner
+assert_eq "exit code is 0" "0" "$RC"
+assert_contains "says the project has no code" "^This project has no code yet" "$OUT"
+assert_contains_literal "carries the empty-project rules" "$(first_rule empty-project-story-rules.md planner)" "$OUT"
+run_rules "$EMPTY_DIR/.craft/backlog/a.md" builder
+assert_eq "the builder gets nothing for an empty project" "" "$OUT"
+write_story "$EMPTY_DIR/.craft/backlog/b.md" "mockup: 2026-01-02-hero" "## Visual Direction"
+run_rules "$EMPTY_DIR/.craft/backlog/b.md" planner
+assert_not_contains "a mockup story leaves the empty project to the mockup rules" "This project has no code yet" "$OUT"
+mkdir "$EMPTY_DIR/src"
+run_rules "$EMPTY_DIR/.craft/backlog/a.md" planner
+assert_eq "a folder the check does not know means the project is not empty" "" "$OUT"
+rm -rf "$EMPTY_DIR"
+
+begin_test "a project inside a larger repository is never called empty"
+REPO_DIR=$(mktemp -d)
+git -C "$REPO_DIR" init -q
+mkdir -p "$REPO_DIR/apps/web/.craft/backlog"
+write_story "$REPO_DIR/apps/web/.craft/backlog/a.md" "" "## Spark"
+run_rules "$REPO_DIR/apps/web/.craft/backlog/a.md" planner
+assert_eq "the planner gets nothing" "" "$OUT"
+rm -rf "$REPO_DIR"
+
+begin_test "a user-interface story gives the builder the interface rules"
+write_story "$STORIES/18-ui.md" "type: ui" "## Spark"
+run_rules "$STORIES/18-ui.md" builder
+assert_eq "exit code is 0" "0" "$RC"
+assert_contains "says why it counts as a user interface" "^- the story.s type is ui$" "$OUT"
+assert_contains_literal "carries the interface rules" "$(first_rule ui-story-rules.md builder)" "$OUT"
+run_rules "$STORIES/18-ui.md" planner
+assert_eq "the planner gets nothing for the story's type" "" "$OUT"
+run_rules "$STORIES/3-mockup.md" builder
+assert_contains "a mockup counts as a user interface" "^- the story names a mockup$" "$OUT"
+assert_contains_literal "the mockup rules still print beside them" "$(first_rule mockup-story-rules.md builder)" "$OUT"
+run_rules "$STORIES/8b-table-only.md" builder
+assert_contains "a binding table counts as a user interface" "^- the story has a Visual Direction binding table$" "$OUT"
+write_story "$STORIES/19-backend.md" "type: technical" "## Spark"
+run_rules "$STORIES/19-backend.md" builder
+assert_eq "a story with none of the three prints nothing" "" "$OUT"
+
 begin_test "every source a story carries prints, each in its own block"
 write_story "$STORIES/17-both.md" "mockup: 2026-01-02-hero
 decisions: [2026-02-01-open-ruling]" "$TABLE"
@@ -290,16 +339,17 @@ assert_eq "exit code is 1" "1" "$RC"
 assert_contains "prints the unavailable line" "^STORY RULES UNAVAILABLE: the reader must be planner or builder" "$OUT"
 
 begin_test "every rules file the script reads has a part for a reader"
-for f in mockup-story-rules.md decision-record-story-rules.md citation-story-rules.md motion-story-rules.md; do
+for f in mockup-story-rules.md decision-record-story-rules.md citation-story-rules.md motion-story-rules.md empty-project-story-rules.md; do
   assert_file_contains "$f has a planner part" '^## planner$' "$REFS/$f"
 done
 assert_file_contains "the mockup rules have a builder part" '^## builder$' "$REFS/mockup-story-rules.md"
 assert_file_contains "the motion rules have a builder part" '^## builder$' "$REFS/motion-story-rules.md"
+assert_file_contains "the interface rules have a builder part" '^## builder$' "$REFS/ui-story-rules.md"
 
 begin_test "the planner, the builder and the build launch still reach the script"
 assert_file_contains "the planner names the script" 'hooks/scripts/story-rules.sh' "$PLUGIN_ROOT/agents/plan-chunks-agent.md"
 assert_file_contains "the builder names the script" 'hooks/scripts/story-rules.sh' "$PLUGIN_ROOT/agents/implementer.md"
-assert_file_contains "the build launch hands the builder the plugin root" 'PLUGIN_ROOT:' "$PLUGIN_ROOT/commands/craft-story-implement.md"
+assert_file_contains "the build launch still hands the builder the plugin root as a fallback" 'PLUGIN_ROOT:.*the implementer cannot resolve' "$PLUGIN_ROOT/commands/craft-story-implement.md"
 
 cleanup_test_dir
 finish_tests

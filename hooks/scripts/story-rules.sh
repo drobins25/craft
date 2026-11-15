@@ -16,8 +16,16 @@
 #   planning sources  source_concept:, or a cited planning  citation-story-rules.md
 #                     log or research file
 #   motion            a Motion line, with no mockup         motion-story-rules.md
+#   empty project     the project root holds only .craft    empty-project-story-rules.md
+#                     and housekeeping files, no mockup
+#   user interface    frontmatter type: ui, a mockup:,      ui-story-rules.md
+#                     or a binding table
 #
-# To add a source: one block function below, one rules file with a
+# The last two are not sources a story carries: one is the state of the
+# project, the other is the kind of story. They ride here because the same two
+# readers need them and most stories need neither.
+#
+# To add one: a block function below, a rules file with a
 # "## planner" and/or "## builder" part, one call at the bottom.
 #
 # Silence must only ever mean "nothing applies". A block that cannot do its
@@ -339,9 +347,70 @@ motion_block() {
   printf '%s\n' "$rules"
 }
 
+# --- A project with nothing in it yet ---------------------------------------
+# Only the planner needs this. A mockup story is handled by the mockup rules.
+# A miss here costs a missing setup chunk; a false hit would lay a new project
+# over live code, so the check fires only when the root holds nothing it does
+# not recognize, and says nothing inside a larger repository.
+empty_project_block() {
+  [ "$ROLE" = "planner" ] || return 0
+  [ -z "$MOCKUP_RAW" ] || return 0
+  [ -n "$ROOT" ] && [ -d "$ROOT" ] || return 0
+  local here top other rules
+  here=$(cd "$ROOT" && pwd -P)
+  top=$(git -C "$ROOT" rev-parse --show-toplevel 2>/dev/null || true)
+  # Inside a larger repo the parent may hold the build: say nothing.
+  [ -z "$top" ] || [ "$top" = "$here" ] || return 0
+  other=$(ls -A "$ROOT" | grep -v -x -E '\.craft|\.git|\.gitignore|\.gitattributes|\.claude|\.DS_Store|CLAUDE\.md|AGENTS\.md|README.*|LICENSE.*|COPYING.*' | head -1 || true)
+  [ -z "$other" ] || return 0
+  rules=$(part empty-project-story-rules.md)
+  if [ -z "$rules" ]; then
+    block_failed "this project has no code yet but the $ROLE rules could not be read from $REFS/empty-project-story-rules.md"
+    return 0
+  fi
+
+  open_block
+  echo "This project has no code yet. Follow the rules below. Facts checked first:"
+  echo "- nothing under $ROOT except .craft and repository housekeeping files"
+  echo ""
+  printf '%s\n' "$rules"
+}
+
+# --- A story with a user interface -------------------------------------------
+# Only the builder is told; the planner already has the Visual Direction rules.
+# Some user-interface stories carry no type, so a mockup or a binding table
+# counts too.
+ui_block() {
+  [ "$ROLE" = "builder" ] || return 0
+  local kind why="" counts rules
+  kind=$(field type | tr '[:upper:]' '[:lower:]')
+  if [ "$kind" = "ui" ]; then
+    why="the story's type is ui"
+  elif [ -n "$MOCKUP_RAW" ]; then
+    why="the story names a mockup"
+  else
+    counts=$(binding_counts)
+    [ "${counts%% *}" -gt 0 ] && why="the story has a Visual Direction binding table"
+  fi
+  [ -n "$why" ] || return 0
+  rules=$(part ui-story-rules.md)
+  if [ -z "$rules" ]; then
+    block_failed "this story has a user interface but the $ROLE rules could not be read from $REFS/ui-story-rules.md"
+    return 0
+  fi
+
+  open_block
+  echo "This story has a user interface. Follow the rules below. Facts checked first:"
+  echo "- $why"
+  echo ""
+  printf '%s\n' "$rules"
+}
+
 mockup_block
 decisions_block
 citations_block
 motion_block
+empty_project_block
+ui_block
 
 exit "$FAILED"
