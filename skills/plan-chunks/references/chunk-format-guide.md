@@ -1,261 +1,97 @@
 # Chunk Format Guide
 
-This is the required format for planned stories: the Investigation, the Pitch, and the chunk specs produced during Phase 3 (Chunk Planning).
+The shape of a planned story. The planner writes it; the user approves it by reading it; the implementer builds one chunk at a time from it. Write for all three: short enough to read, exact wherever two pieces of code have to agree.
 
-**The standard:** A plan locks the **seams** - contracts between chunks, between layers, and with existing code - and leaves the **interiors** to the implementer. Every binding claim carries evidence. The plan is done when a skeptical reviewer probes it and walks away with "...that's all."
+## The story sections planning adds
 
-**The litmus test:** Could two competent implementers build from this plan independently and not conflict at the seams? Seams are what plans must lock. Interiors are what implementers own.
+### `## The Pitch` (right after `## Spark`)
 
----
-
-## Story-Level Sections
-
-A planned story adds two sections beyond the chunks. Both are required.
-
-### `## The Pitch` (replaces `## Delivery`)
-
-Placed directly after `## Spark`. Two parts:
-
-1. **The sell** (2-4 sentences): why this plan works - mechanically, not aspirationally. A pitch you wouldn't buy is a plan that shouldn't be approved, before anyone reads a single chunk.
-2. **The conditions table**: every load-bearing assumption the guarantee stands on, each tagged with how it's secured.
+Two to four sentences on why this plan delivers the Spark, then the conditions it stands on: the things that could turn out false. The implementer watches these hardest.
 
 ```markdown
 ## The Pitch
 
-Ship this and the countdown can't lie and the button can't betray - not because
-we were careful, but because we made other systems responsible: the date is
-ILS-owned so drift is impossible by construction, "once" is ILS-enforced so we
-can't fork its truth, and auth is the existing middleware so there is no new
-surface.
-
-**This plan stands on:**
+Recent files show up the moment the picker opens, newest first, because the list is read
+from the editor's own history file instead of being tracked a second time. Nothing new
+has to stay in sync: the editor writes the history, the picker only reads it.
 
 | Condition | Secured by |
-|-----------|-----------|
-| `holdDeadline` is ILS-owned; local writes would be overwritten | verified - traced all writes, only `jobs/ils-sync.ts` touches it |
-| ILS API accepts `PATCH /holds/{id}/pickup-by` | unverifiable by reading - becomes Chunk 1's FIRST test |
-| Auth middleware covers account mutations | verified - `requirePatron` guards all 3 existing PUTs in `routes/account.ts` |
+|-----------|------------|
+| The editor appends to `history.jsonl` on every open | verified - read `editor/history.ts:22`, the only writer |
+| History lines can be partial while the editor is mid-write | unverifiable - becomes Chunk 1's first test |
+| The picker runs once per keypress, so reads must stay fast on a large history | system-owned - picker caps input at 200 lines (`picker.ts:15`) |
 ```
 
-**Rules for the conditions table:**
-- Every condition is tagged `verified - <evidence>`, `system-owned - <who>`, or `unverifiable by reading - becomes Chunk N's FIRST test`.
-- A condition that can't carry one of those tags is not a condition - it's a hole. Go back.
-- An unverifiable single-thing condition MUST become the named chunk's first test, before anything is built on it. The plan's weakest point gets attacked first, by construction.
-- A class claim never takes the first-test escape: a capture of chosen instances cannot secure a claim about a class. It is secured by research (`verified - research: <slug> -> "<anchor>"`) or, in batch, tagged `unverifiable class claim - research request raised, never a first test` with a matching Critical Blocker.
-- **The conditions table is the implementer's tripwire watchlist.** The implementer doesn't watch everything; it watches these.
+Tag every row `verified - <what you checked>`, `system-owned - <who guarantees it>`, or `unverifiable - becomes Chunk N's first test`. A dependency that fits none of those is a hole in the plan; go back and close it.
 
-### `## Investigation` (the planner's narrative)
+### `## Acceptance`
 
-Placed directly before `## Chunks`. The causal record of how the plan was found - the planner's headspace, so the implementer (and any future re-planner) inherits the reasoning, not just the conclusions. First person is fine. Write it as it happened:
+Specific, checkable, about what the user gets. "The picker lists the 10 most recent files, newest first, and opens instantly with an empty history" - not "recent files work".
 
-```markdown
-## Investigation
+### `## Chunks`
 
-Read the ticket as possibly-a-bug - "show a countdown" sounds like it might
-already exist. Searched the repo for "Pick up by" - nothing. Searched for
-hold-related UI - found AccountPage.tsx, renders hold rows, no deadline. So:
-new feature, existing surface.
-
-AccountPage gets data from UserAccountService.getHolds(). Read it - already
-returns holdDeadline. But the service is GET-only. Asked WHY before planning a
-PUT: traced writes to holdDeadline - nothing in this repo writes it - found
-jobs/ils-sync.ts, a nightly mirror from the library's ILS. This repo does not
-own this date. A local PUT would be silently overwritten by tomorrow's sync.
-Ruled out: writing holdDeadline locally.
-
-Asked the user: hardcode the 2 days? -> Yes, hardcoded. Button placement? ->
-In the hold row, site-standard secondary button.
-
-Dead ends kept: searched for an existing countdown component - none, but
-RelativeDate at components/shared/RelativeDate.tsx is 80% of it. No test
-patterns in jobs/ - out of scope, the ILS client tests are the pattern to mirror.
-```
-
-**Rules for the Investigation:**
-- **Causal, not inventory.** Each step motivates the next ("found X, which raised Y, so read Z"). A list of files read is not an investigation.
-- **Dead ends stay in.** "Searched for it, found nothing" is load-bearing - it records what was ruled out. A suspiciously clean narrative with no wrong turns is itself a fabrication signal.
-- **Absence is evidence.** Every missing thing the plan builds (endpoint, column, config) needs a stated theory of why it's missing. "Nobody needed it yet" is acceptable; "it's a fence" changes the plan.
-- **Ownership is the floor.** "The field exists" is never the bottom of an investigation. "I know who writes it, and what happens to my write tomorrow" is.
-- User questions asked during planning and their answers are recorded here.
-- **Size: typically 10-30 lines.** A narrative that outgrows ~40 lines is usually a story that should split - the sprawl is the signal, not a writing problem.
-- **The Do-Nothing Walk is recorded here.** The resting state's claims and whether the write path agrees with each (display vs held vs would-be-sent). Every divergence found lands as a chunk or a Pitch condition - never as a note that goes nowhere.
-
----
-
-## Required Chunk Template
+## The chunk template
 
 ```markdown
-### Chunk [N]: [Descriptive Name]
+### Chunk 1: Read recent files from the editor's history
 
-**Goal:** [Specific outcome - not vague]
+**Goal:** A `recentFiles()` function returns the newest distinct files from the editor's history, and survives whatever the history file holds.
 
 **Files:**
-- `src/routes/account.ts` - modify (new PUT route)
-- `src/services/UserAccountService.ts` - modify
-- `src/services/__tests__/UserAccountService.test.ts` - create
+- `src/picker/recent.ts` - create
+- `src/picker/__tests__/recent.test.ts` - create
 
-**Contracts:** (binding - these are the seams; match exactly)
-- `IlsClient.extendHoldPickup(holdId: string, newDate: IsoDate)` [owner: Chunk 1 - cite its real signature at implement time, not this line]
-- New route `PUT /api/account/holds/:holdId/extension` [verified: read routes/account.ts - all four existing routes use plural/:id shape]
-- Auth via existing `requirePatron` middleware [verified: it guards the 3 existing account mutations; no new auth surface]
-- Response is the refreshed hold from the ILS payload - never locally computed [investigation: ILS owns this data; local math is the silent-failure trap this plan routes around]
-- 409 when ILS reports `extensionCount >= 1` [investigation: "once" is ILS-enforced; we translate, never track]
+**Contracts:**
+- `recentFiles(historyPath: string, limit: number): RecentFile[]` (new)
+- `RecentFile = { path: string; openedAt: number }` (new; Chunk 2 renders this)
+- History lines are JSON `{ "file": string, "ts": number }`, one per line (checked: `editor/history.ts:22` writes exactly this)
+- Missing history file means "no recent files", never an error (new; first-run users have no history)
+- At most `limit` entries come back however long the history is (new; the picker draws one row per entry)
 
-**Approach:** (advisory - the interior is yours)
-- Service method beside getHolds(), same DI pattern
-- +2 days via addDays from lib/dates.ts, library-local timezone
+**Not covered:**
+- The editor never trims `history.jsonl`, so it grows without limit. Left out because the fix lives in `editor/history.ts`, outside this story's files; this chunk's own read stays fast on a long history (the 50,000-line test).
 
-**Test cases:** (write these, assert this - bodies are yours)
-- "returns refreshed hold on success" - deadline comes from the ILS response, not local math
-- "surfaces 409 when already extended"
-- "rejects unauthenticated with 401"
-- "ILS failure -> 502, no local state change"
+**Approach:**
+- Read the file once, parse line by line, skip lines that fail to parse rather than failing the whole read.
+- Follow the file-reading pattern in `src/picker/bookmarks.ts:10-30`.
 
-**What Could Break:**
-- [resolved] Route collision with /holds/:id - checked, no existing extension route
-- [escalated to conditions] ILS PATCH availability - Chunk 1's first test
+**Test cases:**
+- "returns newest first, one entry per file" - two opens of the same file count once, at the later time
+- "missing history file returns an empty list" - the first-run state
+- "skips a half-written last line" - the editor can be mid-write while we read
+- "file names with spaces, unicode and newlines come back unchanged" - names come from the user's disk
+- "a 50,000-line history returns in under 50 ms" - real histories grow, and the picker reads on every keypress
+
+**Run:**
+- `npx vitest run src/picker/__tests__/recent.test.ts`
+- `npx tsc --noEmit`
+- `npx vitest run`
 
 **Done When:**
-- [ ] Endpoint live behind auth
-- [ ] Build passes and all tests pass
+- [ ] All named tests written, seen failing once, and passing
+- [ ] Every Run command passes
 ```
 
-### Section rules
+### What each part is for
 
-**Contracts** - the binding section. Each line is a seam: a signature, a shape, a route, a name, an integration point, an invariant. Each line carries exactly one receipt:
+- **Goal** - one outcome, stated so you can tell when it is true.
+- **Files** - one line per file in the form `` `path` - action `` with a plain dash, because the build loop splits on it. The action is `create`, `modify` (and what changes) or `read-only` (a file to read and leave alone).
+- **Contracts** - anything that has to come out one particular way: what other code has to agree on (names, signatures, shapes, formats, who owns what) and what a user or another program sees (wording, order, limits). The builder writes its tests' expected values from these lines. Each carries its source in a few words (`checked: <file:line or what you read>`, `new`, or `from Chunk N`) and its reason when that is not obvious. Interiors (function bodies, test bodies, anything only this chunk's own code touches) are the implementer's; leave them out. More than about ten lines here means the chunk should split or is dictating its interior.
+  When the code can fail in a way a user or another program sees, one contract line says what failure looks like: exit status, where the message goes, and its wording if anything matches on it.
+- **Not covered** - optional. A risk research found whose fix lies outside the files this story creates or modifies, or that the story itself rules out, saying which and where. A risk those files could guard against is a contract and a named test instead. It is there so the builder and the user both see it; a risk left off the page is one nobody decided about.
+- **Approach** - optional advice: the local pattern to follow, an order that avoids a trap. Prose, not code.
+- **Test cases** - each test named for a behavior and what it proves, one line each, with the number or the exact text when the result has one. Not only the happy path: the resting state, and every answer from research that became a test.
+- **Run** - the commands that show this chunk left the project building and tested, in the order to run them: this chunk's tests; the type check, when the project has one that covers these files; and the full suite, when it finishes in a few minutes. The builder runs each and quotes the result. Nothing else runs them before the next chunk starts, so a chunk that breaks an earlier chunk's test is caught here or not until the story ends.
+- **Done When** - checkable items, always including that every Run command passes. A chunk that changes only docs or prompts says what content must have landed instead, and needs no Run.
 
-| Receipt | Meaning |
-|---------|---------|
-| `[verified: <what was checked and what would have falsified it>]` | Attacked against existing code during investigation. The receipt is attack residue, not attestation - "I tried to kill this and here's what would have killed it."  For a fact outside the repo the form is `[verified: web - <source url or doc name> - <what was checked>]`. |
-| `[owner: Chunk N]` | The contract's truth is produced by an earlier chunk. By implement time it's real, compiled code - cite IT, not this line, if they differ. |
-| `[investigation: <one-line reason>]` | Backref to the narrative - the reasoning this contract protects. The implementer uses this to judge mismatches: does a deviation break the *reason*, or just the coordinates? Never for a fact outside the repo - that is `[verified: web - ...]`. |
-| `[defines]` | A new seam this chunk creates - a name, route, or shape with no prior reality to verify. Authoritative from this chunk on; later chunks cite it via `[owner: Chunk N]`. Greenfield stories are mostly `[defines]` - that's correct, not a gap. |
-| `[visual-source: <mockup anchor \| tokens.yaml token \| Visual Direction Part/Role>]` | A UI element's visual binding: this Part/Role uses this token or value, sourced from a mockup, the design system, or the Visual Direction table. The visual-domain twin of `[verified:]` - it points at where the look was decided, not at code. |
+Code in a chunk is allowed only where the exact code is the decision (a regex, a format string); say why that exact form matters.
 
-A contract about *pre-existing reality* that can earn no receipt goes in the Pitch's conditions table as unverifiable - it does not ship as a bare assertion.
-
-**Mutation contracts carry their unit and their readers.** A contract for any state-changing write declares the key it writes under ("completion is per schedule-occurrence `(workout_id, scheduled_date)`, not per workout") and receipts its read sites ("[verified: read by CalendarView.tsx:31 and AccountPage.tsx:84 - both rebuild from the refreshed payload]"). An undeclared unit is an invisible assumption - and invisible assumptions are the one thing receipts can't attack.
-
-**Approach** - advisory prose. Pattern pointers by `file:line`, ordering, gotchas. **No code blocks** - with two narrow exceptions. (1) When the code IS the decision (an exact regex, a migration statement, a non-obvious one-liner where ambiguity is dangerous). (2) Irreducible visual logic (an SVG node/path array, a CSS keyframe sequence, a GSAP timeline) that cannot be expressed as a binding-table row and where approximating the geometry or motion sequence would change the result. Either way the code carries a receipt that names what makes it non-substitutable - not a bare `[decision:]` - like any contract.
-
-**Test cases** - names plus what they assert. No bodies. The implementer writes bodies during TDD, where they get verified by running - not authored as fiction in a markdown file.
-
-**What Could Break** - every entry is `[resolved]` (checked dead during planning, say how) or `[escalated to conditions]` (now in the Pitch table). A bare risk bullet that is neither resolved nor escalated is an unfinished thought.
-
-**Amendments** - when implement-time reality contradicts a contract and the fix is approved, the delta is recorded in the chunk under an `**Amendments:**` heading (date, what changed, what the original receipt missed) - the contract line is never silently edited. The plan stays honest about what it got wrong; the amendment trail is how future planning learns which receipts fail.
-
-### Visual Contracts (type=ui stories)
-
-A UI story's per-element visual intent is carried as an **Element Binding Table** in `## Visual Direction` (the story-level source of truth); each chunk binds the subset of rows it builds as Contract lines, each carrying a `[visual-source:]` receipt. The table:
-
-| Part | Role/State | Token | Value/Source |
-|------|------------|-------|--------------|
-| cta | surface | `primary` | tokens.yaml |
-| cta | surface (hover) | `primary/90` | tokens.yaml |
-| label | on-surface | `card-foreground` | mockup hero/h2 |
-
-- **Part** = element/anatomy name. **Role/State** = the styling role plus interaction state - a hover row is its own row, owned by the chunk that builds that state. **Token** = the semantic token bound. **Value/Source** = origin (`tokens.yaml`, a mockup anchor, a design ref), and the literal value only where no token exists.
-- **Raw values are the narrow exception.** A literal (not a token) is allowed only when it is structural rather than thematic (a `1px` hairline, an `aspect-ratio`, a `z-index`) AND no token of that type exists - flagged inline with a one-line reason. Color, spacing, type, radius, shadow, and motion are theme-owned: those must be tokens, never literals.
-
----
-
-## Risk Tag Translation
-
-When the story carries a `## Risk Tags` section, the tags are consumed at plan time: translate EACH tag into at least one acceptance criterion that names the implementation mechanism. A tag that produces no criterion is a tag the plan ignored - say why, or translate it.
+For UI stories, each element in the story's Visual Direction binding table gets its token as a Contract line in the chunk that builds it, ending in a `[visual-source: <tokens.yaml key, mockup anchor, or binding table row>]` receipt; the checker looks for that receipt.
 
 ### Risk Tag Authoring Rule
 
-This is the canonical statement; `skills/content-spark/SKILL.md` and `commands/references/content-spark-inline.md` carry the short form and point here.
+A story's `## Risk Tags` each carry a `#` comment. When you turn a tag into a criterion, name the mechanism the comment gives (or the locked rule it cites), and use any number only as the check on that mechanism. "Interactive elements extend their hit area with padding, not a min-height on the visual element; verify every computed target is at least 44px" is a criterion. "Touch targets >=44px" is not, because it tells the builder what to measure and nothing about what to build.
 
-Each risk tag's `#` comment must specify the **implementation mechanism** or cite a **project locked rule**. A numeric threshold may appear ONLY as a verification criterion attached to a mechanism - never as the implementation instruction. A threshold as a CHECK is legitimate (a quality gate's 44px touch-target floor verifies an outcome); a threshold as the INSTRUCTION is the antipattern - the implementer satisfies the number in the cheapest literal way (`min-height: 44px` on the visual element) instead of building the mechanism (an extended hit area).
+## When reality disagrees with the plan
 
-- Wrong: `- has-touch-targets    # must stay >=44px`
-- Right: `- has-touch-targets    # hit area extended via padding/pseudo-element, not min-height on the visual element; verify computed target >=44px`
-
-**Per-tag translation requirement.** For each tag, the criteria you write must name the mechanism the tag carries (or the locked rule it cites). The threshold, if any, appears only as the verification clause of that mechanism-naming criterion:
-
-- From the RIGHT tag above: "Interactive elements extend their hit area via padding or pseudo-element (not min-height on the visual element); verify every computed target is >=44px."
-- A tag citing a locked rule translates to a criterion that names the rule and asserts conformance with it.
-
-A bare-threshold criterion ("touch targets >=44px") is rejected by plan validation (structural check #8 scans each tag line's `#` comment for a threshold with no mechanism wording).
-
----
-
-## Cutting Chunks: the Ladder
-
-Navigate top-down to find the seam; build bottom-up from the furthest-upstream fact the story touches.
-
-- **Chunk boundaries sit at layer rungs** (data -> types -> service -> endpoint -> UI, or whatever ladder this story actually has). The rung interfaces ARE the contracts - they fall out of the cut instead of being invented.
-- **Later chunks cite earlier chunks' output** via `[owner: Chunk N]`. By implement time the citation points at real, tested code - the ladder is the staleness-proofing.
-- **Chunk 1 sits where speculation lives.** Pre-existing code contracts and any unverifiable condition land in the earliest chunk that can test them. The plan's weakest assumption is the first thing reality gets to vote on.
-- A one-rung story is fine. Discover that honestly ("where does the data come from?" -> it's all right here) and cut one or two chunks. Do not manufacture rungs.
-
----
-
-## Green-Tree Requirement
-
-Every chunk's **Done When** must include at least one criterion asserting the project compiles and all tests pass at the end of the chunk ("Build passes and all tests pass"). Plan validation rejects any chunk whose Done When lacks one.
-
-This is a planning constraint, not a checkbox to append. Cut chunk boundaries so the criterion can actually be true: a rename or symbol removal and every reference to it - including test files, mocks, and fixtures - belong in the same chunk. A plan that defers compilation across a chunk boundary ("do not build between Chunk 1 and Chunk 2") is invalid; merge or re-cut the chunks, or flag the story for splitting.
-
-Exempt: chunks that modify no source files (all Files entries `read-only`, or a Goal that touches only docs).
-
----
-
-## Quality Gates (run before presenting the plan)
-
-1. **The seam test** - for each chunk: could two competent implementers build this independently and not conflict at its boundaries with other chunks and with existing code? If a conflict is possible, a contract is missing. If a contract dictates an interior (HOW a function's body works, what a test body contains), it's overreach - move it to Approach or delete it.
-
-   *Visual token assignment is a seam, not an interior (UI stories).* Two implementers given the same UI spec can assign different valid tokens to one element (`surface` vs `surface-elevated`) - both pass style-analyzer, both render differently. That is exactly the conflict Contracts exist to prevent, so a per-element token/value binding belongs in Contracts with a `[visual-source:]` receipt, never left to Approach. (Also stated in `agents/plan-chunks-agent.md` Phase 3.1, which the agent runs from its own prompt.)
-
-2. **The receipt audit** - every contract line carries a receipt; every receipt-less claim is in the conditions table; every unverifiable single-thing condition is some chunk's first test (a class claim goes to research). Run the narrative check: is the Investigation causal? Are the dead ends still in it? Too clean is a finding.
-
-3. **The Miranda pass** - model the specific skeptic who receives this plan (the user at triage; the reviewer who gets sent in afterward). Write down the five questions they will ask. Each must already be answered *in the artifact* - in the Investigation, a contract receipt, or the conditions table. Not answerable: answered. The plan is done when that review walks out with "...that's all."
-
----
-
-## Bad → Good Example
-
-**BAD (old style - implementation written as fiction):**
-```
-**Implementation Details:**
-- Import Card from src/components/ui/Card - <Card variant="outlined"> takes {title, children}
-- Zod schema: z.object({ email: z.string().email(), password: z.string().min(8) })
-- Submit: api.auth.register(data) - handle 409 with if (err.status === 409)
-- [40 more lines of code the implementer will transcribe without verification]
-```
-Looks rigorous. Nothing in it was compiled, nothing was run, and the implementer is told to copy it even where it's wrong. Plausibility masquerading as verification.
-
-**GOOD (contracts + receipts; interior left to the implementer):**
-```
-**Contracts:**
-- `Card` from src/components/ui/Card, props {title: string, children: ReactNode, className?} [verified: read Card.tsx:8-15; no "outlined" variant exists - that was in the mockup but not the component]
-- Registration via `api.auth.register(data)`, 409 = email taken [verified: read lib/api.ts:89; 409 is the only conflict the server emits]
-- Reuse `PasswordStrength`, props {score: 0-4, showLabel?: boolean} [verified: read PasswordStrength.tsx:8; score is required, not optional]
-
-**Approach:**
-- Form layout follows LoginForm.tsx:45-62 (FormField -> Label -> Input -> ErrorMessage stack)
-
-**Test cases:**
-- "rejects mismatched password confirmation before submit"
-- "surfaces email-taken error from 409"
-- "disables submit while request is in flight"
-```
-Note the first receipt *caught a planning error* ("no outlined variant exists") - that's what receipts are for. The attack residue does the verifying that fake code only performed.
-
-**The exception - code that IS the decision:**
-```
-**Approach:**
-- Strip block comments before any parsing: `css.replace(/\/\*[\s\S]*?\*\//g, '')` [decision: comment syntax inside values would corrupt naive parsing; this exact pattern is the choice]
-```
-An exact regex, a migration statement, a tricky one-liner: when ambiguity is dangerous, the code is a contract and carries a receipt like one. This is rare. If most of a chunk is decision-code, the chunk is probably dictating interiors.
-
----
-
-## Why This Matters
-
-The implementer is autonomous, but it is not a transcriber - it reads the Investigation, holds the contracts as law, owns the interiors, and watches the conditions table. When reality contradicts a contract, finding that mismatch is a *deliverable*, not a failure: the plan gets amended with the delta, instead of code quietly improvised around a broken assumption.
-
-**Planning is where the seams get locked and attacked. Implementation is where interiors get built and contracts meet reality.**
-
-The plan failed only if the reviewer finds what the planner should have - or if two implementers could read the same chunk and ship conflicting seams.
+If the implementer finds a contract is wrong, it stops and reports a `## CONTRACT MISMATCH`. The orchestrator records the approved fix under an `**Amendments:**` heading in that chunk (date, what changed, what the plan missed) instead of silently editing the contract line.
