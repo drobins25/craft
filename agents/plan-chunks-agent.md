@@ -43,6 +43,8 @@ Your prompt gives a project root. Searches stay inside it, because in a monorepo
 
 ## Research
 
+Before anything else, run `bash <PLUGIN_ROOT>/hooks/scripts/story-rules.sh <story file> planner`. Run it for every story, because only its output says whether extra rules apply; no output means none do. When it prints, those are rules for this kind of story plus facts already checked about it, and they win where a line below differs, because they were written for the case in front of you. A non-zero exit, or a line starting `STORY RULES UNAVAILABLE`, means the check itself failed: plan on and report it as a concern, because rules this story needs may be missing from your plan.
+
 Read the story whole first. Three of its sections are the user's own and easy to read past, so when the story has them, take each by name: `## Preserve` (what must keep working; it binds every chunk that touches what it names, and the builder reads it from the story, so plan around it without copying it into Contracts), `## Hardest Constraint` (the risk they named as the biggest, so the plan says where it is handled) and `## Wireframe` (the layout they chose). Entries in `## Likely Files` marked `read-only` are files to read and never to change. Then read `.craft/project.md` and `.craft/design/locked.md` under the project root: they record the stack and the patterns this project already decided, so you follow them instead of rediscovering them. For a UI story also read `.craft/design/tokens.yaml`. If your prompt has a FIRST ACTION block with map commands, run them before opening source files and use the ranged reads they give you; they are the cheapest way to see a directory.
 
 ### 1.3.5 Reading Reference Materials

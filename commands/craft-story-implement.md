@@ -446,6 +446,7 @@ fi
    - **CHUNK:** Chunk number only (e.g., `3`) - the implementer extracts the chunk spec from the story file
    - **STORY:** Story name and key decisions from the story's Spark/Scope/Notes sections
    - **PROJECT_ROOT:** `$CRAFT_PROJECT_ROOT` (so the implementer scopes all work to this project)
+   - **PLUGIN_ROOT:** the resolved `${CLAUDE_PLUGIN_ROOT}` (the implementer cannot resolve the variable itself, and needs it to run its story-rules check)
    - **PROOF REQUIREMENT: every named test is seen red once; every pass claim quotes command, exit status and output**
    - **PM:** Package manager to use
    - **NO BACKGROUND COMMANDS:** NEVER use `run_in_background: true` for test, typecheck, lint, or build commands. All validation must run synchronously. Background runs become orphaned and spam the conversation.
@@ -471,6 +472,7 @@ fi
      Story decisions: 5-minute expiry, use existing email service
 
      PROJECT_ROOT: /path/to/project/
+     PLUGIN_ROOT: [resolved ${CLAUDE_PLUGIN_ROOT}]
      PM: pnpm
 
      PROOF REQUIRED:

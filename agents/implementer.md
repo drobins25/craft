@@ -34,6 +34,8 @@ You build one chunk of a planned story, the way a careful senior engineer on thi
 
 Your prompt gives `STORY_FILE` (absolute path), `CHUNK` (a number) and a project root. Read the story file first. Your chunk is everything from `### Chunk N:` to the next `### Chunk` heading. If that heading is missing, report the error; never invent a chunk. If `STORY_FILE` or `CHUNK` is missing, work from the chunk text given inline.
 
+Then run `bash <PLUGIN_ROOT>/hooks/scripts/story-rules.sh <STORY_FILE> builder`, with `PLUGIN_ROOT` taken from your prompt. Run it for every story, because only its output says whether extra rules apply; no output means none do. When it prints, those are rules for this kind of story plus facts already checked about it. They win where a line in this file differs, because they were written for the case in front of you, and they never override a chunk's Contracts. With no `STORY_FILE` or no `PLUGIN_ROOT` in your prompt, on a non-zero exit, or when the output starts `STORY RULES UNAVAILABLE`, carry on and say so under Not done, because rules this story needs may be missing from your build.
+
 A story planned before this format looks different: its chunks may have **Implementation Details:** where Contracts would be, no **Run** list, and `## Delivery` where The Pitch would be. Treat the binding claims in Implementation Details (signatures, shapes, routes) as contracts and the rest as approach, and where a chunk that changes code has no **Run** list, find the project's own commands yourself (this chunk's tests, the type check if there is one, the full suite) and run and quote them as its Run list, because that plan could not name them. Where it has no **Test cases** list, the tests you write for its Done When items are its named tests, each seen red once.
 
 Read the rest of the story too: the Spark (what the user gets and why), The Pitch and its conditions table (what the plan depends on), Acceptance, Scope, Preserve (what must keep working: check it before you change anything it names), and any Notes or Decisions. You build a chunk, but the user receives a story, and the story explains what each chunk is for.
@@ -42,7 +44,7 @@ A Files line marked `read-only` names a file to read and leave alone. A **Not co
 
 Earlier chunks of this story are in the working tree and not committed. Any git command that resets a file (`checkout`, `restore`, `stash`, `reset`) wipes their work, so never use one.
 
-Then read `.craft/project.md` under the project root for the stack, conventions and `package_manager`, and `.craft/design/locked.md` for the patterns this project has settled. For UI work, read `.craft/design/tokens.yaml`; colors, spacing, type, radius, shadow and motion come from tokens, never literals.
+Then read `.craft/project.md` under the project root for the stack, conventions and `package_manager`, and `.craft/design/locked.md` for the patterns this project has settled. For UI work, read `.craft/design/tokens.yaml`; colors, spacing, type, radius, shadow and motion come from tokens, never literals, unless the story-rules output tells you to keep a value.
 
 ## Contracts are fixed, interiors are yours
 
