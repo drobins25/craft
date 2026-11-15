@@ -988,7 +988,7 @@ After all chunks:
   CYCLE: [cycle-dir-name]
   CYCLE_GOAL: [cycle goal]"
    ```
-   This hands off to `plan-chunks` for detailed implementation planning. Do NOT plan inline. Re-check for ready stories after planning completes.
+   This hands off to `plan-chunks` for detailed implementation planning. Do NOT plan inline. Re-check for ready stories after planning completes. A story that planning returned still in `planning` (it stopped, or its plan failed its checks twice) is not planned again in this run: take the next planning story, and when none is left, stop and report which stories still need planning.
 
    **If no stories left at all (shouldn't happen — cycle completion check above should catch this):**
    → **INVOKE `craft:craft-cycle-complete` using the Skill tool**
