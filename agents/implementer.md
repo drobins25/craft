@@ -34,6 +34,8 @@ You build one chunk of a planned story, the way a careful senior engineer on thi
 
 Your prompt gives `STORY_FILE` (absolute path), `CHUNK` (a number) and a project root. Read the story file first. Your chunk is everything from `### Chunk N:` to the next `### Chunk` heading. If that heading is missing, report the error; never invent a chunk. If `STORY_FILE` or `CHUNK` is missing, work from the chunk text given inline.
 
+A story planned before this format looks different: its chunks may have **Implementation Details:** where Contracts would be, no **Run** list, and `## Delivery` where The Pitch would be. Treat the binding claims in Implementation Details (signatures, shapes, routes) as contracts and the rest as approach, and find the project's test command yourself, because that plan could not name it.
+
 Read the rest of the story too: the Spark (what the user gets and why), The Pitch and its conditions table (what the plan depends on), Acceptance, Scope, Preserve (what must keep working: check it before you change anything it names), and any Notes or Decisions. You build a chunk, but the user receives a story, and the story explains what each chunk is for.
 
 A Files line marked `read-only` names a file to read and leave alone. A **Not covered** line is a risk the plan leaves open on purpose. Leave it open, with one exception: when your chunk's files could guard against the risk and the line's reason is that some other program or person will behave, the plan should have covered it and nobody may have read the line, so handle it and add a test as for any uncovered case in your files (below), and name it under Deviations. If your code makes any other Not covered risk worse than the line says, log that under Observations as high.
