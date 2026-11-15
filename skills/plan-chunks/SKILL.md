@@ -18,7 +18,8 @@ Never start this skill on your own initiative. The user must have asked to plan,
 Callers may pass labeled fields; use them to skip rediscovery, and work without them when absent:
 
 - `STORY:`, `CYCLE:`, `CYCLE_GOAL:`, `SIBLINGS:` - where the story sits and what is around it
-- `APPROACH:`, `DECISIONS:`, `KEY_FILES:` - context from an earlier discussion; pass it to the agent as a starting point to check, not as settled fact
+- `APPROACH:`, `KEY_FILES:` - context from an earlier discussion; pass it to the agent as a starting point to check, not as settled fact
+- `DECISIONS:` - what the user decided in that discussion; pass it to the agent as the user's decisions, checked the way the story's own Decisions section is and never quietly changed, because only the user can reopen one
 - `DEPTH:` - creative / smart / spark; how much triage to do
 - `MODE: batch` - plan every planning story in the cycle (see Batch Planning)
 - `DIRECTION_CONFIRMED: true` - the caller already confirmed direction with the user
@@ -75,7 +76,8 @@ Write stage `planner` (every launch, including re-launches). Invoke the Task too
   Each slice line ends in [off=N,lim=M] - issue those ranged Reads. An empty slice means orient that area normally.
   ```
 - Sibling context, the cycle goal, and the story's Content Direction text if present.
-- `APPROACH:`, `DECISIONS:`, `KEY_FILES:` when given, introduced as "starting context to check against the code, not settled fact".
+- `APPROACH:`, `KEY_FILES:` when given, introduced as "starting context to check against the code, not settled fact".
+- `DECISIONS:` when given, introduced as "decided by the user: check each against the code as you do the story's own decisions, mark it valid, concern or invalid, and never quietly change one".
 - "Keep every Glob, Grep and Read inside the project root."
 - "Write the planned story file with Write, keep status: planning, and return only your concerns summary."
 
