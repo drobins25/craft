@@ -20,7 +20,7 @@ current_chunk: 0
 {{STORY_DESCRIPTION}}
 
 ## The Pitch
-<!-- Written during plan-chunks: the plan's sell + conditions table (every load-bearing assumption tagged verified / system-owned / unverifiable -> chunk-first-test) -->
+<!-- Written during plan-chunks: the plan's sell + conditions table (every load-bearing assumption tagged verified / system-owned / unverifiable - becomes Chunk N's first test) -->
 
 ## Content Direction
 <!-- Written by content-spark: resolved content dimensions and assumptions -->

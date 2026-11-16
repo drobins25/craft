@@ -68,7 +68,7 @@ Task tool:
   Return findings in your structured output format."
 ```
 
-**Key addition for team mode:** The "TEAM MODE" paragraph activates Phase 4 (Teammate Coordination) in the plan-chunks-agent. In subagent mode, this paragraph is omitted and the agent outputs "N/A — running as isolated subagent."
+**Key addition for team mode:** The "TEAM MODE" paragraph tells the planner it is a teammate: before returning, it messages the team with its story's files, new components and key decisions, and records any overlap under Teammate Coordination Notes. In subagent mode, this paragraph is omitted and the agent outputs "N/A - running as isolated subagent."
 
 ---
 
