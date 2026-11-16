@@ -194,6 +194,39 @@ assert_not_contains "no word of it is looked up as a record" "RECORD NOT FOUND" 
 assert_contains "the record beside it is still looked up" "2026-02-01-open-ruling.md (ruled 2026-02-01)" "$OUT"
 assert_contains_literal "carries the rule for written decisions" "$(rules_part decision-record-story-rules.md "planner, decisions written in the header" | grep -m1 '^- ')" "$OUT"
 
+begin_test "a comment after a decisions list is not read as part of a record's name"
+write_story "$STORIES/10c-list-comment.md" "decisions: [2026-02-01-open-ruling, 2026-03-01-built-ruling] # both ruled in spring" "## Spark"
+run_rules "$STORIES/10c-list-comment.md" planner
+assert_contains "the first record is found" "2026-02-01-open-ruling.md (ruled 2026-02-01)" "$OUT"
+assert_contains "the last record is found" "2026-03-01-built-ruling.md (ruled 2026-03-01; frozen, already built)" "$OUT"
+assert_not_contains "the comment is not listed as a written decision" "both ruled in spring" "$OUT"
+write_story "$STORIES/10d-item-comment.md" "decisions:
+  - 2026-02-01-open-ruling # the spring one
+  - 2026-03-01-built-ruling" "## Spark"
+run_rules "$STORIES/10d-item-comment.md" planner
+assert_contains "a record with a comment on its own line is found" "2026-02-01-open-ruling.md (ruled 2026-02-01)" "$OUT"
+assert_not_contains "that comment is not listed as a written decision" "the spring one" "$OUT"
+
+begin_test "a decisions field that says there are none prints nothing"
+for empty_word in none '~' null; do
+  write_story "$STORIES/10f-no-decisions.md" "decisions: $empty_word" "## Spark"
+  run_rules "$STORIES/10f-no-decisions.md" planner
+  assert_eq "exit code is 0 for '$empty_word'" "0" "$RC"
+  assert_eq "output is empty for '$empty_word'" "" "$OUT"
+done
+write_story "$STORIES/10g-none-beside-record.md" "decisions: [none, 2026-02-01-open-ruling]" "## Spark"
+run_rules "$STORIES/10g-none-beside-record.md" planner
+assert_contains "a record listed beside it is still looked up" "2026-02-01-open-ruling.md (ruled 2026-02-01)" "$OUT"
+assert_not_contains "and nothing is reported missing" "RECORD NOT FOUND" "$OUT"
+
+begin_test "a hash mark inside a quoted decision is kept"
+write_story "$STORIES/10e-hash-in-sentence.md" 'decisions:
+  - "Ship issue #12 first, then the rest"
+  - 2026-02-01-open-ruling' "## Spark"
+run_rules "$STORIES/10e-hash-in-sentence.md" planner
+assert_contains "the sentence is listed whole" "^- Ship issue #12 first, then the rest$" "$OUT"
+assert_contains "the record beside it is still looked up" "2026-02-01-open-ruling.md (ruled 2026-02-01)" "$OUT"
+
 begin_test "a Motion line brings the catalog rules, unless a mockup settles the motion"
 write_story "$STORIES/11-motion.md" "" '## Visual Direction
 

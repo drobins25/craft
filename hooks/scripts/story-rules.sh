@@ -96,17 +96,32 @@ field() {
 }
 
 # items <name> - a frontmatter list, one item per line, whether it is written
-# inline ([a, b]) or one item per line. An item may be a sentence.
+# inline ([a, b]) or one item per line. An item may be a sentence. A trailing
+# comment is dropped; a # inside a quoted item is part of the item.
 items() {
   printf '%s\n' "$FRONT" | awk -v key="$1" '
+    # uncomment - the text without its trailing comment. A # starts a comment
+    # when it opens the text or follows a space, outside quotes. A quote opens
+    # only at the start of an item, so an apostrophe inside a word is text.
+    function uncomment(s,   i, c, p, q) {
+      q = ""
+      for (i = 1; i <= length(s); i++) {
+        c = substr(s, i, 1); p = (i == 1) ? " " : substr(s, i - 1, 1)
+        if (q != "") { if (c == q) q = ""; continue }
+        if ((c == "\"" || c == "\047") && p ~ /[[:space:],[]/) { q = c; continue }
+        if (c == "#" && p ~ /[[:space:]]/) { s = substr(s, 1, i - 1); break }
+      }
+      sub(/[[:space:]]+$/, "", s)
+      return s
+    }
     $0 ~ "^" key ":" {
-      v = $0; sub("^" key ":[[:space:]]*", "", v)
+      v = $0; sub("^" key ":[[:space:]]*", "", v); v = uncomment(v)
       if (v == "") { on = 1; next }
       gsub(/^\[|\][[:space:]]*$/, "", v); n = split(v, a, ",")
       for (i = 1; i <= n; i++) print a[i]
       next
     }
-    on && /^[[:space:]]+-[[:space:]]/ { v = $0; sub(/^[[:space:]]+-[[:space:]]*/, "", v); print v; next }
+    on && /^[[:space:]]+-[[:space:]]/ { v = $0; sub(/^[[:space:]]+-[[:space:]]*/, "", v); print uncomment(v); next }
     on { on = 0 }
   ' | tr -d '\r' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//; s/^"\(.*\)"$/\1/; s/^'"'"'\(.*\)'"'"'$/\1/' | sed '/^$/d'
 }
@@ -258,6 +273,8 @@ decisions_block() {
   all=$(items decisions)
   [ -n "$all" ] || return 0
   while IFS= read -r item; do
+    # A word that means "nothing" is not a record name, as on the mockup line.
+    case "$item" in none|None|null|'~'|n/a|N/A) continue ;; esac
     case "$item" in
       *[[:space:]]*) written="${written}${item}
 " ;;
