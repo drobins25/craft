@@ -1,6 +1,8 @@
 # Plan: TDD Enforcement & Quality Gates
 
 > **Status: Implemented.** This was a planning document written before the TDD enforcement changes shipped. The changes described below have been applied to `agents/implementer.md`, `skills/validate-chunk/SKILL.md`, and `commands/craft-story-implement.md`. This file is a completed-decision record, not a description of planned work.
+>
+> **Superseded in 2.19.0.** The test-first workflow recorded below no longer runs. The implementer now follows The Proof Posture in `agents/implementer.md`: tests written from the plan, each named test seen failing once, every pass quoted. This file stays as history.
 
 ## Summary
 
