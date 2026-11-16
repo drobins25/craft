@@ -4,7 +4,7 @@ How to gather context before planning begins. This covers sibling story analysis
 
 ---
 
-## Sibling Context Gathering (Phase 0.1b)
+## Sibling Context Gathering (Phase 0)
 
 **Skip if:** Story is in backlog (no cycle context).
 
@@ -94,13 +94,13 @@ Task tool:
   Return findings in your structured output format."
 ```
 
-**Include sibling context:** Paste the sibling context block from Phase 0.1b directly into the prompt. If no relevant siblings, include: `"**Sibling context:** No relevant siblings — stories appear unrelated."`
+**Include sibling context:** Paste the sibling context block from Phase 0 directly into the prompt. If no relevant siblings, include: `"**Sibling context:** No relevant siblings — stories appear unrelated."`
 
 **Include orchestrator context:** If args include `APPROACH:`, `DECISIONS:`, or `KEY_FILES:`, add the optional starting context block.
 
 ---
 
-## Agent Launch Prompt - Multi-Story Batch (Phase M-2)
+## Agent Launch Prompt - Multi-Story Batch (Batch Planning, step 5)
 
 For batch planning, each agent receives all sibling names/sparks plus predecessor context for dependent stories:
 
@@ -132,7 +132,7 @@ Task tool:
   ...
 
   [PREDECESSOR CONTEXT - if this story has in-set dependencies, include here.
-  See SKILL.md M-2 'Predecessor Context Handoff' for the exact format:
+  See SKILL.md Batch Planning, step 6 "Pass contracts forward" for the exact format:
   Goal + Files + Contracts from each predecessor chunk,
   with CRITICAL alignment instructions.]
 
@@ -143,5 +143,5 @@ Task tool:
 
 **Key differences from single-story:**
 - Batch mode provides ALL story names/sparks (not filtered by relevance) so the agent can detect file overlap and coordination needs with any sibling
-- **Dependent stories include predecessor context** - the Goal, Files, and Contracts from each chunk of the story they depend on, with explicit instructions to align contracts (IDs, file paths, exports, naming conventions). See SKILL.md M-2 Predecessor Context Handoff for the full format.
+- **Dependent stories include predecessor context** - the Goal, Files, and Contracts from each chunk of the story they depend on, with explicit instructions to align contracts (IDs, file paths, exports, naming conventions). See SKILL.md Batch Planning, step 6 "Pass contracts forward" for the full format.
 
