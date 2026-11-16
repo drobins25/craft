@@ -106,7 +106,7 @@ You converge by reacting in plain words. No forms, no pickers.
 - **Polish.** Micro-adjustments land in the open page while you watch. Try, see, keep or discard, seconds each.
 - **A feeling counts.** "B is close but something's off" is a feeling, and craft riffs the fuzzy reaction into a sharp direction with you before rebuilding, instead of spending a round on a guess.
 - **Acceptance is explicit.** "That's it, ship it." The new design values land in `tokens.yaml` with their provenance before anything downstream exists, so every later story and validator enforces the design you approved in your browser.
-- **Then it graduates on your call.** Tweak it in now, grow it into a story with its CSS ported as-is, or park it as a notebook todo.
+- **Then it graduates on your call.** Tweak it in now, grow it into a story with its CSS ported as-is, or park it as a notebook todo. In the middle of building a story, it can go straight into that story, and the chunks still to build pick up the look.
 
 The same door takes a two-minute tweak:
 
@@ -118,7 +118,7 @@ And when the page is almost there, a notch off:
 
 > "Can we dial down the login text and try a different color perhaps?"
 
-`/craft:dial` drops A, B, C, D into your running app, in a small panel on the page you were already looking at. You click until one stops bugging you. "Oh I like B." Nothing is written to source.
+`/craft:dial` drops A, B, C, D into your running app, in a small panel on the page you were already looking at. You click until one stops bugging you. "Oh I like B." Nothing is written to source. When the pick belongs to a story, what the page showed for it goes into that story as values the build has to match.
 
 Your reactions are recorded word for word along the way. They are the convergence history, and they feed the taste record.
 
