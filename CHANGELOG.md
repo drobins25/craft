@@ -4,14 +4,17 @@ Notable, user-facing changes per version. Internal changes (tests, refactors, co
 
 ## 2.19.0 - 2026-11-15
 
-- Changed how craft plans a story. A plan now pins down only what has to come out one particular way: what the chunks and your existing code must agree on, and what you or another program will see. Each chunk names its tests by the behavior they prove and the commands that must pass, and every risk the plan leaves out is listed with its reason, so nothing is dropped unseen.
-- Changed how craft builds a chunk: it has to prove its work. The builder writes each test from the plan, not from its own code, watches every named test fail once before it passes, and quotes the commands it ran and what came back.
+- Rewrote the heart of craft: the loop that plans a story and builds it. We threw out three quarters of the prompts and the builds got better. The planner and builder now run on 508 lines where they ran on 2,268, and they leave review a lot less to catch. We rebuilt two stories craft had already shipped, four times each way. Of the bugs review had found in the originals, the new prompts dodged 17 of 20 and 5 of 8. The old ones dodged 9 of 20 and 2 of 8.
+- Changed what a plan is. It no longer tries to script the whole build. It pins down only what has to come out one particular way: what the chunks and your existing code must agree on, and what you or another program will see. Each chunk names its tests by the behavior they prove and the commands that must pass, and every risk the plan leaves out is listed with its reason, so nothing is dropped unseen.
+- Changed how craft builds a chunk: show the work or it doesn't count. The builder writes each test from the plan, not from its own code, watches every named test fail once before it passes, and quotes the commands it ran and what came back.
+- Changed what happens when the builder hits a wall. If it cannot build a chunk, say because a story's mockup file is missing, the build stops right there and tells you why instead of marching on. Anything it did differently from the plan is shown to you as each chunk finishes.
 - Added a story check before planning. Craft reads the story against the code it names and shows you any line that is no longer true, that hands old code over as the product without saying what it must handle, or that contradicts another line, with the wording it would change it to.
 - Added a way to put a mockup into the story you are building. Accept a mockup in the middle of a story and it can go straight into that story: the chunks still to build pick up the look, and parts already built are left alone and named.
 - Added a way to put a dial pick into a story. What the page actually showed for the position you chose goes into the story as values the build has to match. A value the dial tried that the page never showed is left out and listed.
-- Changed planning for a story whose look is already settled. When the look came from a mockup or an annotate session and the story has no list tying each part to it, craft builds that list with you before it plans, and no longer offers to explore visual options you already chose.
-- Changed what happens to a value you approved on screen that has no matching design token: it is built exactly as you approved it and listed in the build report.
+- Changed planning for a story whose look is already settled. When the look came from a mockup or an annotate session and the story has no list tying each part to it, craft builds that list with you before it plans, and stops offering visual options you already chose.
+- Changed what happens to a value you approved on screen that has no matching design token: it is built exactly as you approved it and shown to you when that chunk finishes.
 - Changed unattended runs. When a plan fails craft's checks, the run re-plans once, then stops that story and tells you why.
+- Crystallized a prompt-writing agent along the way, the one that helped word this rewrite. It is not in this release. It ships in a later patch.
 
 ## 2.18.2 - 2026-11-14
 
