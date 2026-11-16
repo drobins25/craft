@@ -97,7 +97,7 @@ Read what one position put on the page, while it is still there. Run it before C
 ```js
 return (() => {
   const letter = '<letter>';
-  const key = `html[data-craft-dial="${letter}"]`;
+  const key = `[data-craft-dial="${letter}"]`;
   const root = document.documentElement;
   const sheet = document.getElementById('craft-dial-style')?.sheet;
   if (!sheet) return { readable: false };
@@ -125,7 +125,7 @@ return (() => {
     if (mine.length && rule.cssRules && rule.cssRules.length) nested += rule.cssRules.length;
     if (!rule.style.length) continue;
     for (const full of mine) {
-      const bare = full.split(key).join('').trim() || 'html';
+      const bare = full.split(key).join('').trim().replace(/^(html|:root)(?=\s|$)/, '').trim() || 'html';
       const selector = /^[>+~]/.test(bare) ? 'html ' + bare : bare;
       const pseudo = (selector.match(/::?(before|after)$/) || [null])[0];
       const base = pseudo ? selector.slice(0, -pseudo.length).trim() || 'html' : selector;
