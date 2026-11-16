@@ -107,7 +107,6 @@ test('the reference doc and status surface exist', () => {
 });
 
 const AGENT_DOC = path.join(REPO_ROOT, 'commands', 'references', 'map-for-agents.md');
-const PLAN_AGENT = path.join(REPO_ROOT, 'agents', 'plan-chunks-agent.md');
 
 test('agent-facing map doc exists and teaches the four behaviors + kill switch', () => {
   assert.ok(fs.existsSync(AGENT_DOC), 'commands/references/map-for-agents.md present');
@@ -134,14 +133,6 @@ test('the slice-read rule is a POSITIVE ranged-read procedure with all load-bear
   assert.match(doc, /no reliable span/i, 'floor: only unspanned symbols fall back to whole-file reads');
 });
 
-test('plan-chunks-agent carries the same positive ranged-read instruction', () => {
-  const agent = fs.readFileSync(PLAN_AGENT, 'utf8');
-  assert.match(agent, /issuing the ranged reads the slice hands you/i, 'positive instruction, not a prohibition');
-  assert.match(agent, /NARROWEST span/i, 'narrowest-span bias present');
-  assert.match(agent, /ADJACENT span/i, 'adjacent-span escalation present');
-  assert.match(agent, /NO `\[off,lim\]` annotation has no reliable span/, 'floor present');
-});
-
 test('the directory ceiling routes the scattered remainder to normal research, not a common ancestor', () => {
   const doc = fs.readFileSync(AGENT_DOC, 'utf8');
   assert.match(doc, /do NOT widen to a common-ancestor/i, 'forbids widening to a common-ancestor slice');
@@ -152,17 +143,6 @@ test('an empty or floored slice degrades to today behavior with no retry, no blo
   const doc = fs.readFileSync(AGENT_DOC, 'utf8');
   assert.match(doc, /empty or floored slice/i, 'names the empty/floored non-result');
   assert.match(doc, /[Dd]o not retry, do not block/, 'no retry, no block on a non-result');
-});
-
-test('plan-chunks-agent Phase 1.3 carries the map pointer after baseline context, before story-driven research', () => {
-  const agent = fs.readFileSync(PLAN_AGENT, 'utf8');
-  const pointerIdx = agent.indexOf('map-for-agents.md');
-  const baselineIdx = agent.indexOf('Start with your baseline context');
-  const storyNeedsIdx = agent.indexOf("Then follow the story's needs");
-  assert.ok(pointerIdx !== -1, 'the pointer to map-for-agents.md is present');
-  assert.ok(baselineIdx !== -1 && storyNeedsIdx !== -1, 'the surrounding Phase 1.3 anchors exist');
-  assert.ok(pointerIdx > baselineIdx, 'pointer sits after the baseline-context block');
-  assert.ok(pointerIdx < storyNeedsIdx, 'pointer sits before story-driven research');
 });
 
 test('the agent-facing doc is distinct from the user-facing map.md', () => {

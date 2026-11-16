@@ -566,6 +566,8 @@ options:
     description: "I'll come back to plan stories later"
 ```
 
+Leave "Explore a story creatively" off that card when the story's look is already settled: its header has a non-empty `mockup:`, `annotate:` or `dial:` line, its `## Visual Direction` has a filled-in binding table, or its own text names the look to copy. The other three options stand.
+
 **If user selects "Other" or provides custom text:** Ask a clarifying AskUserQuestion to understand their intent before proceeding.
 
 **Note:** Cycle stays in `planning` status until stories are planned and you're ready to implement.

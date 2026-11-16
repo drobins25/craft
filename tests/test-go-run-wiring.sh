@@ -67,13 +67,9 @@ assert_literal "Skip for now" "$DEFAULT" 'label: "Skip for now"'
 assert_literal "Next step header" "$DEFAULT" 'header: "Next step"'
 assert_literal "Plan all [N] stories" "$DEFAULT" 'label: "Plan all [N] stories"'
 assert_literal "Plan a story now" "$DEFAULT" 'label: "Plan a story now"'
-assert_literal "Prerequisite header" "$SKILL" 'header: "Prerequisite"'
 assert_literal "Run content-spark first" "$SKILL" 'Run content-spark first (Recommended)'
 assert_literal "Skip - I know what I want" "$SKILL" 'Skip - I know what I want'
 assert_literal "Re-plan with the failure list" "$SKILL" 'Re-plan with the failure list'
-assert_literal "Yes, mark ready" "$SKILL" 'label: "Yes, mark ready"'
-assert_literal "Yes, implement now" "$SKILL" 'label: "Yes, implement now"'
-assert_literal "Come back later (S-6)" "$SKILL" 'label: "Come back later"'
 assert_literal "Approve" "$BATCH" 'label: "Approve"'
 assert_literal "Approve all" "$BATCH" 'label: "Approve all"'
 assert_literal "Start implementing" "$BATCH" 'label: "Start implementing"'
@@ -136,10 +132,8 @@ echo ""
 
 begin_test "story citations survive planning"
 BATCH="$PLUGIN_ROOT/skills/plan-chunks/references/batch-triage.md"
-PLANSKILL="$PLUGIN_ROOT/skills/plan-chunks/SKILL.md"
 assert_literal "intake keeps the group for the story's life" "$INTAKE" "The group is part of the story for its whole life."
 assert_literal "batch-triage never touches Reference Materials" "$BATCH" '**Never touch `## Reference Materials`.**'
-assert_literal "plan-chunks answer-time write keeps Reference Materials" "$PLANSKILL" 'Never touch `## Reference Materials` in that write'
 echo ""
 
 begin_test "questions to the issue: gate and shape"

@@ -481,12 +481,6 @@ The `decisions:` line holds only the approved decision records the user named fo
 ## Hardest Constraint
 [The biggest risk or challenge]
 
-## Technical Concerns
-- [Specific concern about feasibility, performance, or architecture]
-
-## Recommendations
-- [Ways to reduce risk or complexity]
-
 ## Dependencies
 **Blocked by:** [None, or list]
 **Blocks:** [None, or list]

@@ -7,8 +7,8 @@ How to orchestrate parallel story planning using Claude Code agent teams. This i
 ## Prerequisites
 
 - **Env var:** `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` must be set
-- **Detection:** Check in Phase 0.2 of the orchestrator (SKILL.md)
-- **Fallback:** If not set, use Task subagent batches (see SKILL.md Phase M-2 fallback mode)
+- **Detection:** Check in Batch Planning step 5 of the orchestrator (SKILL.md)
+- **Fallback:** If not set, use Task subagent batches (see SKILL.md Batch Planning step 5)
 
 ---
 
@@ -64,11 +64,13 @@ Task tool:
   2. Check teammate messages for file overlap or coordination needs
   3. Note any unresolved coordination in your Teammate Coordination Notes section
 
+  Batch mode: nobody can answer a PLAN FORK or a RESEARCH REQUEST during this run. Your instructions for batch mode say what to do instead.
+
   Read the story, understand what it needs, then research the codebase and plan chunks.
   Return findings in your structured output format."
 ```
 
-**Key addition for team mode:** The "TEAM MODE" paragraph activates Phase 4 (Teammate Coordination) in the plan-chunks-agent. In subagent mode, this paragraph is omitted and the agent outputs "N/A — running as isolated subagent."
+**Key addition for team mode:** The "TEAM MODE" paragraph tells the planner it is a teammate: before returning, it messages the team with its story's files, new components and key decisions, and records any overlap under Teammate Coordination Notes. In subagent mode, this paragraph is omitted and the agent outputs "N/A - running as isolated subagent."
 
 ---
 
@@ -76,7 +78,7 @@ Task tool:
 
 Stories are planned in **dependency graph levels** — not fixed-size batches:
 
-1. Parse `## Dependencies` from each planning story (see SKILL.md M-1b)
+1. Parse `## Dependencies` from each planning story (see SKILL.md Batch Planning step 3)
 2. Build topological levels: Level 0 = no in-set blockers, Level 1 = blocked by Level 0 only, etc.
 3. Launch all stories in Level 0 in parallel → wait for completion → launch Level 1 → ...
 
@@ -114,7 +116,7 @@ After a batch completes:
 
 **Merge coordination findings:**
 - In team mode: coordination notes are already in each agent's output
-- In subagent mode: orchestrator builds coordination notes via post-hoc cohesion check (SKILL.md Phase M-3)
+- In subagent mode: orchestrator builds coordination notes via the comparison at the end of SKILL.md Batch Planning step 7
 
 ---
 
@@ -124,7 +126,7 @@ If agent teams spawn fails (env var set but feature unavailable or broken):
 
 1. Catch the error from the first teammate spawn attempt
 2. Log: "Agent teams unavailable — falling back to Task subagents"
-3. Switch to subagent mode (SKILL.md Phase M-2 fallback path)
+3. Switch to subagent mode (SKILL.md Batch Planning step 5)
 4. Continue with the same stories and batching strategy
 
 **The fallback must always work independently.** Never assume agent teams are available just because the env var is set — the feature is experimental and may be unavailable in some environments.

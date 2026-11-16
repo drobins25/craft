@@ -10,7 +10,6 @@ FOLLOW="$PLUGIN_ROOT/commands/references/tracker-follow.md"
 INTAKE="$PLUGIN_ROOT/commands/references/tracker-intake.md"
 REFRESH="$PLUGIN_ROOT/commands/references/tracker-refresh.md"
 GORUN="$PLUGIN_ROOT/commands/references/go-run.md"
-AGENT="$PLUGIN_ROOT/agents/plan-chunks-agent.md"
 
 echo "=== test-tracker-follow-wiring.sh ==="
 echo ""
@@ -143,7 +142,6 @@ if [ -n "$GOROW" ] && ! echo "$GOROW" | grep -qiE "$FORBIDDEN"; then
 else
   echo "  FAIL: go-run row missing or carries a forbidden word"; FAIL=$((FAIL + 1))
 fi
-assert_literal "agent concern line" "$AGENT" "$CONCERN"
 if echo "$CONCERN" | grep -qiE "$FORBIDDEN"; then
   echo "  FAIL: agent concern carries a forbidden word"; FAIL=$((FAIL + 1))
 else
@@ -214,20 +212,6 @@ HEADINGS="$(grep '^## ' "$GORUN" 2>/dev/null | tr '\n' '|' || true)"
 assert_eq "still eight headings" "## When a run is a Go run|## Answering a prompt|## What still stops|## Product forks|## Known prompts|## Planning|## At the stage ceiling|## After compaction|" "$HEADINGS"
 echo ""
 
-begin_test "agent reads current rows"
-GUARD_AT="$(grep -n '^\*\*Missing Reference Materials on a planning-sourced story' "$AGENT" | head -1 | cut -d: -f1)"
-ROWS_AT="$(grep -n '^\*\*Tracker rows marked current or superseded' "$AGENT" | head -1 | cut -d: -f1)"
-NEXT_AT="$(grep -n '^### 1.4 Research Principles' "$AGENT" | head -1 | cut -d: -f1)"
-if [ -n "$GUARD_AT" ] && [ -n "$ROWS_AT" ] && [ -n "$NEXT_AT" ] && [ "$GUARD_AT" -lt "$ROWS_AT" ] && [ "$ROWS_AT" -lt "$NEXT_AT" ]; then
-  echo "  PASS: paragraph ($ROWS_AT) sits after the planning-sourced guard ($GUARD_AT)"; PASS=$((PASS + 1))
-else
-  echo "  FAIL: order guard='$GUARD_AT' rows='$ROWS_AT' next='$NEXT_AT'"; FAIL=$((FAIL + 1))
-fi
-assert_literal "reads the current row" "$AGENT" "read only the \`(current)\` row's issue copy"
-assert_literal "citations never edited" "$AGENT" 'never edit the citation lines'
-assert_literal "unmarked rows read as cited" "$AGENT" 'Unmarked rows are read as cited.'
-echo ""
-
 # Entry points: each guard is one paragraph that precedes the work it protects.
 DEFAULT_MODE="$PLUGIN_ROOT/commands/references/cycle-design/default-mode.md"
 DETAILING_MODE="$PLUGIN_ROOT/commands/references/cycle-design/detailing-mode.md"
@@ -255,7 +239,6 @@ check_guard() {
 begin_test "guards at the entry points"
 check_guard "default-mode" "$DEFAULT_MODE" "### Step 2: Story Brainstorm"
 check_guard "detailing-mode" "$DETAILING_MODE" "### Step D1: Show Current State"
-check_guard "plan-chunks" "$PLAN_SKILL" "### 0.1b Gather Sibling Context (Smart)"
 assert_eq "default-mode Go paragraphs unchanged" "0" "$(grep -c '^\*\*Under a Go run' "$DEFAULT_MODE" || true)"
 assert_eq "detailing-mode Go paragraphs unchanged" "0" "$(grep -c '^\*\*Under a Go run' "$DETAILING_MODE" || true)"
 assert_eq "plan-chunks Go paragraphs unchanged" "1" "$(grep -c '^\*\*Under a Go run' "$PLAN_SKILL" || true)"

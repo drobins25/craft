@@ -14,7 +14,7 @@ You must NOT write implementation code directly. For EVERY chunk, you MUST use t
 Task tool:
   subagent_type: "craft:implementer"
   description: "Implement chunk N of [story]"
-  prompt: [chunk details, story context, TDD requirement]
+  prompt: [chunk details, story context, proof requirement]
 ```
 
 If you find yourself about to write code → STOP → use Task tool instead.
@@ -255,7 +255,7 @@ If no config files found AND no test dependencies → "No test infrastructure de
 
 **If test infrastructure missing:**
 
-> "This project doesn't have test infrastructure set up. TDD is required for quality.
+> "This project doesn't have test infrastructure set up. Craft proves every chunk with tests.
 >
 > Set up testing now?"
 
@@ -446,7 +446,8 @@ fi
    - **CHUNK:** Chunk number only (e.g., `3`) - the implementer extracts the chunk spec from the story file
    - **STORY:** Story name and key decisions from the story's Spark/Scope/Notes sections
    - **PROJECT_ROOT:** `$CRAFT_PROJECT_ROOT` (so the implementer scopes all work to this project)
-   - **TDD REQUIREMENT: Tests MUST be written FIRST, run and fail, THEN implementation**
+   - **PLUGIN_ROOT:** the resolved `${CLAUDE_PLUGIN_ROOT}` (the implementer cannot resolve the variable itself, and needs it to run its story-rules check)
+   - **PROOF REQUIREMENT: every named test is seen red once; every pass claim quotes command, exit status and output**
    - **PM:** Package manager to use
    - **NO BACKGROUND COMMANDS:** NEVER use `run_in_background: true` for test, typecheck, lint, or build commands. All validation must run synchronously. Background runs become orphaned and spam the conversation.
 
@@ -471,13 +472,14 @@ fi
      Story decisions: 5-minute expiry, use existing email service
 
      PROJECT_ROOT: /path/to/project/
+     PLUGIN_ROOT: [resolved ${CLAUDE_PLUGIN_ROOT}]
      PM: pnpm
 
-     TDD REQUIRED:
-     - Write tests FIRST in `__tests__/` directories
-     - Run tests and verify they FAIL
-     - THEN write implementation
-     - Run tests and verify they PASS
+     PROOF REQUIRED:
+     - Write each named test's assertions from the spec, not from your code
+     - Show every named test red once (run it before the behavior exists, or break the behavior once, restore it, and quote both runs)
+     - Quote the final green run: command, exit status, pass count
+     - Change what a test expects only by quoting the spec line the change follows, never to reach green
 
      NO BACKGROUND COMMANDS: NEVER use run_in_background for test/typecheck/lint/build. Run all validation synchronously."
    ```
@@ -495,12 +497,12 @@ fi
 
    **Contract Mismatch routing:**
 
-   If the implementer's output contains `## CONTRACT MISMATCH` instead of a completion report, the PLAN — not the code — is wrong. Do NOT route to refine-chunk or test-fix (those fix code; this is a plan defect). Do NOT re-invoke the implementer to "make it work." A pulled tripwire is a caught planning bug — treat the report as a deliverable.
+   If the implementer's output contains `## CONTRACT MISMATCH` instead of a completion report, the implementer is saying the PLAN - not the code - is wrong. Do NOT route to refine-chunk or test-fix (those fix code; this is a plan defect). Do NOT re-invoke the implementer to "make it work" around a mismatch that holds. A pulled tripwire is a caught planning bug — treat the report as a deliverable.
 
    1. **Persist the report first**: write it verbatim to `.craft/checkpoints/[story]-chunk-[N]-mismatch.md`. The implementer's work state must survive the user-question gap and any session restart — orchestrator context is not durable. Then read it: contract, reality, reasoning impact, proposed amendment, work state.
    2. **Interactive (default):** Surface via **AskUserQuestion**. The question text carries the contract-vs-reality delta and the reasoning impact (self-contained — the user judges from the dialog alone). Options: "Amend: [proposed amendment]" / "Different amendment" (discuss, then amend) / "Halt story" (replan needed).
-   3. **Autonomous (RUN_MODE=autonomous):** Do not guess. Park the story: emit a `contract_mismatch` event via append-event.sh, leave the story `active` at the current chunk, note it for the run summary, and continue to the next ready story. A graceful pause beats an unsupervised contract rewrite at 2am.
-   4. **On approved amendment, YOU make the edit — never the implementer.** Edit the story file: update the contract line, keeping one receipt on it (a fact from outside the repo is `[verified: web - <source url or doc name> - <what was checked>]`), AND append an `**Amendments:**` entry to the chunk (date, what changed, what the original receipt missed). The plan artifact belongs to planning; an implementer that can amend the contract it tripped over has no tripwire at all.
+   3. **Autonomous (RUN_MODE=autonomous):** Check the report once before parking. Both mistakes cost: a false alarm parks the whole story, and waving through a real mismatch ships a wrong contract. Open the line the report cites, search the project for code or a test that already relies on what the contract says, and run it. Only if it runs and shows the contract can be met as written, reply to the SAME implementer via SendMessage with what you found ("the contract holds: [file:line] already does this - continue from your work state"), or re-invoke a fresh implementer with the persisted report as step 5 describes when that agent cannot be reached; do this at most once per chunk. In every other case the mismatch holds, and you do not guess: park the story (emit a `contract_mismatch` event via append-event.sh, leave the story `active` at the current chunk, note it for the run summary) and continue to the next ready story. You never rewrite the contract yourself in this mode.
+   4. **On approved amendment, YOU make the edit — never the implementer.** Edit the story file: update the contract line, keeping its source note (`checked: <what was read>`, `new` or `from Chunk N`), AND append an `**Amendments:**` entry to the chunk (date, what changed, what the plan missed). The plan artifact belongs to planning; an implementer that can amend the contract it tripped over has no tripwire at all.
    5. **Resume the SAME implementer via SendMessage** — it holds the chunk context and a green work state: "Amendment approved and recorded — the contract now reads [X]. Continue from your work state." Only if that agent is no longer reachable (session restart, compaction, or SendMessage unavailable in this environment): re-invoke a fresh implementer using the partial-chunk resume prompt from Resume Support, and include the persisted mismatch report (`.craft/checkpoints/[story]-chunk-[N]-mismatch.md`) in its prompt — a fresh agent has no other access to the prior work state.
    6. **If "Halt story":** stop, leave the story `active`, report. The user decides whether to replan.
 
@@ -518,6 +520,8 @@ fi
      ```
 
    `observations-append.sh` independently writes nothing when grade, severity, or loc is empty (defense in depth): a malformed entry that slips the parser still cannot corrupt a sidecar.
+
+   **Deviations and Not done:** These are the implementer's notes to the user. When either has content, show it to the user under the chunk number as soon as the chunk returns. If Not done says the chunk was not built, stop here, before validating: leave the story `active` and tell the user what it says, as for "Halt story" above. Validation cannot catch a chunk that was not built, because it does not run the build or the tests.
 
 3. **Validate the Chunk**
 
@@ -838,7 +842,7 @@ After all chunks:
 
    **Steps:**
    1. Re-read the story's `## The Pitch` section (written during planning).
-   2. Verify the conditions table is fully cashed: every `unverifiable -> Chunk N's FIRST test` condition had its test written and passing (the chunk validations already enforced this — this is a final confirmation, not a re-run).
+   2. Verify the conditions table is fully cashed: every `unverifiable - becomes Chunk N's first test` condition had its test written and passing (each builder's report quotes that run; this is a final confirmation, not a re-run).
    3. Present the pitch as a confident summary alongside the completion message.
 
    ```
@@ -988,7 +992,7 @@ After all chunks:
   CYCLE: [cycle-dir-name]
   CYCLE_GOAL: [cycle goal]"
    ```
-   This hands off to `plan-chunks` for detailed implementation planning. Do NOT plan inline. Re-check for ready stories after planning completes.
+   This hands off to `plan-chunks` for detailed implementation planning. Do NOT plan inline. Re-check for ready stories after planning completes. A story that planning returned still in `planning` (it stopped, or its plan failed its checks twice) is not planned again in this run: take the next planning story, and when none is left, stop and report which stories still need planning.
 
    **If no stories left at all (shouldn't happen — cycle completion check above should catch this):**
    → **INVOKE `craft:craft-cycle-complete` using the Skill tool**
@@ -1144,9 +1148,9 @@ If `.state` file is corrupted or missing:
 - Validate after every chunk
 - Nothing ships without approval
 - Quality is pristine by default
-- **TDD is required** — tests first, then implementation
+- **Proof is required** - spec-written tests, seen red once, pass quoted
 - **Never skip tests** — set up infrastructure if missing
-- **Edge cases matter** — implementer checks the checklist before marking complete
+- **Edge cases matter** — the implementer handles the inputs the code will really get, and tests the worst of them, before it reports
 - **Strict TypeScript** — enable and fix errors, don't disable
 - **ALL tests must pass** - never dismiss test failures as "unrelated to this story." FAILED means FAILED.
 - **No any types** — use proper types or get explicit approval

@@ -20,7 +20,7 @@ current_chunk: 0
 {{STORY_DESCRIPTION}}
 
 ## The Pitch
-<!-- Written during plan-chunks: the plan's sell + conditions table (every load-bearing assumption tagged verified / system-owned / unverifiable -> chunk-first-test) -->
+<!-- Written during plan-chunks: the plan's sell + conditions table (every load-bearing assumption tagged verified / system-owned / unverifiable - becomes Chunk N's first test) -->
 
 ## Content Direction
 <!-- Written by content-spark: resolved content dimensions and assumptions -->
@@ -94,11 +94,8 @@ risk_tags: []
      - active.md dated entries: `## Recent state changes -> [YYYY-MM-DD entry]`
      Multi-anchor per file is the norm. Absolute paths only (wrapper-vs-nested rule). -->
 
-## Investigation
-<!-- Written during plan-chunks: the planner's causal research narrative, dead ends kept -->
-
 ## Chunks
-<!-- Implementation chunks: Goal / Files / Contracts (receipted) / Approach / Test cases / What Could Break / Done When -->
+<!-- Implementation chunks: Goal / Files / Contracts / Not covered / Approach / Test cases / Run / Done When -->
 
 ## Acceptance
 <!-- Given/When/Then format for testable criteria -->

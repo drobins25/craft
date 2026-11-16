@@ -170,21 +170,6 @@ assert_file_contains \
 
 echo ""
 
-# Test 6: the structural check row and retry prompt are wired in plan-chunks SKILL.md
-begin_test "SKILL.md row #8 and retry prompt are wired"
-
-assert_file_contains \
-  "structural check table has the risk-tag mechanism row" \
-  "Risk tag comments name a mechanism, not a bare threshold" \
-  "$PLUGIN_ROOT/skills/plan-chunks/SKILL.md"
-
-assert_file_contains \
-  "retry prompt carries the risk-tag mechanism requirement" \
-  "bare threshold values with no mechanism wording are flagged by check #8" \
-  "$PLUGIN_ROOT/skills/plan-chunks/SKILL.md"
-
-echo ""
-
 # Test 7: the canonical anchor string is present on all three rule surfaces
 begin_test "anchor string present on all three rule surfaces"
 
@@ -202,16 +187,6 @@ assert_file_contains \
   "content-spark inline reference points at the anchor" \
   "Risk Tag Authoring Rule" \
   "$PLUGIN_ROOT/commands/references/content-spark-inline.md"
-
-echo ""
-
-# Test 8: the consumption principle is present in the planning agent
-begin_test "consumption principle present in planning agent"
-
-assert_file_contains \
-  "planning agent translates risk tags into mechanism-naming criteria" \
-  "Translate risk tags into mechanism-naming criteria" \
-  "$PLUGIN_ROOT/agents/plan-chunks-agent.md"
 
 echo ""
 

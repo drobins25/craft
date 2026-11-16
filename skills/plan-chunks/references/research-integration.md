@@ -4,7 +4,7 @@ How to gather context before planning begins. This covers sibling story analysis
 
 ---
 
-## Sibling Context Gathering (Phase 0.1b)
+## Sibling Context Gathering (Phase 0)
 
 **Skip if:** Story is in backlog (no cycle context).
 
@@ -86,21 +86,23 @@ Task tool:
 
   [OPTIONAL: Starting context from orchestrator — validate it THROUGH the map slice's ranged reads, then deepen. Provided context means read NARROWER, never skip orientation — the FIRST ACTION above still runs first:
     APPROACH: [value]
-    DECISIONS: [value]
     KEY_FILES: [value]]
+
+  [OPTIONAL, when DECISIONS: is given - decided by the user: check each against the code as you do the story's own decisions, mark it valid, concern or invalid, and never quietly change one:
+    DECISIONS: [value]]
 
   Read the story, understand what it needs, then research the codebase and plan chunks.
   If the story's `## Visual Direction` has an Element Binding Table, verify each row's token against tokens.yaml and bind every row a chunk builds as a `[visual-source:]` Contract; route TBD rows to the Pitch conditions table.
   Return findings in your structured output format."
 ```
 
-**Include sibling context:** Paste the sibling context block from Phase 0.1b directly into the prompt. If no relevant siblings, include: `"**Sibling context:** No relevant siblings — stories appear unrelated."`
+**Include sibling context:** Paste the sibling context block from Phase 0 directly into the prompt. If no relevant siblings, include: `"**Sibling context:** No relevant siblings — stories appear unrelated."`
 
-**Include orchestrator context:** If args include `APPROACH:`, `DECISIONS:`, or `KEY_FILES:`, add the optional starting context block.
+**Include orchestrator context:** If args include `APPROACH:` or `KEY_FILES:`, add the optional starting context block. If they include `DECISIONS:`, add the decisions block below it.
 
 ---
 
-## Agent Launch Prompt - Multi-Story Batch (Phase M-2)
+## Agent Launch Prompt - Multi-Story Batch (Batch Planning, step 5)
 
 For batch planning, each agent receives all sibling names/sparks plus predecessor context for dependent stories:
 
@@ -132,9 +134,11 @@ Task tool:
   ...
 
   [PREDECESSOR CONTEXT - if this story has in-set dependencies, include here.
-  See SKILL.md M-2 'Predecessor Context Handoff' for the exact format:
+  See SKILL.md Batch Planning, step 6 "Pass contracts forward" for the exact format:
   Goal + Files + Contracts from each predecessor chunk,
   with CRITICAL alignment instructions.]
+
+  Batch mode: nobody can answer a PLAN FORK or a RESEARCH REQUEST during this run. Your instructions for batch mode say what to do instead.
 
   Read the story, understand what it needs, then research the codebase and plan chunks.
   If the story's `## Visual Direction` has an Element Binding Table, verify each row's token against tokens.yaml and bind every row a chunk builds as a `[visual-source:]` Contract; route TBD rows to the Pitch conditions table.
@@ -143,5 +147,5 @@ Task tool:
 
 **Key differences from single-story:**
 - Batch mode provides ALL story names/sparks (not filtered by relevance) so the agent can detect file overlap and coordination needs with any sibling
-- **Dependent stories include predecessor context** - the Goal, Files, and Contracts from each chunk of the story they depend on, with explicit instructions to align contracts (IDs, file paths, exports, naming conventions). See SKILL.md M-2 Predecessor Context Handoff for the full format.
+- **Dependent stories include predecessor context** - the Goal, Files, and Contracts from each chunk of the story they depend on, with explicit instructions to align contracts (IDs, file paths, exports, naming conventions). See SKILL.md Batch Planning, step 6 "Pass contracts forward" for the full format.
 

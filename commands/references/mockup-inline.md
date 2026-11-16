@@ -254,9 +254,17 @@ options:
     description: "A notebook todo holds the pointer; pick it up whenever"
 ```
 
+When a story is being built in this project, the card adds a fourth option as its first, because a mockup made in the middle of a story is almost always for that story. A story is being built when `${CRAFT_PROJECT_ROOT:-.}/.craft/.global-state` names a `CURRENT_STORY`, that story's file is in the active cycle's `stories` folder with `status: active`, and this record's `status` is not `parked`. [story title] is the title in that story's header:
+
+```
+  - label: "Use it in [story title]"
+    description: "The story being built takes this look - the chunks still to build carry it over"
+```
+
 The fork records the graduation, writes BOTH backlinks - record.md `graduated_to:` + the destination artifact's `mockup:` field - updates `status` (`graduated-tweak` / `graduated-story` / `parked`), completes Choose destination, and ENDS. The destination flow (adhoc, story-new, notebook) runs as its own thread with its own tasks:
 
 - **Tweak:** the handoff brief states "direction pre-settled, converged mockup at [path]" so adhoc's classification doesn't re-open exploration. When the record carries an `origin`, the brief ALSO forwards it ("grew from [origin]") so the ported tweak can stamp its `grew_from` - the read side that keeps lineage alive on the tweak ramp. When `## Materials` is non-empty, the brief forwards the materials spec too: the direction uses real material the port must acquire through the project's idiom, never by porting the inlined base64.
+- **Into the story being built:** the one destination that does not hand off to a thread of its own, and the one where the fork writes no backlink or status itself. Read `${CLAUDE_PLUGIN_ROOT}/commands/references/mockup-into-story.md` inline with the Read tool (never via the Skill tool) and follow it with this record and the story named by `CURRENT_STORY`. It writes the links in its own order, adds the look to the story, and the build then resumes where it was.
 - **Story:** story-new's craft designs source (commands/references/story-from-mockup.md) does the pre-fill. The mockup's CSS is NORMATIVE there - ported, never reinterpreted. It also reads `## Materials` and forwards the material spec into the produced story.
 - **Park:** capture a notebook todo naming the mockup path. Pickup = todo done, then re-enter THIS destination choice against the still-converged record. Graduating a long-parked mockup first re-verifies the target surface still exists as mocked - structural drift is surfaced before porting.
 

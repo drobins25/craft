@@ -196,14 +196,13 @@ The Living Map's structural generator lives in a dedicated top-level `scripts/ma
 
 ## Planned Story Format (contracts model)
 
-Chunk specs lock **seams, not interiors**. The planner pins contracts (signatures, shapes, routes, invariants - each line carrying a receipt: `[verified: attack evidence]`, `[owner: Chunk N]`, `[investigation: reason]`, `[visual-source: where the look was decided]`, `[defines]`); the implementer owns function bodies and test bodies. No copy-pasteable code in plans - code appears only when the code IS the decision.
+Chunk specs lock **seams, not interiors**. The planner pins contracts: anything that has to come out one particular way, whether two pieces of code must agree on it (names, signatures, shapes, routes) or a user would see it (wording, order, limits). Each contract carries its source in a few words (`checked: <what was read>`, `new`, or `from Chunk N`); a visual binding ends in a `[visual-source: ...]` receipt. The implementer owns function bodies and test bodies. Code appears in a plan only when the exact code is the decision.
 
-A planned story carries four planning artifacts (format reference: `skills/plan-chunks/references/chunk-format-guide.md`):
+A planned story carries three planning artifacts (format reference: `skills/plan-chunks/references/chunk-format-guide.md`):
 
-- **`## The Pitch`** - the plan's guarantee plus a conditions table of every load-bearing assumption, tagged `verified` / `system-owned` / `unverifiable -> becomes Chunk N's first test`. Doubles as the implementer's tripwire watchlist.
-- **`## Investigation`** - the planner's causal research narrative, dead ends kept. Transfers the planner's headspace to the implementer and any future re-planner.
-- **`## Acceptance Pre-Flight`** - one row per acceptance vehicle, symbolically walked through the path it exercises using the test's own data shape; any `UNREACHABLE` verdict blocks plan acceptance (walk reference: `skills/plan-chunks/references/acceptance-walkthrough.md`).
-- **`## Chunks`** - cut bottom-up at layer rungs; later chunks cite earlier chunks' real output via `[owner: Chunk N]`, which self-freshens the spec.
+- **`## The Pitch`** - why the plan delivers the Spark, plus a conditions table of what it depends on that could be false, each row tagged `verified` / `system-owned` / `unverifiable - becomes Chunk N's first test`.
+- **`## Acceptance`** - specific, checkable criteria about what the user gets.
+- **`## Chunks`** - the fewest chunks that each leave the project building and tested. Each has Goal, Files, Contracts, Test cases (named for the behavior they prove), Run (the commands the builder runs and quotes) and Done When, and may have Not covered (a risk left open on purpose, with its reason) and Approach.
 
 For `type=ui` stories, per-element visual intent lives as an **Element Binding Table** in `## Visual Direction` (the source of truth); each chunk binds the rows it builds as Contract lines carrying a `[visual-source:]` receipt. Visual token assignment is a seam, not an interior - two implementers can assign different valid tokens to the same element, so it is pinned in Contracts rather than left to the implementer. Verification is two-tier: a plan-time enumerating gate (every non-`TBD` row is bound by some chunk) plus a project-local rendered-fidelity Done-When check.
 
@@ -342,6 +341,7 @@ The band reads `.craft/.global-state`, the active cycle's `.state`, story files'
 | `update-cycle-state.sh` | Update cycle .state file |
 | `update-story-status.sh` | Change story status in frontmatter; clears the story's planning stage on ready, active and complete |
 | `planning-stage.sh` | Write, rewrite or clear a story's `planning_stage` frontmatter field, the one line the progress band's planning view reads |
+| `story-rules.sh` | Print the extra rules a story's sources bring, for the planner or the builder. Each source a story carries (a mockup, decisions in its header, planning sources, a Motion line) gets the facts checked about it and that reader's part of the source's `*-story-rules.md` file. The same script tells the planner when the project is empty and gives the builder the interface rules on a user-interface story. The plan-chunks skill runs it as a third reader before planning, and hears only about a story whose look was settled in a mockup, an annotate run or a dial and whose binding table is missing. A story with none of these prints nothing |
 | `statusline.sh` | Generate status line display |
 | `find-workshop.sh` | Locate .craft/ directory. Also owns the shared before-init lookup (`craft_before_init_root`: the set-up project, then the git top level, then the current folder) and the monorepo-top refusal (`craft_refuse_monorepo_top`) that bugs and notebook captures use |
 | `discover-projects.sh` | Find all craft projects |
