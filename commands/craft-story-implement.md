@@ -521,6 +521,8 @@ fi
 
    `observations-append.sh` independently writes nothing when grade, severity, or loc is empty (defense in depth): a malformed entry that slips the parser still cannot corrupt a sidecar.
 
+   **Deviations and Not done:** These are the implementer's notes to the user. When either has content, show it to the user under the chunk number as soon as the chunk returns. If Not done says the chunk was not built, stop here, before validating: leave the story `active` and tell the user what it says, as for "Halt story" above. Validation cannot catch a chunk that was not built, because it does not run the build or the tests.
+
 3. **Validate the Chunk**
 
    Invoke the chunk-validator agent directly. Do NOT invoke the validate-chunk skill here - the skill is for manual use only. The command owns the validation chain.
