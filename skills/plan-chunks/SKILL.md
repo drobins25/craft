@@ -2,7 +2,7 @@
 name: plan-chunks
 description: This skill should be used when the user asks to "plan chunks", "break this down", "plan the implementation", or when a story has status planning and needs implementation details before building. Required before any story can be implemented. Turns a story into a chunk-by-chunk build plan with file lists, the contracts chunks share, named tests and risks. Supports parallel planning of multiple stories via batch mode.
 version: 5.0.0
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Task", "Skill", "SendMessage"]
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Task", "Skill", "SendMessage", "AskUserQuestion"]
 ---
 
 # Plan Chunks (Orchestrator)
@@ -67,7 +67,7 @@ In batch, run it per story before the first launch.
 
 ### Phase 0.4: Content direction
 
-(Skip in batch; batch checks it per story in Batch Planning.) If the story has no non-empty `## Content Direction`, write stage `content-check` and ask on a card headed `Prerequisite`: `Run content-spark first (Recommended)`, or plan anyway. To run it, Read `${CLAUDE_PLUGIN_ROOT}/commands/references/content-spark-inline.md` and follow it against this story. Never invoke it through the Skill tool, because a nested skill breaks control flow back to this one.
+(Skip in batch; batch checks it per story in Batch Planning.) If the story has no non-empty `## Content Direction`, write stage `content-check` and ask (AskUserQuestion), headed `Prerequisite`: `Run content-spark first (Recommended)` or `Plan anyway`. To run it, Read `${CLAUDE_PLUGIN_ROOT}/commands/references/content-spark-inline.md` and follow it against this story. Never invoke it through the Skill tool, because a nested skill breaks control flow back to this one.
 
 ### Phase 0.45: Alignment
 
@@ -75,11 +75,11 @@ Skip when the frontmatter says `alignment: complete` and the story has an `## Al
 
 ### Phase 0.46: Visual direction
 
-Only for `type: ui` stories, not in batch, and only when `## Visual Direction` has no filled-in binding table (a row for each part of the wireframe). Skip it when the story's header has a non-empty `mockup:`, `annotate:` or `dial:` line, or the Phase 0 story-rules call printed for this story, because that look is already settled. Skip it too when the story's own text names the look to copy (an existing element or a named pattern, as in "a copy of the create toast"), and say in one line that planning took the look from the story. Write stage `direction` and ask on a card headed `Prerequisite`: riff visual options first (recommended), or `Skip - I know what I want`. To riff, Read `${CLAUDE_PLUGIN_ROOT}/commands/references/creative-spark-inline.md` and follow it.
+Only for `type: ui` stories, not in batch, and only when `## Visual Direction` has no filled-in binding table (a row for each part of the wireframe). Skip it when the story's header has a non-empty `mockup:`, `annotate:` or `dial:` line, or the Phase 0 story-rules call printed for this story, because that look is already settled. Skip it too when the story's own text names the look to copy (an existing element or a named pattern, as in "a copy of the create toast"), and say in one line that planning took the look from the story. Write stage `direction` and ask (AskUserQuestion), headed `Prerequisite`: `Riff visual options first (Recommended)` or `Skip - I know what I want`. To riff, Read `${CLAUDE_PLUGIN_ROOT}/commands/references/creative-spark-inline.md` and follow it.
 
 ### Phase 0.5: Direction confirmation
 
-Skip when `DIRECTION_CONFIRMED: true`, or when the user's own words in this session asked to plan this story. Otherwise write stage `direction`, show the story title and Spark, and ask: plan it, explore creatively first (clear the stage and stop), or adjust the scope (discuss, update the Spark, ask again). In batch, show all sparks in one table and ask once: plan all, review individually, or exclude some.
+Skip when `DIRECTION_CONFIRMED: true`, or when the user's own words in this session asked to plan this story. Otherwise write stage `direction`, show the story title and Spark, and ask (AskUserQuestion): `Plan it`, `Explore creatively first` (clear the stage and stop) or `Adjust the scope` (discuss, update the Spark, ask again). In batch, show all sparks in one table and ask once (AskUserQuestion): `Plan all`, `Review individually` or `Exclude some`.
 
 ## S-1: Launch the planner
 
@@ -117,7 +117,7 @@ Write stage `planner` (every launch, including re-launches). Invoke the Task too
 8. Every Spark requirement has a home in some chunk. Read the Spark, list what it asks for, and find each one. Every open question in `## Story Check` is answered by a contract or a named test, or sits on a **Not covered** line with its reason.
 9. No **Not covered** line leaves out a risk that a file some chunk creates or modifies could guard against, or gives as its reason that another program, script or person will behave. Those are covered by a contract and a named test.
 
-If check 1 fails, the agent did not plan: plan inline yourself, following `${CLAUDE_PLUGIN_ROOT}/agents/plan-chunks-agent.md`, rather than blocking the user. If any other check fails, show the user the numbered failures and ask on a card: `Re-plan with the failure list` (re-launch S-1 with it), fix the story file by hand (clear the stage and stop), or go on to triage with the gaps named. Re-plan is the proposed option until the planner has been re-launched once for failed checks on this story. After that, whichever check fails, the card is still asked and its proposed option is to go on to triage, with each failure still standing printed at the top of triage's settled list, so a run never loops. In autonomous mode nobody answers that card and nobody reads that list before the build. The first time checks fail, take `Re-plan with the failure list` without asking. If any check fails on the plan that re-launch returns, stop this story instead of going on to triage: clear the stage, leave the story in planning, and report the numbered failures.
+If check 1 fails, the agent did not plan: plan inline yourself, following `${CLAUDE_PLUGIN_ROOT}/agents/plan-chunks-agent.md`, rather than blocking the user. If any other check fails, show the user the numbered failures and ask (AskUserQuestion): `Re-plan with the failure list` (re-launch S-1 with it), `Fix the story file by hand` (clear the stage and stop) or `Go on to triage with the gaps named`. Re-plan is the recommended option until the planner has been re-launched once for failed checks on this story. After that, whichever check fails, the question is still asked and its recommended option is to go on to triage, with each failure still standing printed at the top of triage's settled list, so a run never loops. In autonomous mode nobody answers that question and nobody reads that list before the build. The first time checks fail, take `Re-plan with the failure list` without asking. If any check fails on the plan that re-launch returns, stop this story instead of going on to triage: clear the stage, leave the story in planning, and report the numbered failures.
 
 ## S-3: Triage with the user
 
@@ -138,7 +138,7 @@ Items that reach no card are printed before the first question under `Settled wi
 
 ## S-4: Approve
 
-Read the story file fresh and present the plan: total chunks and files, the settled list if it wasn't shown yet, the File Impact table, then each chunk as written. Ask whether the plan looks complete: `Yes, mark ready` or `Mark ready and start implementing now`.
+Read the story file fresh and present the plan: total chunks and files, the settled list if it wasn't shown yet, the File Impact table, then each chunk as written. Ask (AskUserQuestion) whether the plan looks complete: `Yes, mark ready` or `Mark ready and start implementing now`.
 
 Either answer: confirm every triage answer landed, then
 
@@ -152,16 +152,16 @@ ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/update-story-status.sh [story-file] ready
 
 With nothing waiting:
 - `Mark ready and start implementing now` invokes the Skill tool with `skill: "craft:craft-story-implement"`, `args: "[story-file-path]"`. Never implement directly.
-- `Yes, mark ready` offers: `Yes, implement now` (same Skill invocation, or the hand-back rule), plan another story, or `Come back later`.
+- `Yes, mark ready` asks (AskUserQuestion): `Yes, implement now` (same Skill invocation, or the hand-back rule), `Plan another story` or `Come back later`.
 
 ## Batch Planning (`MODE: batch`)
 
 1. **Find the stories.** List `[cycle]/stories/*.md` with `status: planning`. None: say so and stop. One: plan it as a single story.
-2. **Story check and content direction.** Run the Phase 0 story-rules call on each story and follow what it prints. Run the story check on each (Phase 0.3). Then write stage `content-check` per story; if any lack `## Content Direction`, ask once whether to run content-spark on them first (inline, as in Phase 0.4) or plan anyway.
-3. **Dependencies decide the order.** Every story needs a `## Dependencies` section with a `**Blocked by:**` line and a `## Likely Files` section; if one is missing, stop and ask the user to fill it in (or scan Likely Files now) or cancel, clearing every stage on cancel. A story that says "Blocked by: None" but shares a modify/create file with another batch story gets one card: which plans first, or truly independent (record that on its Blocked by line so it isn't asked again). Then group stories into levels: level 0 has no blockers in the batch; each later level depends only on earlier ones. A circular pair is excluded and reported.
+2. **Story check and content direction.** Run the Phase 0 story-rules call on each story and follow what it prints. Run the story check on each (Phase 0.3). Then write stage `content-check` per story; if any lack `## Content Direction`, ask once for all of them (AskUserQuestion), with Phase 0.4's two options (run it inline, as in Phase 0.4).
+3. **Dependencies decide the order.** Every story needs a `## Dependencies` section with a `**Blocked by:**` line and a `## Likely Files` section; if one is missing, stop and ask (AskUserQuestion): `I'll fill it in`, `Scan Likely Files now` or `Cancel batch`, clearing every stage on cancel. A story that says "Blocked by: None" but shares a modify/create file with another batch story gets one card: which plans first, or truly independent (record that on its Blocked by line so it isn't asked again). Then group stories into levels: level 0 has no blockers in the batch; each later level depends only on earlier ones. A circular pair is excluded and reported.
 4. **Levels plan in order, never together.** Planners decide names, IDs, file ownership and formats; a planner that runs before its predecessor's plan exists invents its own versions, and the stories then disagree. Tell the user the levels and a rough time (about 8 minutes per level).
 5. **Launch each level.** Write stage `planner` per story. With `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`, spawn teammates (details: `${CLAUDE_PLUGIN_ROOT}/skills/plan-chunks/references/team-planning.md`); otherwise launch Task agents with `run_in_background: true` so each summary is saved to disk and survives compaction, and record each story's output file path. Each prompt carries what S-1 lists, plus the other stories' names, sparks and Likely Files, plus: "Batch mode: nobody can answer a PLAN FORK or a RESEARCH REQUEST during this run. Your instructions for batch mode say what to do instead." Wait for the whole level before launching the next.
 6. **Pass contracts forward.** For each story in the next level, read each blocker's finished story file and include its chunks' Goal, Files and Contracts only, with: "This plan comes first. Use its names and shapes, extend it rather than duplicating it, and note anything you need it to add."
 7. **Check each plan, one at a time.** Read each output file and story file in turn (stage `plan-check`), run the S-2 checks, and keep only the metadata: chunks, files, concerns, File Impact. Never hold two plans in context. Then compare File Impact tables across stories for shared files, duplicate components and conflicting decisions; each is a triage item.
-8. **Failures.** If any story failed, ask: retry the failed ones as single stories, skip them, or retry all (clear stages accordingly).
+8. **Failures.** If any story failed, ask (AskUserQuestion): `Retry failed stories` (as single stories), `Skip them for now` or `Retry all` (clear stages accordingly).
 9. **Triage.** Read `${CLAUDE_PLUGIN_ROOT}/skills/plan-chunks/references/batch-triage.md` and run it (BT-1 to BT-7). One card per item, grouped by story; approval reads each story file fresh, one story at a time.
