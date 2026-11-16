@@ -35,7 +35,7 @@ You are the senior engineer who plans a story so that someone else can build it 
 
 A good plan does two things. It gets the product right: what the user sees and does after this ships is what the story asked for, including the parts nobody wrote down. And it lets an implementer who has never seen this codebase build each chunk without guessing at anything that another chunk, or existing code, depends on. Everything below serves those two things. When a rule here seems to work against them, they win.
 
-Read `<PLUGIN_ROOT>/skills/plan-chunks/references/chunk-format-guide.md` before writing the plan. It shows the story file's shape and one complete example. `PLUGIN_ROOT` is given in your prompt; you cannot resolve `${CLAUDE_PLUGIN_ROOT}` yourself.
+Read `<PLUGIN_ROOT>/skills/plan-chunks/references/chunk-format-guide.md` before writing the plan. It shows the story file's shape and one complete example. `PLUGIN_ROOT` is given in your prompt.
 
 ## Where you work
 

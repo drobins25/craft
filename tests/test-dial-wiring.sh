@@ -169,6 +169,44 @@ grep -qF 'inside `() => { ... }`' "$DL" && pass "comment mode passes the overlay
 grep -qF 'annotate-run.sh" stamp --session "<id>" --no-run' "$DL" && pass "the paste path takes its stamp line from stamp --no-run" || fail "the paste path takes its stamp line from stamp --no-run" "stamp --no-run" "absent"
 ! grep -qF 'window.__craftAnnotatePort = <port>;' "$DL" && pass "no hand-written port stamp survives in dial's flow" || fail "no hand-written port stamp survives in dial's flow" "absent" "present"
 echo ""
+echo "-- Test: what a chosen position showed is read from the page before it is cleared --"
+SF="$REPO/commands/references/story-from-dial.md"
+for op in MEASURE INJECT TOGGLE READ CLEAR; do
+  grep -q "^### $op\$" "$DI" && pass "dial-inject defines $op" || fail "dial-inject defines $op" "a '### $op' heading" "absent"
+done
+grep -qF 'MEASURE, INJECT, TOGGLE, READ, CLEAR' "$DL" && pass "dial-inline lists all five payloads" || fail "dial-inline lists all five payloads" "MEASURE, INJECT, TOGGLE, READ, CLEAR" "absent"
+STEP8_ORDER="$(python3 - "$DL" <<'PYEOF'
+import sys
+text = open(sys.argv[1], encoding="utf-8").read()
+step = text[text.index("## Step 8"):]
+read_at, clear_at = step.find("run READ"), step.find("Run CLEAR")
+print("ok" if 0 <= read_at < clear_at else "read=%d clear=%d" % (read_at, clear_at))
+PYEOF
+)"
+[ "$STEP8_ORDER" = "ok" ] && pass "Step 8 runs READ before CLEAR" || fail "Step 8 runs READ before CLEAR" "READ first" "$STEP8_ORDER"
+grep -qF 'data-craft-dial-injected="<letter>"' "$DI" && pass "an added node's marker carries its position's letter" || fail "an added node's marker carries its position's letter" 'data-craft-dial-injected="<letter>"' "absent"
+READ_BODY="$(python3 - "$DI" <<'PYEOF'
+import re, sys
+text = open(sys.argv[1], encoding="utf-8").read()
+m = re.search(r"### READ\n.*?```js\n(.*?)```", text, re.S)
+print(m.group(1) if m else "")
+PYEOF
+)"
+if command -v node >/dev/null 2>&1; then
+  printf 'const f = () => {\n%s\n};\n' "$READ_BODY" > "${TMPDIR:-/tmp}/craft-dial-read-$$.js"
+  node --check "${TMPDIR:-/tmp}/craft-dial-read-$$.js" 2>/dev/null && pass "the READ payload parses as a function body" || fail "the READ payload parses as a function body" "valid JavaScript" "a syntax error"
+  rm -f "${TMPDIR:-/tmp}/craft-dial-read-$$.js"
+fi
+for field in showed applies matched visible added unlettered strays nested keyframes readable; do
+  printf '%s' "$READ_BODY" | grep -q "$field" && grep -q "\`$field" "$DI" && pass "READ returns $field and the text explains it" || fail "READ returns $field and the text explains it" "$field in the payload and in the text" "missing from one"
+done
+grep -qF 'story-from-dial.md' "$DL" && pass "the story exit reads the dial-to-story reference" || fail "the story exit reads the dial-to-story reference" "story-from-dial.md" "absent"
+for field in showed applies added unlettered strays nested keyframes readable; do
+  grep -q "\`$field" "$SF" && pass "the dial-to-story reference acts on $field" || fail "the dial-to-story reference acts on $field" "$field" "absent"
+done
+grep -qF 'never the CSS as you remember injecting it' "$DL" && pass "the tweak brief takes its values from READ" || fail "the tweak brief takes its values from READ" "the READ source for [values]" "absent"
+
+echo ""
 echo "-- Summary --"
 echo "Total:  $TOTAL"
 echo "Passed: $PASS_COUNT"
