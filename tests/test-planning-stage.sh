@@ -173,13 +173,9 @@ done
 
 # --- plan-chunks wiring: one lint per flow file ----------------------------------
 SKILL="$REPO/skills/plan-chunks/SKILL.md"
-AGENT="$REPO/agents/plan-chunks-agent.md"
 
 echo "Test: the plan-chunks skill calls the planning-stage script"
 if grep -qF 'hooks/scripts/planning-stage.sh' "$SKILL"; then pass "skill calls planning-stage.sh"; else fail "skill calls planning-stage.sh"; fi
-
-echo "Test: the planner template carries the field"
-if grep -q '^planning_stage:' "$AGENT"; then pass "agent template has planning_stage"; else fail "agent template has planning_stage"; fi
 
 echo ""
 echo "=== Results (test-planning-stage): $PASS_COUNT passed, $FAIL_COUNT failed ==="

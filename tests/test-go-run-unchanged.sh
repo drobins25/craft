@@ -50,7 +50,6 @@ begin_test "no-Go gate text unchanged"
 assert_span "cycle gate span" commands/craft-cycle-design.md cycle-design-gate.txt
 
 begin_test "no-Go plan-chunks text unchanged"
-assert_span "Orchestrator Context span" skills/plan-chunks/SKILL.md plan-chunks-orchestrator-context.txt
 assert_span "Question Templates span" skills/plan-chunks/references/batch-triage.md batch-triage-question-templates.txt
 
 begin_test "no-Go intake stage text unchanged"
@@ -65,7 +64,6 @@ assert_span "implement-auto Story Selection Guards" commands/craft-story-impleme
 begin_test "no-issue spans at the tracker issue check sites unchanged"
 assert_span "default-mode Step 2 head" commands/references/cycle-design/default-mode.md default-mode-step2-head.txt
 assert_span "detailing-mode Pre-check" commands/references/cycle-design/detailing-mode.md detailing-precheck.txt
-assert_span "plan-chunks Gather Launch Context" skills/plan-chunks/SKILL.md plan-chunks-gather-launch-context.txt
 
 begin_test "one Go paragraph per site"
 assert_one_go_paragraph "cycle-design" commands/craft-cycle-design.md

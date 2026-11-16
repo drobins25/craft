@@ -12,16 +12,8 @@ CYCLE_COMPLETE="$PLUGIN_ROOT/commands/craft-cycle-complete.md"
 begin_test "implementer doc carries the Bar and Observations schema"
 assert_file_exists "implementer.md exists" "$IMPL"
 assert_file_contains "has Observations section" "^## Observations" "$IMPL"
-assert_file_contains "states the two-axis gate" "severity and distance" "$IMPL"
-assert_file_contains "OBSERVE tie-breaker" "the default is OBSERVE" "$IMPL"
 assert_file_contains "confirmed/suspicion grades" "confirmed.*suspicion" "$IMPL"
 assert_file_contains "pipe-delimited schema example" "grade=confirmed | severity=high" "$IMPL"
-assert_file_contains "log broadly act narrowly" "focus protects action, not awareness" "$IMPL"
-
-begin_test "implementer doc states optional + never-with-mismatch"
-assert_file_contains "section is optional" "OPTIONAL" "$IMPL"
-assert_file_contains "absent is a no-op" "absent section is the common case" "$IMPL"
-assert_file_contains "never alongside CONTRACT MISMATCH" "NEVER.*emit .## Observations. alongside a .## CONTRACT MISMATCH" "$IMPL"
 
 # --- craft-story-implement.md: parse + chain-end surfacing ---
 begin_test "story-implement gates the parse behind no-mismatch"

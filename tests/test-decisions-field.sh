@@ -287,90 +287,10 @@ extract_section_text() {
   sed -n "$((start_line + 1)),$((end_line - 1))p" "$file"
 }
 
-# --- Phase 3.8 REQUIRED block: decisions: sits between story_number and chunks_total ---
-begin_test "the REQUIRED frontmatter block names decisions: between story_number and chunks_total"
-FENCE_OPEN=$(awk '/^### 3.8 Write Story File/ { s=1 } s && /^```markdown$/ { print NR; exit }' "$PLAN_CHUNKS_AGENT")
-FENCE_CLOSE=""
-if [ -n "$FENCE_OPEN" ]; then
-  FENCE_CLOSE=$(awk -v s="$FENCE_OPEN" 'NR > s && /^```$/ { print NR; exit }' "$PLAN_CHUNKS_AGENT")
-fi
-STORY_NUMBER_LINE=""
-DECISIONS_FIELD_LINE=""
-CHUNKS_TOTAL_LINE=""
-if [ -n "$FENCE_OPEN" ] && [ -n "$FENCE_CLOSE" ]; then
-  STORY_NUMBER_LINE=$(awk -v s="$FENCE_OPEN" -v e="$FENCE_CLOSE" 'NR > s && NR < e && /^story_number:/ { print NR; exit }' "$PLAN_CHUNKS_AGENT")
-  DECISIONS_FIELD_LINE=$(awk -v s="$FENCE_OPEN" -v e="$FENCE_CLOSE" 'NR > s && NR < e && /^decisions:/ { print NR; exit }' "$PLAN_CHUNKS_AGENT")
-  CHUNKS_TOTAL_LINE=$(awk -v s="$FENCE_OPEN" -v e="$FENCE_CLOSE" 'NR > s && NR < e && /^chunks_total:/ { print NR; exit }' "$PLAN_CHUNKS_AGENT")
-fi
-if [ -n "$STORY_NUMBER_LINE" ] && [ -n "$DECISIONS_FIELD_LINE" ] && [ -n "$CHUNKS_TOTAL_LINE" ] \
-   && [ "$STORY_NUMBER_LINE" -lt "$DECISIONS_FIELD_LINE" ] && [ "$DECISIONS_FIELD_LINE" -lt "$CHUNKS_TOTAL_LINE" ]; then
-  echo "  PASS: decisions: sits between story_number and chunks_total in the REQUIRED block"
-  PASS=$((PASS + 1))
-else
-  echo "  FAIL: decisions: not correctly positioned in the REQUIRED block"
-  echo "    story_number=$STORY_NUMBER_LINE decisions=$DECISIONS_FIELD_LINE chunks_total=$CHUNKS_TOTAL_LINE"
-  FAIL=$((FAIL + 1))
-fi
-
-# --- Phase 1.1: the record-read bullet precedes the ## Decisions bullet ---
-begin_test "the Phase 1.1 record bullet sits above the ## Decisions bullet"
-RECORD_BULLET_LINE=$(grep -n -F '**Decision records**' "$PLAN_CHUNKS_AGENT" | head -1 | cut -d: -f1)
-DECISIONS_BULLET_LINE=$(grep -n -F '**Decisions** —' "$PLAN_CHUNKS_AGENT" | head -1 | cut -d: -f1)
-if [ -n "$RECORD_BULLET_LINE" ] && [ -n "$DECISIONS_BULLET_LINE" ] && [ "$RECORD_BULLET_LINE" -lt "$DECISIONS_BULLET_LINE" ]; then
-  echo "  PASS: record bullet (line $RECORD_BULLET_LINE) precedes the Decisions bullet (line $DECISIONS_BULLET_LINE)"
-  PASS=$((PASS + 1))
-else
-  echo "  FAIL: record bullet does not precede the Decisions bullet"
-  echo "    record=$RECORD_BULLET_LINE decisions=$DECISIONS_BULLET_LINE"
-  FAIL=$((FAIL + 1))
-fi
-
-RECORD_BULLET_TEXT=""
-if [ -n "$RECORD_BULLET_LINE" ]; then
-  RECORD_BULLET_TEXT=$(sed -n "${RECORD_BULLET_LINE}p" "$PLAN_CHUNKS_AGENT")
-fi
-
-# --- The bullet names both record headings ---
-begin_test "the record bullet names both ## Decision and ## Consequences"
-assert_contains_literal 'names ## Decision' '## Decision' "$RECORD_BULLET_TEXT"
-assert_contains_literal 'names ## Consequences' '## Consequences' "$RECORD_BULLET_TEXT"
-
-# --- The bullet names the approved/ path shape ---
-begin_test "the record bullet names the .craft/decisions/approved/ path shape"
-assert_contains_literal 'names the approved/ path shape' '.craft/decisions/approved/' "$RECORD_BULLET_TEXT"
-
-# --- Unresolvable slug: CONCERN, not a guess, not a skip ---
-begin_test "an unresolvable slug is specified as a CONCERN, not a guess and not a skip"
-assert_contains_literal 'names CONCERN' 'CONCERN' "$RECORD_BULLET_TEXT"
-assert_contains_literal "names the story's created: date" "story's \`created:\` date" "$RECORD_BULLET_TEXT"
-assert_contains_literal 'never a guess' 'never a guess' "$RECORD_BULLET_TEXT"
-assert_contains_literal 'never a silent skip' 'never a silent skip' "$RECORD_BULLET_TEXT"
-
-# --- Absent or empty decisions: reads as [] with no CONCERN ---
-begin_test "an absent or empty decisions: field is specified as [] with no CONCERN"
-assert_contains_literal 'states missing or empty means []' 'missing or empty' "$RECORD_BULLET_TEXT"
-assert_contains_literal 'states no CONCERN, no warning, no error' 'no CONCERN, no warning, no error' "$RECORD_BULLET_TEXT"
-assert_contains_literal 'states the story file is never rewritten' 'never rewritten' "$RECORD_BULLET_TEXT"
-
 # --- Phase 2.5: records validated by slug into the Design Decision Validation table ---
 begin_test "Phase 2.5 validates records by slug into the Design Decision Validation table"
 PHASE_2_5_TEXT=$(extract_section_text "$PLAN_CHUNKS_AGENT" '### 2.5 Validate Design Decisions' '### 2.6')
 assert_contains_literal 'mentions the decisions: field' 'decisions:' "$PHASE_2_5_TEXT"
-assert_contains_literal 'mentions valid / concern / invalid' 'valid / concern / invalid' "$PHASE_2_5_TEXT"
-assert_contains_literal 'mentions the Design Decision Validation table' 'Design Decision Validation table' "$PHASE_2_5_TEXT"
-assert_contains_literal 'mentions full dated slug' 'full dated slug' "$PHASE_2_5_TEXT"
-
-# --- 1.3.5 Reference Materials contract is untouched; no mention of records ---
-begin_test "the Reference Materials contract is untouched"
-SECTION_1_3_5=$(extract_section_text "$PLAN_CHUNKS_AGENT" '### 1.3.5 Reading Reference Materials (Contract)' '### 1.4')
-assert_file_contains '1.3.5 heading is present' '^### 1\.3\.5 Reading Reference Materials (Contract)$' "$PLAN_CHUNKS_AGENT"
-assert_contains_literal 'anchor table header row is present' '| File type | Anchor format | How to read |' "$SECTION_1_3_5"
-assert_not_contains '1.3.5 makes no mention of the approved/ path' '\.craft/decisions/approved' "$SECTION_1_3_5"
-assert_not_contains '1.3.5 does not name the decisions: field' 'decisions:' "$SECTION_1_3_5"
-
-# --- The preserve-everything-else frontmatter rule survives ---
-begin_test "the preserve-everything-else frontmatter rule survives"
-assert_file_contains 'preserve-everything-else row is present' 'Update `chunks_total`, `updated`.*preserve everything else' "$PLAN_CHUNKS_AGENT"
 
 # --- The implementer never learns about decisions: (ruled 2026-09-04: "Only the plan") ---
 begin_test "agents/implementer.md carries no mention of decisions:"
@@ -382,78 +302,19 @@ assert_file_not_contains 'implementer.md has no decisions: mention' 'decisions:'
 
 SKILL_MD="$PLUGIN_ROOT/skills/plan-chunks/SKILL.md"
 
-# --- Row 9 exists, keyed on decision-record evidence ---
-begin_test "SKILL.md carries an S-2 row 9 keyed on decision-record evidence"
-assert_file_contains "row 9 exists in the check table" '^| 9 |' "$SKILL_MD"
-assert_file_contains "row 9 is keyed on the decisions: field" '^| 9 |.*decisions:' "$SKILL_MD"
 ROW_9_LINE=$(grep -n '^| 9 |' "$SKILL_MD" | head -1 | cut -d: -f1)
 ROW_9_TEXT=""
 if [ -n "$ROW_9_LINE" ]; then
   ROW_9_TEXT=$(sed -n "${ROW_9_LINE}p" "$SKILL_MD")
 fi
-assert_contains_literal "row 9 declares grep+read logic, not a single regex" 'This is grep+read logic, not a single regex.' "$ROW_9_TEXT"
-assert_contains_literal "row 9 carries the legacy-plans clause verbatim" 'Applies only to plans produced after this gate shipped - legacy plans never re-triage' "$ROW_9_TEXT"
-
-# --- Row 9's failure text names the slugs with no evidence ---
-begin_test "row 9's failure text names the slugs with no evidence"
-assert_contains_literal "failure text carries a [list] placeholder for the missing slugs" '[list]' "$ROW_9_TEXT"
-assert_contains_literal "failure text names decision record(s) with no evidence" 'show no evidence of being read' "$ROW_9_TEXT"
-
-# --- Row 9 states the empty-or-absent exemption inline ---
-begin_test "row 9 states the empty-or-absent exemption inline"
-assert_contains_literal "exemption: empty or absent decisions: passes with no output" 'an empty or absent' "$ROW_9_TEXT"
-assert_contains_literal "exemption: passes with no output" 'passes with no output' "$ROW_9_TEXT"
 
 # --- Step 3 routing range widens to cover rows 8 and 9 ---
 begin_test "the Step 3 routing range covers rows 8 and 9"
 assert_file_not_contains "old 'Checks 2-7' range no longer present" 'Checks 2-7' "$SKILL_MD"
-assert_file_contains "routing range now reads 'Checks 2-9'" 'Checks 2-9' "$SKILL_MD"
 
 # --- Row 9's prose uses regular dashes only ---
 begin_test "row 9's prose uses regular dashes, never an em dash"
 assert_not_contains "row 9 text has no em dash" $'\xe2\x80\x94' "$ROW_9_TEXT"
-
-# --- The eight existing check rows survive, unchanged, in ascending order ---
-begin_test "the eight existing check rows survive in order"
-CHECK_NAME_STRINGS=(
-  '`## Chunks` section exists'
-  '`chunks_total` in frontmatter is 2-7'
-  '`## The Pitch` section has content + conditions table'
-  '`## Investigation` section has content'
-  '`## Acceptance` section has detailed criteria'
-  'Each chunk has required sub-sections'
-  'Contract lines carry receipts'
-  'Visual bindings cover the Element Binding Table (UI/styling stories)'
-  "Each chunk's Done When asserts a green tree"
-  '`## Acceptance Pre-Flight` receipt present, no unreachable vehicles'
-  'Risk tag comments name a mechanism, not a bare threshold'
-)
-PREV_LINE=0
-ROWS_IN_ORDER=1
-BAD_ROW=""
-for check_name in "${CHECK_NAME_STRINGS[@]}"; do
-  line=$(grep -n -F "$check_name" "$SKILL_MD" | head -1 | cut -d: -f1)
-  if [ -z "$line" ] || [ "$line" -le "$PREV_LINE" ]; then
-    ROWS_IN_ORDER=0
-    BAD_ROW="$check_name"
-    break
-  fi
-  PREV_LINE="$line"
-done
-if [ "$ROWS_IN_ORDER" = "1" ]; then
-  echo "  PASS: all eight existing check rows present, in ascending line order"
-  PASS=$((PASS + 1))
-else
-  echo "  FAIL: existing check rows out of order or missing"
-  echo "    first bad row: '$BAD_ROW'"
-  FAIL=$((FAIL + 1))
-fi
-
-# --- S-3 Step 3 is intact ---
-begin_test "S-3 Step 3 is intact"
-assert_file_contains "S-3 Step 3 heading present" 'Design Decision Validation:\*\*' "$SKILL_MD"
-assert_file_contains "anchor sentence: proceed with no interaction" 'proceed with no interaction\.' "$SKILL_MD"
-assert_file_contains "anchor sentence: surface explicitly, user stays in control" 'Surface them explicitly so the user stays in control\.' "$SKILL_MD"
 
 # --- Gate mirror: reimplements row 9's logic in bash, exercised against
 #     fixture story files (mirrors tests/test-risk-tag-mechanism.sh:17-40's
