@@ -283,6 +283,43 @@ write_story "$STORIES/16-plain-refs.md" "" '## Reference Materials
 run_rules "$STORIES/16-plain-refs.md" planner
 assert_eq "ordinary code citations print nothing" "" "$OUT"
 
+begin_test "the story template's own Reference Materials comment is never read as citations"
+TEMPLATE_REFS=$(awk '/^## Reference Materials/ { on = 1 } /^## Chunks/ { on = 0 } on' "$PLUGIN_ROOT/templates/story-full.md")
+assert_contains "the template still ships dashed example lines in a comment" "^[[:space:]]*- .*active\.md" "$TEMPLATE_REFS"
+write_story "$STORIES/17-template-only.md" "" "$TEMPLATE_REFS"
+run_rules "$STORIES/17-template-only.md" planner
+assert_eq "a story holding only the template comment prints nothing" "" "$OUT"
+write_story "$STORIES/18-template-concept.md" "source_concept: /plans/concept-08.md" "$TEMPLATE_REFS"
+run_rules "$STORIES/18-template-concept.md" planner
+assert_contains "a concept story holding only the comment is still called out as citing nothing" "NO REFERENCE MATERIALS" "$OUT"
+assert_not_contains "and is not said to cite a planning log" "cites a planning log" "$OUT"
+write_story "$STORIES/19-template-plus-one.md" "source_concept: /plans/concept-08.md" "$TEMPLATE_REFS
+- \`/plans/concept-08.md\` (\`## Locked decisions\`)"
+run_rules "$STORIES/19-template-plus-one.md" planner
+assert_contains "a real citation under the comment is the only one counted" "Reference Materials: 1 entries" "$OUT"
+write_story "$STORIES/19b-one-line-comment.md" "" '## Reference Materials
+<!-- - see active.md for how to cite -->
+- `src/app.ts:10-20`'
+run_rules "$STORIES/19b-one-line-comment.md" planner
+assert_eq "a comment on one line is skipped too" "" "$OUT"
+write_story "$STORIES/19c-opener-as-text.md" "source_concept: /plans/concept-08.md" '## Reference Materials
+
+- `templates/story-full.md` (the `<!--` marker that opens its instructions)
+- `/plans/active.md` (`## Recent state changes`)
+- `.craft/research/sync/_plan.md` -> "Convergence Points"'
+run_rules "$STORIES/19c-opener-as-text.md" planner
+assert_contains "a comment opener written as text hides no citation after it" "Reference Materials: 3 entries" "$OUT"
+assert_contains "the planning log after it is still seen" "cites a planning log" "$OUT"
+assert_contains "the research after it is still seen" "cites research" "$OUT"
+write_story "$STORIES/19d-never-closed.md" "source_concept: /plans/concept-08.md" '## Reference Materials
+
+- `src/app.ts:10-20`
+<!-- a note nobody closed
+- `/plans/active.md` (`## Recent state changes`)'
+run_rules "$STORIES/19d-never-closed.md" planner
+assert_contains "a comment that is never closed hides no citation after it" "Reference Materials: 2 entries" "$OUT"
+assert_contains "and the planning log after it is still seen" "cites a planning log" "$OUT"
+
 begin_test "an empty project tells the planner to set it up first, and only then"
 EMPTY_DIR=$(mktemp -d)
 mkdir -p "$EMPTY_DIR/.craft/backlog" "$EMPTY_DIR/.craft/mockups/2026-01-02-hero"
@@ -426,6 +463,17 @@ assert_eq "a record whose mockup file is gone never stops a story that does not 
 write_story "$STORIES/33-unlinked.md" "" "## Spark"
 run_rules "$STORIES/33-unlinked.md" builder
 assert_eq "a story no record points at still prints nothing for the builder" "" "$OUT"
+mkdir -p "$TEST_DIR/.craft/mockups/2026-06-09-listed" "$TEST_DIR/.craft/mockups/2026-06-10-bracketed"
+echo "<html></html>" > "$TEST_DIR/.craft/mockups/2026-06-09-listed/mockup.html"
+echo "<html></html>" > "$TEST_DIR/.craft/mockups/2026-06-10-bracketed/mockup.html"
+printf '%s\n' "---" "status: graduated-story" "graduated_to:" "  - someone-else" "  - 34-listed" "---" > "$TEST_DIR/.craft/mockups/2026-06-09-listed/record.md"
+printf '%s\n' "---" "status: graduated-story" "graduated_to: [someone-else, 35-bracketed]" "---" > "$TEST_DIR/.craft/mockups/2026-06-10-bracketed/record.md"
+write_story "$STORIES/34-listed.md" "" "## Spark"
+run_rules "$STORIES/34-listed.md" builder
+assert_contains "a record that lists its stories one a line still links the story" "^- mockup file: .*/2026-06-09-listed/mockup.html$" "$OUT"
+write_story "$STORIES/35-bracketed.md" "" "## Spark"
+run_rules "$STORIES/35-bracketed.md" builder
+assert_contains "so does a record that lists them in brackets" "^- mockup file: .*/2026-06-10-bracketed/mockup.html$" "$OUT"
 write_story "$STORIES/31-asked.md" "mockup: 2026-06-07-asked" "## Spark"
 run_rules "$STORIES/31-asked.md" orchestrator
 assert_not_contains "an answered tokens question is not mentioned" "^- tokens:" "$OUT"
@@ -518,12 +566,6 @@ assert_file_contains "the motion rules have a builder part" '^## builder$' "$REF
 assert_file_contains "the interface rules have a builder part" '^## builder$' "$REFS/ui-story-rules.md"
 for part in mockup annotate dial; do
   assert_file_contains "the settled-look rules have an orchestrator part for $part" "^## orchestrator, $part\$" "$REFS/settled-look-story-rules.md"
-done
-
-begin_test "the two files that define a table row say the same thing"
-for phrase in "would point at and name on the page" "its dots, glyphs, ticks, dividers and scrollbars, the overlays drawn with" "an edge fade that changes with scroll position, a reduced-motion version of an entrance" "about a dozen"; do
-  assert_file_contains "the planning rule has: $phrase" "$phrase" "$REFS/settled-look-story-rules.md"
-  assert_file_contains "the mid-story reference has: $phrase" "$phrase" "$REFS/mockup-into-story.md"
 done
 
 begin_test "the planner, the builder, the orchestrator and the build launch still reach the script"

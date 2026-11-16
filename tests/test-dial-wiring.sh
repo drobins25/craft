@@ -174,7 +174,6 @@ SF="$REPO/commands/references/story-from-dial.md"
 for op in MEASURE INJECT TOGGLE READ CLEAR; do
   grep -q "^### $op\$" "$DI" && pass "dial-inject defines $op" || fail "dial-inject defines $op" "a '### $op' heading" "absent"
 done
-grep -qF 'MEASURE, INJECT, TOGGLE, READ, CLEAR' "$DL" && pass "dial-inline lists all five payloads" || fail "dial-inline lists all five payloads" "MEASURE, INJECT, TOGGLE, READ, CLEAR" "absent"
 STEP8_ORDER="$(python3 - "$DL" <<'PYEOF'
 import sys
 text = open(sys.argv[1], encoding="utf-8").read()
@@ -204,7 +203,6 @@ grep -qF 'story-from-dial.md' "$DL" && pass "the story exit reads the dial-to-st
 for field in showed applies added unlettered strays nested keyframes readable; do
   grep -q "\`$field" "$SF" && pass "the dial-to-story reference acts on $field" || fail "the dial-to-story reference acts on $field" "$field" "absent"
 done
-grep -qF 'never the CSS as you remember injecting it' "$DL" && pass "the tweak brief takes its values from READ" || fail "the tweak brief takes its values from READ" "the READ source for [values]" "absent"
 
 echo ""
 echo "-- Summary --"

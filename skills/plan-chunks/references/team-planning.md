@@ -7,7 +7,7 @@ How to orchestrate parallel story planning using Claude Code agent teams. This i
 ## Prerequisites
 
 - **Env var:** `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` must be set
-- **Detection:** Check in Phase 0.2 of the orchestrator (SKILL.md)
+- **Detection:** Check in Batch Planning step 5 of the orchestrator (SKILL.md)
 - **Fallback:** If not set, use Task subagent batches (see SKILL.md Batch Planning step 5)
 
 ---
@@ -63,6 +63,8 @@ Task tool:
   1. Message teammates with: story name, files you plan to modify/create, key decisions
   2. Check teammate messages for file overlap or coordination needs
   3. Note any unresolved coordination in your Teammate Coordination Notes section
+
+  Batch mode: nobody can answer a PLAN FORK or a RESEARCH REQUEST during this run. Your instructions for batch mode say what to do instead.
 
   Read the story, understand what it needs, then research the codebase and plan chunks.
   Return findings in your structured output format."

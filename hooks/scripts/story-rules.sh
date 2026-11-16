@@ -322,12 +322,43 @@ EOF_WRITTEN
 }
 
 # --- A story that came from planning, or cites a planning log or research --
+# strip_comments - drops HTML comments from its input, whether one sits on a
+# single line or spans several. The story template ships its instructions as
+# comments, and those are never the story's own content. An opener counts only
+# when it is outside a code span and a closer follows it: one written as text,
+# or one that is never closed, is left exactly as it is, so it can never hide
+# the lines after it.
+strip_comments() {
+  awk '
+    { text = text $0 "\n" }
+    END {
+      out = ""
+      while ((at = index(text, "<!--")) > 0) {
+        before = substr(text, 1, at - 1)
+        n = split(before, parts, "\n")
+        line = parts[n]
+        ticks = gsub(/`/, "`", line)
+        rest = substr(text, at + 4)
+        shut = index(rest, "-->")
+        if (ticks % 2 == 1 || shut == 0) {
+          out = out before "<!--"
+          text = rest
+          continue
+        }
+        out = out before
+        text = substr(rest, shut + 3)
+      }
+      printf "%s", out text
+    }'
+}
+
 citations_block() {
   [ "$ROLE" = "planner" ] || return 0
   local concept refs entries log research rules
   concept=$(field source_concept)
   # Read from the whole story: on a re-plan the section can sit below the plan.
-  refs=$(awk '/^## Reference Materials/ { on = 1; next } /^## / { on = 0 } on' "$STORY")
+  # Comments go first, so the template's example lines are never counted.
+  refs=$(awk '/^## Reference Materials/ { on = 1; next } /^## / { on = 0 } on' "$STORY" | strip_comments)
   entries=$(printf '%s\n' "$refs" | grep -c '^[[:space:]]*[-*][[:space:]]' || true)
   log=$(printf '%s\n' "$refs" | grep -c 'active\.md' || true)
   research=$(printf '%s\n' "$refs" | grep -c '\.craft/research/' || true)
@@ -362,7 +393,7 @@ motion_block() {
   local line rules catalog
   line=$(printf '%s\n' "$BODY" | grep -m1 -E '^[[:space:]]*([-*][[:space:]]+)?\*\*Motion([[:space:]]*\([^)]*\))?:\*\*' || true)
   [ -n "$line" ] || return 0
-  printf '%s\n' "$line" | grep -q -i -E ':\*\*[[:space:]]*(none|n/a)([^a-z]|$)' && return 0
+  printf '%s\n' "$line" | grep -q -i -E ':\*\*[[:space:]]*(none|no (motion|animation)|n/a)([^a-z]|$)' && return 0
   # Neither does a line with nothing after the label, or only the template's placeholder.
   printf '%s\n' "$line" | grep -q -E ':\*\*[[:space:]]*(\[[^]]*\])?[[:space:]]*$' && return 0
   rules=$(part motion-story-rules.md)
@@ -478,7 +509,8 @@ points_here() {
   local keys
   keys=$(story_keys)
   # One destination per line: a value may list several, split by ; or ,
-  # and each may carry a note in brackets.
+  # or written as a list (in square brackets, or one item a line), and each
+  # may carry a note in brackets.
   while IFS= read -r to; do
     to=$(printf '%s' "$to" | sed 's/[[:space:]]*(.*$//; s/^[[:space:]]*//; s/[[:space:]]*$//; s/\.md$//')
     to="${to%/}"; to="${to##*/}"
@@ -489,8 +521,8 @@ points_here() {
 $keys
 EOF_KEYS
   done <<EOF_TO
-$(awk '/^graduated_to:/ { sub(/^graduated_to:[[:space:]]*/, ""); print; exit }' "$1" 2>/dev/null \
-    | tr -d '\r"' | tr -d "'" | sed 's/[[:space:]]#.*$//' | sed 's/([^)]*)//g' | tr ';,' '\n\n')
+$(awk '/^graduated_to:/ { v = $0; sub(/^graduated_to:[[:space:]]*/, "", v); print v; on = 1; next } on && /^[[:space:]]+-[[:space:]]/ { v = $0; sub(/^[[:space:]]+-[[:space:]]*/, "", v); print v; next } on { exit }' "$1" 2>/dev/null \
+    | tr -d '\r"[]' | tr -d "'" | sed 's/[[:space:]]#.*$//' | sed 's/([^)]*)//g' | tr ';,' '\n\n')
 EOF_TO
   return 1
 }

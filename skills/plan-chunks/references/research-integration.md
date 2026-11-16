@@ -86,8 +86,10 @@ Task tool:
 
   [OPTIONAL: Starting context from orchestrator — validate it THROUGH the map slice's ranged reads, then deepen. Provided context means read NARROWER, never skip orientation — the FIRST ACTION above still runs first:
     APPROACH: [value]
-    DECISIONS: [value]
     KEY_FILES: [value]]
+
+  [OPTIONAL, when DECISIONS: is given - decided by the user: check each against the code as you do the story's own decisions, mark it valid, concern or invalid, and never quietly change one:
+    DECISIONS: [value]]
 
   Read the story, understand what it needs, then research the codebase and plan chunks.
   If the story's `## Visual Direction` has an Element Binding Table, verify each row's token against tokens.yaml and bind every row a chunk builds as a `[visual-source:]` Contract; route TBD rows to the Pitch conditions table.
@@ -96,7 +98,7 @@ Task tool:
 
 **Include sibling context:** Paste the sibling context block from Phase 0 directly into the prompt. If no relevant siblings, include: `"**Sibling context:** No relevant siblings — stories appear unrelated."`
 
-**Include orchestrator context:** If args include `APPROACH:`, `DECISIONS:`, or `KEY_FILES:`, add the optional starting context block.
+**Include orchestrator context:** If args include `APPROACH:` or `KEY_FILES:`, add the optional starting context block. If they include `DECISIONS:`, add the decisions block below it.
 
 ---
 
@@ -135,6 +137,8 @@ Task tool:
   See SKILL.md Batch Planning, step 6 "Pass contracts forward" for the exact format:
   Goal + Files + Contracts from each predecessor chunk,
   with CRITICAL alignment instructions.]
+
+  Batch mode: nobody can answer a PLAN FORK or a RESEARCH REQUEST during this run. Your instructions for batch mode say what to do instead.
 
   Read the story, understand what it needs, then research the codebase and plan chunks.
   If the story's `## Visual Direction` has an Element Binding Table, verify each row's token against tokens.yaml and bind every row a chunk builds as a `[visual-source:]` Contract; route TBD rows to the Pitch conditions table.
