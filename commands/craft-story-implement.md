@@ -583,7 +583,13 @@ fi
 
    **If PASSED (or PARTIAL on non-final chunk):**
    - **Gate reconcile beat:** Read `${CLAUDE_PLUGIN_ROOT}/commands/references/gate-reconcile.md` and run it inline (NOT via the Skill tool). Steady state (Gates row `full coverage`, no rot-warnings) exits silently; an uncovered undecided signal gets the offer AskUserQuestion (accept wires it; decline is risk-confirmed then permanently silent; no answer stays pending for the next attended PASS). This runs BEFORE complete-chunk.sh and never fires on FAILED.
-   - Run complete-chunk.sh: `bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/complete-chunk.sh`
+   - **Complete the chunk and tick its Done When boxes.**
+     - If this chunk's builder report is in your context as it returned (the latest one, when the builder was resumed after a contract mismatch), write the open-box file, then run `bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/complete-chunk.sh --not-done`. A summary of the report does not count as the report.
+     - If you no longer have that report (after a compaction, or in a resumed session), run the same script with no flag. No flag means no box changes.
+     - Write `${CRAFT_PROJECT_ROOT:-.}/.craft/.chunk-not-done.txt` with the Write tool, never through a shell command, so the builder's words are never typed into one. First line `story: ` plus the story file's name without `.md`; second line `chunk: ` plus the chunk number; then one `box: ` line per box to leave open, each followed by its `reason: ` line. Read the chunk's Done When list from the story file now, never from memory, and copy each `box:` exactly as the story's box line reads after `- [ ] ` (for a wrapped item, the box line alone). `reason:` is the builder's own reason from its Not done section, on one line. Nothing left open means the file holds only `story:` and `chunk:`.
+     - Which boxes to list, leaning one way only. A Not done item about one of the chunk's open boxes lists that box. An item that might be about a box but cannot be matched with confidence lists every box it might be about. An item about none of the boxes lists nothing. An item drops off the list only when a fix pass after it shows the item was done before the chunk passed. In doubt, list the box: it stays open, because a false tick is the one mistake nothing later catches.
+     - Never tick or edit a box yourself, and never hand the builder the write.
+     - When the script prints `Done When: chunk <N> - no boxes changed (...)`, tell the user in one line under the chunk number. The builder's Deviations and Not done notes are still shown when the chunk returns.
    - Write continuation breadcrumb for next chunk:
    ```bash
    cat > "${CRAFT_PROJECT_ROOT:-.}/.craft/.continuation" << CRUMB
@@ -600,7 +606,7 @@ fi
 
    **If FAILED:**
    > **FAILED path:** Read `${CLAUDE_PLUGIN_ROOT}/commands/references/validate-fix-loop.md` for the error routing loop (error classification, REFINE_COUNT tracking, fix skill invocation, re-validation, and escalation). Follow its instructions.
-   - After the loop exits with PASSED, return to the PASSED path above (run complete-chunk.sh, write breadcrumb, continue).
+   - After the loop exits with PASSED, return to the PASSED path above (do the passed-chunk step above: hand over the open boxes, complete the chunk, write breadcrumb, continue).
    - After the loop exits with escalation (REFINE_COUNT >= 4), offer rollback or stop.
 
    **ALL tests must pass. Never dismiss failures as "unrelated to this story." FAILED means FAILED - no overrides.**
@@ -1135,11 +1141,13 @@ If `.state` file is corrupted or missing:
 
 > "State file is missing. Reconstructing from story file...
 >
-> Based on chunk markers:
+> Based on the story's chunk counters:
 > - Chunks 1-2 are marked complete
 > - Chunk 3 is unmarked
 >
 > Start from Chunk 3?"
+
+Read built chunks from the story's `chunks_complete` and `current_chunk` frontmatter, never from checkboxes. An open Done When box in a finished chunk is a note from the builder about something it could not do or check; it never means the chunk is unbuilt.
 
 ## Remember
 
@@ -1160,5 +1168,5 @@ If `.state` file is corrupted or missing:
 - **zsh compatibility** — Never use `status` as a bash variable name. It is read-only in zsh (alias for `$?`). Use `st`, `story_status`, `exit_code`, etc. instead.
 - **Use create-checkpoint.sh** for chunk state snapshots (git commits happen via complete-story.sh)
 - **Always salvage before rollback** — run `salvage-partial-work.sh` before any `git restore`/`git checkout` to preserve partial work
-- **After chunk-validator returns, parse `**Status:**` and route immediately.** PASSED -> complete-chunk.sh -> next chunk. FAILED -> Read references/validate-fix-loop.md -> fix -> re-validate. Do not stop between steps.
+- **After chunk-validator returns, parse `**Status:**` and route immediately.** PASSED -> the passed-chunk step (open-box handoff, then complete the chunk) -> next chunk. FAILED -> Read references/validate-fix-loop.md -> fix -> re-validate. Do not stop between steps.
 - **The story is not done until Step 5 completes.** Chunk validation passing is a gate to the NEXT chunk, not the end. Only Step 5 (story completion) marks the story done.
