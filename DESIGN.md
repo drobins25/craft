@@ -330,7 +330,7 @@ The band reads `.craft/.global-state`, the active cycle's `.state`, story files'
 | `move-story.sh` | Move story between backlog and cycle |
 | `start-cycle.sh` | Set active cycle in .global-state |
 | `start-story.sh` | Set active story, enable writes |
-| `complete-chunk.sh` | Mark chunk done, update .state |
+| `complete-chunk.sh` | Mark chunk done, update .state; ticks the passed chunk's Done When boxes when the build loop passes the open-box list |
 | `complete-story.sh` | Mark story complete, disable writes |
 | `complete-cycle.sh` | Complete cycle, trigger learnings |
 | `start-workflow-session.sh` | Initialize a workflow session directory and state |

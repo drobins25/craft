@@ -2,6 +2,10 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.19.1 - 2026-11-16
+
+- Added ticking of a chunk's Done When boxes when it passes. Anything the builder said it could not do or check stays open, with its reason written beside it, so an open box in a finished story always points at something real.
+
 ## 2.19.0 - 2026-11-15
 
 - Rewrote the heart of craft: the loop that plans a story and builds it. We threw out three quarters of the prompts and the builds got better. The planner and builder now run on 508 lines where they ran on 2,268, and they leave review a lot less to catch. We rebuilt two stories craft had already shipped, four times each way. Of the bugs review had found in the originals, the new prompts dodged 17 of 20 and 5 of 8. The old ones dodged 9 of 20 and 2 of 8.
