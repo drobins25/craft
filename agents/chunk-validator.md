@@ -250,7 +250,7 @@ Assignment is enforced primarily at plan time (the binding is a Contract the imp
 
 After all checks resolve, derive the coverage summary for the report's `Gates` row from the Pre-Check stack fingerprint. Coverage keys on OUTCOMES, never on manifest presence:
 
-- A **non-package.json manifest** is **covered** when some verified gate that plausibly exercises its toolchain resolved PASS or WARN (judge from the gate's command and name: `dotnet` → `*.csproj`/`*.sln`, `go` → `go.mod`, `cargo` → `Cargo.toml`, `make` → `Makefile`, `composer` → `composer.json`, python tools → `pyproject.toml`). Otherwise it is **uncovered**.
+- A **non-package.json manifest** is **covered** when some verified gate that plausibly exercises its toolchain resolved PASS or WARN (judge from the gate's command and name: `dotnet` → `*.csproj`/`*.sln`, `go` → `go.mod`, `cargo` → `Cargo.toml`, `make` → `Makefile`, `composer` → `composer.json`, python tools → `pyproject.toml`, `mvn` → `pom.xml`, `gradle` → `build.gradle`/`build.gradle.kts`, ruby tools (`bundle`, `rake`, `rspec`) → `Gemfile`, `mix` → `mix.exs`, `deno` → `deno.json`/`deno.jsonc`). Otherwise it is **uncovered**.
 - The **package.json** manifest is **covered** when at least one built-in check resolved PASS, WARN, or FAIL. If ALL built-in checks resolved SKIP, package.json is **uncovered** — presence alone never covers. Check 8 (Citation Scan) is EXCLUDED from this arithmetic and from the Gates row's ran/skipped counts entirely — it exercises no toolchain and must never make a manifest count as covered.
 
 Row value:

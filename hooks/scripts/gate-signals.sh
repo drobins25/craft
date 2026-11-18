@@ -6,7 +6,9 @@
 #
 #   scan (default)     -> print one line per manifest glob PRESENT in the
 #                         project (package.json, *.csproj, *.sln, composer.json,
-#                         pyproject.toml, go.mod, Cargo.toml, Makefile):
+#                         pyproject.toml, go.mod, Cargo.toml, Makefile, pom.xml,
+#                         build.gradle, build.gradle.kts, Gemfile, mix.exs,
+#                         deno.json, deno.jsonc):
 #                           manifest <glob> <count>                  (unrecorded)
 #                           manifest <glob> <count> <state> <date>   (recorded)
 #                         where <state> is the reconcile record (declined|wired)
@@ -47,6 +49,13 @@ MANIFEST_GLOBS=(
   "go.mod"
   "Cargo.toml"
   "Makefile"
+  "pom.xml"
+  "build.gradle"
+  "build.gradle.kts"
+  "Gemfile"
+  "mix.exs"
+  "deno.json"
+  "deno.jsonc"
 )
 
 # Dirs that hold vendored/generated copies of manifests, never the project's own.
