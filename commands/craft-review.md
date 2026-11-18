@@ -1,18 +1,17 @@
 ---
 name: review
-description: "PR review skill - invokes pr-reviewer-expert agent against branch diff, story commits, or full project audit. Every run on your own work leaves a record in .craft/reviews/, clean or not, and every finding gets a proposed door; a review of someone else's PR leaves nothing in your project."
+description: "PR review skill - invokes pr-reviewer-expert agent against branch diff, any changes you name, or full project audit. Every run on your own work leaves a record in .craft/reviews/, clean or not, and every finding gets a proposed door; a review of someone else's PR leaves nothing in your project."
 ---
 
 # Review
 
-Run a PR-style code review using the crystallized pr-reviewer-expert agent. Three approaches based on what you want reviewed.
+Run a PR-style code review using the crystallized pr-reviewer-expert agent. The two modes below are shortcuts; anything else the user names in their own words is reviewed too.
 
 ## Modes
 
 | Mode | Trigger | What gets reviewed |
 |------|---------|-------------------|
 | **Branch** (default) | `/craft:review` | Everything this branch's pull request would contain, committed or not |
-| **Story** | `/craft:review story [name]` | Commits from a specific story |
 | **Project** | `/craft:review project [path]` | Full codebase or subsystem audit (no diffs) |
 
 Optional focus flag: `--focus security|consistency|performance|correctness` (default: correctness + security)
@@ -26,7 +25,6 @@ Optional review strategy: `--maze` enables perpendicular maze review (architect 
 **Parse args to determine review scope:**
 
 - No args or `branch` → **Branch mode**
-- `story` or `story <name>` → **Story mode**
 - `project` or `project <path>` → **Project mode**
 
 When the user says what to review in their own words, such as a PR link, a folder or "whatever would be in the PR", review exactly that, record it under the mode it fits, and tell the user in one line what you resolved it to. This matters because the user knows what they want reviewed, and the arguments above are shortcuts, not limits.
@@ -53,20 +51,6 @@ If nothing differs from the base, say so in one line naming the base, and stop t
 
 > "Large diff ([N] lines across [M] files). I'll review in batches by directory to keep findings sharp."
 
-**Story mode:**
-
-If no story name provided, check `.craft/.global-state` for CURRENT_STORY. If none active, use AskUserQuestion to pick from completed/active stories in the current cycle.
-
-```bash
-# Read story file to find associated commits
-# Look for commits that reference the story name
-git log --oneline --all --grep="[story-name]"
-
-# If no story-tagged commits found, ask user for commit range
-```
-
-Get cumulative diff across those commits. Also read the story file itself so the agent knows intent.
-
 **Project mode:**
 
 No diff. Instead gather:
@@ -88,11 +72,11 @@ Build the prompt with:
 
 1. **Mode** - what kind of review this is
 2. **Context** - locked.md content, project.md content, quality.yaml content
-3. **Diff** - the actual diff (branch/story modes) or file list (project mode)
-4. **Changed files** - list of files that changed (branch/story modes)
+3. **Diff** - the actual diff, or the file list in project mode
+4. **Changed files** - list of files that changed (every mode but project)
 5. **Commit messages** - so the agent understands intent
 6. **Focus** - which lens to prioritize
-7. **Story intent** - the story file content (story mode only)
+7. **Story intent** - the story file content, when the review is of a story
 
 **Prompt structure for the agent:**
 
@@ -338,8 +322,6 @@ Read `${CLAUDE_PLUGIN_ROOT}/commands/references/review-record.md` and run its cl
 ```bash
 /craft:review                          # Branch review (default, standard mode)
 /craft:review --maze                   # Branch review with maze architecture
-/craft:review story auth-flow          # Review a specific story's changes
-/craft:review story --maze             # Story review with maze architecture
 /craft:review project                  # Full project audit (standard only)
 /craft:review project src/api          # Audit a subsystem
 /craft:review --focus security         # Branch review, security focus
