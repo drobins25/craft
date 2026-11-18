@@ -235,10 +235,6 @@ if has_planning:
   Extract content above the first `---` divider (after frontmatter) → planning_focus
   # This is the "## Focus" section — 3-5 lines of current roadmap state
   Calculate days since planning_updated → planning_age_days
-
-  # Find next open concept for roadmap-next suggestions
-  Read "$PROJECT/.craft/planning/README.md"
-  Parse the Roadmap table → find first row with status "open" → next_concept_name, next_concept_file
 ```
 
 ### Step 4: Build Contextual Options
@@ -564,47 +560,6 @@ craft runs autonomously through a cycle (cruise 🚀) - it chains chunks and sto
 **After story complete:**
 - Log summary, continue to next story
 - No user prompt
-
-**After cycle complete:**
-> "🎉 **Cycle complete!**
->
-> **Stories:** [N] implemented
-> **Chunks:** [M] total
-> **Time:** [duration]
-> **Cost:** $X.XX
->
-> **Summary:**
-> - [Story 1]: ✓ [brief outcome]
-> - [Story 2]: ✓ [brief outcome]
-> - [Story 3]: ✓ [brief outcome]
->
-> **Patterns to review:** [N] (collected during cruise)
->
-> What's next?"
-
-**Roadmap-next suggestion:** Before presenting the AskUserQuestion, check if `has_planning` is true and `next_concept_name` is set. If so, add the roadmap suggestion to the cycle complete message and make it the recommended first option.
-
-Use **AskUserQuestion**:
-```
-question: "Cycle complete. What's next?"  # If has_planning: prepend "> Roadmap: '[next_concept_name]' is next.\n\n"
-header: "Next"
-options:
-  # If has_planning and next_concept_name:
-  - label: "Start [next_concept_name] (Recommended)"
-    description: "Next concept from your roadmap"
-    → routes to: craft:craft-planning with args "create-stories [next_concept_file]"
-  - label: "Run analysis"
-    description: "QA, UX, Creative, or Style checks"
-  - label: "Review new patterns to lock"
-    description: "Formalize patterns from this cycle"
-  # If NOT has_planning:
-  - label: "Start a new cycle"
-    description: "Begin planning next work"
-  - label: "Take a break"
-    description: "Pause for now"
-```
-
-**If user provides custom text:** Ask a clarifying AskUserQuestion to understand their intent.
 
 ## Remember
 
