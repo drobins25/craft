@@ -762,7 +762,7 @@ Failures route to `refine-chunk` (build/lint) or `test-fix` (tests). FAIL is FAI
 
 ### Beyond npm: verified command gates
 
-The built-ins auto-detect npm-shaped projects. For everything else, .NET, Go, Python, Rust, Make, monorepos, craft never guesses. It measures what it can see and says what it can't.
+The built-ins auto-detect npm-shaped projects. For everything else, .NET, Go, Python, Rust, Java, Ruby, Elixir, Deno, Make, monorepos, craft never guesses. It measures what it can see and says what it can't.
 
 - **A coverage line on every report.** A fast probe fingerprints which toolchain manifests your repo has. When every one is measured, the `Gates` row reads `full coverage`; otherwise it names what isn't.
 - **One real question, once.** When a chunk passes while a toolchain sits unmeasured, craft asks whether to wire up a gate for it. Decline and it confirms what you're waiving, then never asks about that toolchain again. No answer means the question returns next time; a timeout is not a decision. Autonomous runs ask at launch, while you're still at the keyboard.

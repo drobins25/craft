@@ -382,7 +382,7 @@ flowchart TD
 
     ARCHIVE --> SUMMARY["Step 5: Cycle Complete Summary<br/>Stories, Duration,<br/>Bugs filed (only when any)"]
 
-    SUMMARY --> NEXT["AskUserQuestion:<br/>• Start new cycle<br/>• Review backlog<br/>• Take a break"]
+    SUMMARY --> NEXT["AskUserQuestion:<br/>• Review the cycle (Recommended)<br/>• Review the full diff<br/>• Not now"]
 ```
 
 ---

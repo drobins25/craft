@@ -2,6 +2,12 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.19.2 - 2026-11-17
+
+- Changed the question at the end of a cycle. Craft now asks whether to run a Craft review on the cycle you just finished, with a review of everything your branch's pull request would contain as the second choice. The old Start new cycle, Review backlog and Take a break choices are gone.
+- Fixed Java, Ruby, Elixir and Deno projects showing full coverage when nothing checked them. Craft now notices Maven, Gradle, Ruby, Elixir and Deno projects and offers once to set up a check for them, the same way it does for .NET, Go, Python and Rust.
+- Removed the story shortcut from `/craft:review`. To review one story, ask in your own words, like "review the checkout story". Craft works out that story's changes even when your commit messages never name it, where the shortcut searched commit messages and came back empty.
+
 ## 2.19.1 - 2026-11-16
 
 - Added ticking of a chunk's Done When boxes when it passes. Anything the builder said it could not do or check stays open, with its reason written beside it, so an open box in a finished story always points at something real.

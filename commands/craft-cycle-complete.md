@@ -188,20 +188,23 @@ ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/update-global-state.sh RUN_MODE ""
 > **Duration:** [start] → [end]
 > Bugs filed: <N> (include this line only when the walkthrough filed any)
 >
-> **What's next?"
+> **Run a Craft review on the cycle we just completed?"
 
 Use **AskUserQuestion**:
 ```yaml
-question: "Cycle complete. What's next?"
-header: "Next"
+question: "Run a Craft review on the cycle we just completed?"
+header: "Review"
 options:
-  - label: "Start new cycle"
-    description: "Create cycle from backlog or new work"
-  - label: "Review backlog"
-    description: "See what's queued up"
-  - label: "Take a break"
+  - label: "Review the cycle (Recommended)"
+    description: "A Craft review of everything this cycle built"
+  - label: "Review the full diff"
+    description: "Everything this branch's pull request would contain, committed or not"
+  - label: "Not now"
     description: "Done for now"
 ```
+
+**Review the cycle** → invoke `craft:craft-review` using the Skill tool and ask it to review the cycle that just completed, by its title.
+**Review the full diff** → invoke `craft:craft-review` using the Skill tool with no arguments.
 
 ---
 

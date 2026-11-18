@@ -45,6 +45,23 @@ assert_not_contains "absent go.mod emits no line" "go.mod" "$OUT"
 rm -rf "$TR"
 echo ""
 
+# --- scan: JVM, Ruby, Elixir and Deno manifests ---
+begin_test "scan reports Maven, Gradle, Ruby, Elixir and Deno manifests"
+TR=$(new_root)
+mkdir -p "$TR/api" "$TR/svc" "$TR/web"
+touch "$TR/pom.xml" "$TR/api/build.gradle" "$TR/svc/build.gradle.kts" \
+  "$TR/Gemfile" "$TR/mix.exs" "$TR/deno.json" "$TR/web/deno.jsonc"
+OUT=$(run_signals "$TR" scan)
+assert_contains "pom.xml reported" "manifest pom.xml 1" "$OUT"
+assert_contains "build.gradle reported" "manifest build.gradle 1" "$OUT"
+assert_contains "build.gradle.kts reported" "manifest build.gradle.kts 1" "$OUT"
+assert_contains "Gemfile reported" "manifest Gemfile 1" "$OUT"
+assert_contains "mix.exs reported" "manifest mix.exs 1" "$OUT"
+assert_contains "deno.json reported" "manifest deno.json 1" "$OUT"
+assert_contains "deno.jsonc reported" "manifest deno.jsonc 1" "$OUT"
+rm -rf "$TR"
+echo ""
+
 # --- scan: prune list ---
 begin_test "scan excludes node_modules"
 TR=$(new_root)

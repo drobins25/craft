@@ -1033,10 +1033,10 @@ Status indicators:
 
 **After completing a cycle:**
 ```
-"Cycle complete! What's next?"
-○ Start a new cycle
-○ Run analysis (QA, UX, Creative, Style)
-○ Review backlog
+"Run a Craft review on the cycle we just completed?"
+○ Review the cycle (Recommended)
+○ Review the full diff
+○ Not now
 ```
 
 **Commands as shortcuts:**
