@@ -28,19 +28,16 @@ Include inferred type tags where possible. If there's enough context to classify
 
 What each reply does:
 
-- **A yes** creates the cycle with these titles: continue to Step R2.
+- **A yes** saves these titles as the cycle's stories: continue to Step R2.
 - **Adding, changing or removing titles** edits the list and shows it again, ending on the same question.
 - **A reply that is none of these** gets the same question back, with the list unchanged. Never assume what it means.
 
-### Step R2: Create Cycle and Story Files
+### Step R2: Write Story Files
 
-1. **Create cycle** using `create-cycle.sh`. If the cycle was inferred from a planning concept (verbatim-quote rule per craft-cycle-design.md Step 1), pass the planning doc path(s) as the 5th positional arg:
+1. **Write into the cycle Step 1 created.** Step 1 made its folder and `cycle.yaml`, with the title, goal and `source_concept`, and recorded the folder name as `PLANNING_CYCLE`. Make no new cycle or folder here: `create-cycle.sh` always makes the next numbered folder, so a second cycle would split this cycle's stories across two folders. Print the folder name and use it as `[cycle-dir]` below; if it prints no folder name, stop and tell the user Step 1 recorded no cycle:
 ```bash
-${CLAUDE_PLUGIN_ROOT}/hooks/scripts/create-cycle.sh "[cycle-slug]" "[Cycle Title]" "[Goal]" "." "[source-concept-paths]"
+grep "^PLANNING_CYCLE=" "${CRAFT_PROJECT_ROOT:-.}/.craft/.global-state" | cut -d= -f2 | tr -d '"'
 ```
-   - **`cycle-slug`** = kebab-case slug for the directory (e.g., `auth-flow`). The script auto-numbers it (creates `3-auth-flow/`).
-   - **`Cycle Title`** = human-readable name shown in status line and context (e.g., `"Auth Flow"`). Always provide this.
-   - **`source-concept-paths`** = comma-separated planning doc paths, or empty string. Written to cycle.yaml's `source_concept` field.
 
 2. **Before writing story files, apply planning-source routing.** Read cycle.yaml. If `source_concept` is populated, apply the **action-moment framing** per story:
 
