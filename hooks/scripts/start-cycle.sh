@@ -43,6 +43,19 @@ fi
 
 CYCLE_NAME=$(basename "$CYCLE_DIR")
 
+# The dashboard's project, from the cycle's absolute path: a relative dir or a
+# by-name lookup (both resolve against the current folder) has no leading
+# /.craft/ to strip, yet still belongs to the project it sits in. A cycle that
+# sits in no project gives an empty root, which builds nothing.
+_DASH_ABS="$CYCLE_DIR"
+if [[ "$_DASH_ABS" != /* ]]; then
+  _DASH_ABS="$PWD/$_DASH_ABS"
+fi
+DASHBOARD_ROOT=$(echo "$_DASH_ABS" | sed 's|/.craft/.*||')
+if [ ! -d "$DASHBOARD_ROOT/.craft" ]; then
+  DASHBOARD_ROOT=""
+fi
+
 # Update global state
 "$SCRIPT_DIR/update-global-state.sh" ACTIVE_CYCLE "$CYCLE_NAME" "$PROJECT_ROOT"
 "$SCRIPT_DIR/update-global-state.sh" PLANNING_CYCLE "" "$PROJECT_ROOT"
@@ -64,7 +77,7 @@ EVENTS_DIR="$CYCLE_DIR/.events"
 
 # Refresh the dashboard graph data. Silenced so callers still read this
 # script's own final line; guarded so a missing wrapper never fails a flow.
-bash "$SCRIPT_DIR/../../scripts/dashboard/dashboard-run.sh" --root "${PROJECT_ROOT:-.}" >/dev/null 2>&1 || true
+bash "$SCRIPT_DIR/../../scripts/dashboard/dashboard-run.sh" --root "$DASHBOARD_ROOT" >/dev/null 2>&1 || true
 
 # Display human-readable title
 cycle_title=""

@@ -86,7 +86,7 @@ plugins/craft/
 │       ├── story-from-annotate.md ← Story ramp: pre-fill a story from an annotate record (the look carries verbatim, content becomes scope; selector and component are anchors)
 │       └── story-from-mockup.md   ← Story ramp: pre-fill a story from a converged mockup (CSS normative)
 ├── skills/                    ← Orchestrator-context skills (11 skills)
-│   ├── approve/               ← Scoped write permission gate (AskUserQuestion + TaskCreate)
+│   ├── approve/               ← Scoped write permission gate (AskUserQuestion + printed approval line)
 │   ├── browser/               ← playwright-cli browser automation launcher
 │   ├── content-spark/         ← Surface content assumptions before creative/planning
 │   ├── creative-spark/        ← Generate creative options; supports muse/alchemist drivers
@@ -506,11 +506,11 @@ Craft's scripts write `title` and `target` (`create-cycle.sh`), and `focus` and 
 
 Concepts in `.craft/planning/` (managed by `/craft:planning`) have an alignment walkthrough that resolves a concept's strategic sub-decisions before stories get created. The architecture has three load-bearing parts:
 
-**TaskTool queue.** The orchestrator's speculative working list of sub-decisions for a concept lives in TaskTool - session-scoped, allowed to die. The model only sees one task at a time, so multi-decision AskUserQuestion bundles become structurally impossible. Re-derivation on session resume is correct behavior; not loss.
+**Confirmed list.** The orchestrator's speculative working list of sub-decisions for a concept is a numbered list stated in the conversation - session-scoped, allowed to die. The model walks one item at a time and never bundles several into one AskUserQuestion - the prompt enforces this, not the structure. Re-derivation on session resume is correct behavior; not loss.
 
-**Three completion destinations.** Every sub-decision terminates in exactly one place: `## Locked decisions` (conversational resolution + explicit lock-confirmation ask - the orchestrator must ask "Want me to lock this as X?" before writing), `pending_decisions[]` frontmatter (user deferred - regenerates as a task on next session), or `## Open questions` with owner annotation (blocked on someone else - doesn't auto-nag).
+**Three completion destinations.** Every sub-decision terminates in exactly one place: `## Locked decisions` (conversational resolution + explicit lock-confirmation ask - the orchestrator must ask "Want me to lock this as X?" before writing), `pending_decisions[]` frontmatter (user deferred - returns to the confirmed list next session), or `## Open questions` with owner annotation (blocked on someone else - doesn't auto-nag).
 
-**Step 9 destination-coverage gate (intra-session).** Before story creation runs, the gate verifies every closed task landed in one of the three destinations. Tasks that closed without filing block story creation and route back to alignment with the unaccounted items named. Cross-session integrity is handled by the immediate-write rule (Locked entries hit disk at the moment of resolution), not by the gate.
+**Step 9 destination-coverage gate (intra-session).** Before story creation runs, the gate checks that every item on the concept's confirmed list landed in one of the three destinations. An item with no entry blocks story creation and routes back to alignment with the unaccounted items named. Cross-session integrity is handled by the immediate-write rule (Locked entries hit disk at the moment of resolution), not by the gate.
 
 The depth ceiling is prose-enforced: planning is for strategic decisions (the ones that shape which stories come out of the concept), not implementation detail. If candidate extraction returns more than ~10 items, the orchestrator reframes some as story-new / plan-chunks work and defers them.
 

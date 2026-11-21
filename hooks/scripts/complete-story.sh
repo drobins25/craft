@@ -234,7 +234,7 @@ rm -f "${PROJECT_ROOT}.craft/.chunk-state" 2>/dev/null
 # the story's state DID change even when the commit was refused. Silenced so
 # callers still read this script's own output; guarded so a missing wrapper
 # never fails a flow.
-bash "$SCRIPT_DIR/../../scripts/dashboard/dashboard-run.sh" --root "${PROJECT_ROOT:-.}" >/dev/null 2>&1 || true
+bash "$SCRIPT_DIR/../../scripts/dashboard/dashboard-run.sh" --root "$PROJECT_ROOT" >/dev/null 2>&1 || true
 
 # The Crafted: lines are buffered from the flip above and print here, right
 # before the deferred abort exit, so they are present on every run - clean

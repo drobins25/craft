@@ -2,6 +2,11 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.20.1 - 2026-11-20
+
+- Fixed approvals, workflow runs and planning leaning on a task checklist that current Claude models don't provide, so those steps were quietly skipped. Approving a write now prints what you approved, a workflow run prints its stage list as it goes, and planning walks its open decisions as a numbered list. Init and mockup no longer show a step checklist.
+- Fixed your dashboard refreshing for no reason when Craft changed a story or record that belongs to no project. The dashboard now refreshes only for the project that owns the file, so a change in one project no longer touches another's.
+
 ## 2.20.0 - 2026-11-20
 
 - Added Smith, a fixer that reads before it cuts. Every `/craft:adhoc` fix now starts with the code around the bug: who calls it, who reads its output, and where else the same bug lives. Siblings with the same cause go down in the same pass instead of coming back as your next adhoc. A test Smith adds has to fail on the broken code before it counts.

@@ -517,7 +517,7 @@ flowchart TD
     DEST -->|"Tweak"| TWEAK["craft:adhoc<br/>direction pre-settled, CSS ported"]
     DEST -->|"Story"| STORY["story-new 'craft designs'<br/>pre-filled, CSS normative"]
     DEST -->|"Park"| PARK["Notebook todo holds the pointer<br/>pickup re-enters this fork"]
-    DEST -->|"No choice"| OPEN["Record stays converged<br/>task pending, never nagged"]
+    DEST -->|"No choice"| OPEN["Record stays converged<br/>choice stays open, never nagged"]
 ```
 
 ---
@@ -622,7 +622,7 @@ flowchart TD
     Q_RESOLVE --> UPDATE
 
     PICK --> ALIGN_STORY["9a.1: Alignment Walkthrough"]
-    ALIGN_STORY --> DGATE{"Destination-coverage gate<br/>intra-session, scans TaskTool history<br/>did every closed task file somewhere?"}
+    ALIGN_STORY --> DGATE{"Destination-coverage gate<br/>intra-session, checks the confirmed list<br/>did every listed item file somewhere?"}
     DGATE -->|No| REFUSE["REFUSE story creation<br/>surface the unfiled item by name<br/>route back to alignment"]
     REFUSE --> ALIGN_STORY
     DGATE -->|Yes| ANALYZE["9b: Read + analyze concept"]
@@ -638,7 +638,7 @@ flowchart TD
 
 - **Step 11 — Auto-promotion.** Adding a sub-concept to a concept that exists as a single `.md` file promotes it to a folder: the original content becomes the folder's `README.md` (reformatted as an initiative README), the new sub-concept lands beside it, and `README.md`'s roadmap reference updates.
 - **Path-discovery rule.** Only `active.md` and `README.md` are hardcoded paths (fixed convention, never promote). Every other planning path is discovered via Glob.
-- **TaskTool is a hard dependency.** The Alignment Walkthrough's working queue lives in TaskTool. If a future harness mode restricts `TaskCreate`, the walkthrough must **fail loudly**, not silently fall back to bundled AskUserQuestion.
+- **The working queue is a list in the conversation.** The Alignment Walkthrough's working queue is the numbered list of confirmed sub-decisions the orchestrator states in its reply. Canonical state is the concept file.
 
 Concept completion is a separate entry point — it is called from the story/cycle completion flow, never by the user directly:
 
@@ -662,7 +662,7 @@ Invoked from Step 5c (after candidate concepts are confirmed) and Step 9a.1 (bef
 %%{init: {'theme': 'dark'}}%%
 flowchart TD
     AW["Alignment Walkthrough<br/>invoked from Step 5c and Step 9a.1"] --> RESUME{"Concept has<br/>pending_decisions?"}
-    RESUME -->|Yes| REGEN["Regenerate those as TaskTool tasks FIRST<br/>(the user explicitly said 'ask me again')"]
+    RESUME -->|Yes| REGEN["Put those first on the confirmed list<br/>(the user explicitly said 'ask me again')"]
     RESUME -->|No| DERIVE
     REGEN --> DERIVE["Derive new candidates from concept state"]
 
@@ -670,21 +670,21 @@ flowchart TD
     CEILING -->|Yes| REFRAME["Reframe some as implementation detail<br/>defer to story-new / plan-chunks"]
     CEILING -->|No| SHAPE
     REFRAME --> SHAPE["Present the rough shape:<br/>'anything to add or strike?'"]
-    SHAPE --> QUEUE["TaskCreate one task per confirmed candidate<br/>speculative working queue"]
+    SHAPE --> QUEUE["State one numbered item per confirmed candidate<br/>speculative working queue"]
 
-    QUEUE --> WALK["Walk tasks ONE at a time<br/>conversation is the primary surface"]
-    WALK --> TERM{"How does this task terminate?"}
+    QUEUE --> WALK["Walk the list ONE item at a time<br/>conversation is the primary surface"]
+    WALK --> TERM{"How does this item terminate?"}
 
     TERM -->|"Path A: resolved in conversation"| ASK_LOCK{"MUST ASK explicitly:<br/>'want me to lock this as X?'"}
     ASK_LOCK -->|"Hedge / open question / implied consent"| WALK
-    ASK_LOCK -->|"Explicit yes"| LOCK["Write to ## Locked decisions IMMEDIATELY<br/>never batched to concept end<br/>close task"]
+    ASK_LOCK -->|"Explicit yes"| LOCK["Write to ## Locked decisions IMMEDIATELY<br/>never batched to concept end"]
 
     TERM -->|"Path B/C: user cannot resolve now"| PARK["AskUserQuestion<br/>the PARKING mechanism, not the asking mechanism"]
-    PARK -->|"Skip - ask me next session"| DEFER["Write to pending_decisions frontmatter<br/>REGENERATES as a task on resume"]
+    PARK -->|"Skip - ask me next session"| DEFER["Write to pending_decisions frontmatter<br/>RETURNS to the list on resume"]
     PARK -->|"Blocked - waiting on someone"| OWNER["Ask conversationally: who's blocking?"]
     OWNER --> BLOCKED["Write to ## Open questions with owner<br/>does NOT regenerate<br/>surfaces only via Step 8"]
 
-    LOCK --> NEXT{"More tasks?"}
+    LOCK --> NEXT{"More items?"}
     DEFER --> NEXT
     BLOCKED --> NEXT
     NEXT -->|Yes| WALK
@@ -694,7 +694,7 @@ flowchart TD
     DRILL -.-> WALK
 ```
 
-**The three-destination invariant.** Every strategic sub-decision terminates in exactly one of: `## Locked decisions` (Path A, explicit lock only), `pending_decisions[]` frontmatter (Path B, regenerates on resume), or `## Open questions` with an owner annotation (Path C, does not regenerate). The concept file is canonical state and survives sessions because resolutions hit disk the moment they resolve; TaskTool is session-scoped working memory and is allowed to die.
+**The three-destination invariant.** Every strategic sub-decision terminates in exactly one of: `## Locked decisions` (Path A, explicit lock only), `pending_decisions[]` frontmatter (Path B, regenerates on resume), or `## Open questions` with an owner annotation (Path C, does not regenerate). The concept file is canonical state and survives sessions because resolutions hit disk the moment they resolve; the confirmed list in the conversation is session-scoped working memory and is allowed to die.
 
 ---
 
