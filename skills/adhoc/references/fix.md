@@ -97,7 +97,7 @@ Write the list in the Confidence Check section as `claim | evidence | holds`. Yo
 
 ## Step 4: Apply the Fix
 
-Before the first edit, the fix file on disk holds Symptom through Confidence Check, so a reader can see what you meant to change if an edit goes wrong. Send that write on its own and edit only after it has succeeded. Make your edits directly using Edit/Write tools; there is no implementer agent. The shell's soft scope check applies while you edit.
+Before the first edit, the fix file on disk holds Symptom through Confidence Check, so a reader can see what you meant to change if an edit goes wrong. Send that write on its own and edit only after it has succeeded. Make your edits directly using Edit/Write tools; there is no implementer agent.
 
 Update the fix file: set `status: applied`, update `files_changed` and `lines_changed`.
 

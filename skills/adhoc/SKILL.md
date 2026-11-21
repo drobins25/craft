@@ -54,7 +54,7 @@ Read the matching reference file and execute it inline (never via the Skill tool
 
 The reference owns the record file, the gate question (confidence vs fit), the edits, and validation. It hands back here for each commit.
 
-**Soft scope check (both flavors; for a fix the smith agent applies it and returns it as an escalation):** If you find yourself touching 5+ files, pause and tell the user: "This is touching [N] files - that's getting bigger than a typical adhoc change. Want me to continue or create a story?" Let them decide.
+**Soft scope check (tweaks only, because a tweak runs in this session; a fix has no file limit):** If you find yourself touching 5+ files, pause and tell the user: "This is touching [N] files - that's getting bigger than a typical adhoc change. Want me to continue or create a story?" Let them decide.
 
 ## Step 5: Commit
 

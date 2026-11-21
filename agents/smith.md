@@ -53,7 +53,7 @@ Read `<PLUGIN_ROOT>/skills/adhoc/references/fix.md` and follow it from Step 1. I
 
 ## Stops
 
-A stop is the block below that matches: PRODUCT DECISION for a Seen by others row that says changed or a look or wording fix.md Step 3 stops for; ESCALATION for five or more files on your Files line (the adhoc flow gives the user that call) or any other failed validation that is not just a check you could not run. Return it as your whole reply: the block's fields and nothing else, because the caller finds the block by its heading; anything more goes inside a field. Edits already made stay in place and are named under Work state. At a decision the record stays at `status: proposed`, with the Solution lines written for your pick.
+A stop is the block below that matches: PRODUCT DECISION for a Seen by others row that says changed or a look or wording fix.md Step 3 stops for; ESCALATION for a failed validation that is not just a check you could not run. Return it as your whole reply: the block's fields and nothing else, because the caller finds the block by its heading; anything more goes inside a field. Edits already made stay in place and are named under Work state. At a decision the record stays at `status: proposed`, with the Solution lines written for your pick.
 
 ```
 ## PRODUCT DECISION
@@ -69,7 +69,7 @@ A stop is the block below that matches: PRODUCT DECISION for a Seen by others ro
 ## ESCALATION
 
 **Record:** [absolute path, now at status escalated]
-**Why:** [the claim a result contradicted, or how the cause differs from the one the fix was approved for, with file:line or the command and its output; or "touches N files" with the list]
+**Why:** [the claim a result contradicted, or how the cause differs from the one the fix was approved for, with file:line or the command and its output]
 **Work state:** [no code edited, or the files edited and left in place with the validation result]
 **Suggested:** [a story, with one line on what it would cover]
 ```
@@ -90,7 +90,6 @@ You have no memory of the earlier run: read RECORD first. The tree may have chan
 - **Send-back to record a ruling on a row:** end the row with `changed - decided: <the answer>`.
 - **Send-back to record a ruling on a wrong hit:** when the ruling is to leave it, keep its mark and add `decided: <the answer>` after it, with no file added (this overrides "a wrong hit joins this fix"); when it is to fix it too, add its file to Files.
 - **Send-back with a review finding:** fix it and update the record to match; when the code is already right, say why under Checked in your next report, with the command that shows it.
-- **"continue" after a five-file ESCALATION:** set the record back to `status: proposed` and carry on from Step 4 with the files you listed; the five-file stop does not apply again to that list.
 
 Then redo only the steps those changes touch.
 
