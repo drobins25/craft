@@ -11,9 +11,11 @@ SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILDER="$SELF_DIR/build.py"
 
 ROOT=""
+ROOT_GIVEN=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --root)
+      ROOT_GIVEN=1
       ROOT="${2:-}"
       shift 2 || shift
       ;;
@@ -22,6 +24,13 @@ while [ $# -gt 0 ]; do
       ;;
   esac
 done
+
+# A caller that passes --root with an empty value found no project for the
+# record it was handed: build nothing, anywhere, rather than guess from the
+# current directory.
+if [ "$ROOT_GIVEN" = "1" ] && [ -z "$ROOT" ]; then
+  exit 0
+fi
 
 if [ -z "$ROOT" ]; then
   if [ -n "${CRAFT_PROJECT_ROOT:-}" ]; then

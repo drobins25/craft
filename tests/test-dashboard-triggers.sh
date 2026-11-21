@@ -240,4 +240,60 @@ assert_file_exists "seeded .gitignore rode along" "$BARE/.craft/graph/.gitignore
 rm -rf "$BARE"
 echo ""
 
+begin_test "a story outside any .craft folder never rebuilds the dashboard of the folder the hook runs from"
+
+TEST_DIR=$(create_craft_with_story "outside-cycle" "outside-story" "Outside Story" "3" "ready")
+OUTSIDE=$(mktemp -d)
+printf -- '---\nname: x\nstatus: ready\n---\n' > "$OUTSIDE/x.md"
+rm -rf "$TEST_DIR/.craft/graph"
+
+for hook_args in "update-story-status.sh $OUTSIDE/x.md complete" "start-story.sh $OUTSIDE/x.md"; do
+  set +e
+  # shellcheck disable=SC2086
+  (cd "$TEST_DIR" && bash "$HOOKS/${hook_args%% *}" ${hook_args#* } >/dev/null 2>&1)
+  set -e
+  assert_dir_not_exists "${hook_args%% *} on an outside story leaves the current project's graph untouched" "$TEST_DIR/.craft/graph"
+done
+
+rm -rf "$OUTSIDE"
+cleanup_test_dir
+echo ""
+
+begin_test "a path inside a project's .craft rebuilds that project's dashboard, run from another directory"
+
+TEST_DIR=$(create_craft_with_story "inside-cycle" "inside-story" "Inside Story" "3" "ready")
+STORY="$TEST_DIR/.craft/cycles/1-inside-cycle/stories/1-inside-story.md"
+ELSEWHERE=$(mktemp -d)
+mkdir -p "$ELSEWHERE/.craft"
+rm -rf "$TEST_DIR/.craft/graph"
+
+set +e
+(cd "$ELSEWHERE" && bash "$HOOKS/update-story-status.sh" "$STORY" active >/dev/null 2>&1)
+set -e
+
+assert_file_exists "owning project's graph rebuilt" "$TEST_DIR/.craft/graph/graph.js"
+assert_dir_not_exists "the current directory's dashboard was not touched" "$ELSEWHERE/.craft/graph"
+
+rm -rf "$ELSEWHERE"
+cleanup_test_dir
+echo ""
+
+begin_test "a cycle or story named relatively or by name, run from the project folder, rebuilds that project's dashboard"
+
+TEST_DIR=$(create_craft_with_story "rel-cycle" "rel-story" "Rel Story" "3" "ready")
+REL_CYCLE=".craft/cycles/1-rel-cycle"
+REL_STORY="$REL_CYCLE/stories/1-rel-story.md"
+
+for hook_args in "start-cycle.sh $REL_CYCLE" "start-cycle.sh 1-rel-cycle" "complete-cycle.sh $REL_CYCLE" "start-story.sh $REL_STORY" "complete-story.sh $REL_STORY"; do
+  rm -rf "$TEST_DIR/.craft/graph"
+  set +e
+  # shellcheck disable=SC2086
+  (cd "$TEST_DIR" && bash "$HOOKS/${hook_args%% *}" ${hook_args#* } >/dev/null 2>&1)
+  set -e
+  assert_file_exists "${hook_args} rebuilds the project's graph" "$TEST_DIR/.craft/graph/graph.js"
+done
+
+cleanup_test_dir
+echo ""
+
 finish_tests "test-dashboard-triggers"

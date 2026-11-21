@@ -89,10 +89,10 @@ if [[ "$_DASH_ABS" != /* ]]; then
 fi
 DASHBOARD_ROOT=$(echo "$_DASH_ABS" | sed 's|/.craft/.*||')
 if [ ! -d "$DASHBOARD_ROOT/.craft" ]; then
-  DASHBOARD_ROOT="."
+  DASHBOARD_ROOT=""
 fi
 # Refresh the dashboard graph data. Silenced so callers still read this
 # script's own final line; guarded so a missing wrapper never fails a flow.
-bash "$SCRIPT_DIR/../../scripts/dashboard/dashboard-run.sh" --root "${DASHBOARD_ROOT:-.}" >/dev/null 2>&1 || true
+bash "$SCRIPT_DIR/../../scripts/dashboard/dashboard-run.sh" --root "$DASHBOARD_ROOT" >/dev/null 2>&1 || true
 
 echo "$DEST"
