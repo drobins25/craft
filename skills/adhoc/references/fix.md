@@ -143,6 +143,16 @@ Run the shared detection from the shell's `## Todo Satisfaction Detection` secti
 
 ## Step 8: Close
 
+When the record reads `status: validated` and this fix was started from a bug record in `.craft/bugs/`, close that bug first, whether or not the fix is committed. Started from means the request pointed at that record: its file, its slug or its line in the open pile. A bug that only looks like the one this fix cured stays open, because this close asks no one. Ask nothing. A subagent skips it, because its caller closes the bug after checking the report. A caller following `fix-handoff.md` skips it too, because H-5 already ran it, and a second run on a record that has moved can close another open bug with a similar name.
+
+Read the bug record first: one that gives its layer as `judgment` stays open, because only the user's eye on the result closes that kind, and the summary says it is fixed and theirs to close. Otherwise run:
+
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/bugs-close.sh" "<the bug record's path>" --status=fixed --fixed-by="fix record <the record's name>"
+```
+
+`already closed` means nothing is left to do; any other refusal leaves the bug open and goes in the summary.
+
 Output this summary. A subagent sends its report instead.
 
 ```
@@ -154,6 +164,7 @@ Validation: [what was checked, result]
 Planned test: ["<name>" from the source story / none / no source story]
 Lesson: [one sentence, or "none"]
 Todo: [closed <todo-slug> / none matched]
+Bug: [closed <bug title> / fixed, yours to close / none]
 ```
 
 Then hand back to the shell to close the gate (Step 6 there).

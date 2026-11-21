@@ -6,6 +6,7 @@ Notable, user-facing changes per version. Internal changes (tests, refactors, co
 
 - Fixed approvals, workflow runs and planning leaning on a task checklist that current Claude models don't provide, so those steps were quietly skipped. Approving a write now prints what you approved, a workflow run prints its stage list as it goes, and planning walks its open decisions as a numbered list. Init and mockup no longer show a step checklist.
 - Fixed your dashboard refreshing for no reason when Craft changed a story or record that belongs to no project. The dashboard now refreshes only for the project that owns the file, so a change in one project no longer touches another's.
+- Fixed bugs staying in your open pile after an adhoc fix cured them. When you fix a filed bug through `/craft:adhoc`, Craft now closes that bug as soon as the fix is seen working and notes which fix closed it, so the pile only shows what is still broken.
 
 ## 2.20.0 - 2026-11-20
 
