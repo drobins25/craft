@@ -1033,7 +1033,7 @@ Status indicators:
 
 **After completing a cycle:**
 ```
-"Run a Craft review on the cycle we just completed?"
+"Run a Craft review?"
 ○ Review the cycle (Recommended)
 ○ Review the full diff
 ○ Not now
