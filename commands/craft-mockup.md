@@ -26,7 +26,7 @@ This shell owns only routing. The funnel lives in one reference file.
 
 ### Step 2: Open mockups
 
-A mockup left open by an earlier session never blocks a new one: its pin listener ended with that session, and its alchemist is re-anchored from the record on resume. A mockup open in another terminal right now looks the same on disk, which is why resuming or abandoning one asks first (below). Only the mockup this conversation is running keeps a new one waiting, because its pin listener, browser tab and round tasks cannot be shared with a second.
+A mockup left open by an earlier session never blocks a new one: its pin listener ended with that session, and its alchemist is re-anchored from the record on resume. A mockup open in another terminal right now looks the same on disk, which is why resuming or abandoning one asks first (below). Only the mockup this conversation is running keeps a new one waiting, because its pin listener, browser tab cannot be shared with a second.
 
 Find the project folder first - `$CRAFT_PROJECT_ROOT` when it is set, else the folder this prints: `bash -c 'source "$1" >/dev/null 2>&1; craft_before_init_root' _ "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/find-workshop.sh"` - so a mockup started before `/craft:init` is not missed. Then list the open ones:
 

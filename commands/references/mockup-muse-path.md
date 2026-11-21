@@ -82,4 +82,4 @@ Quote 2-3 vivid verbatim briefing lines in prose first, prefixed "Muse's take: .
 
 ## 5. Assemble the brief and rejoin
 
-The brief to the alchemist is record.md `## Brief` pasted whole and verbatim - the full muse briefing (all 3 directions), the loaded constraints, and the mobile verdict, all already written there. The orchestrator never summarizes, compresses, or re-authors any part of it. Then continue at mockup-inline.md Step 2.
+The brief to the alchemist is record.md `## Brief` pasted whole and verbatim. The orchestrator never summarizes, compresses, or re-authors any part of it. Rejoin mockup-inline.md at the last paragraph of Step 1 ("Write the brief into `## Brief`"), which adds the loaded constraints and the mobile verdict beside the muse briefing, then go on to Step 2.

@@ -72,7 +72,6 @@ Read `.craft/design/.inspiration-session`. Check the `phase` field:
 
 Skip Phase 0, 0a, 0b, 1, 2, and 2b entirely - the session file already has all context needed.
 
-
 ---
 
 ### Phase 0.5: Project Intent (Optional)
@@ -295,7 +294,6 @@ options:
 **If "Mostly right":** Ask what needs correction, update findings, proceed.
 
 **If "Needs significant changes":** Fall back to asking key questions (project type, language, framework). Don't ask about things that are verifiable from files.
-
 
 **Store confirmed values:**
 - `PROJECT_TYPE` = `ui` | `cli` | `api` | `hybrid` — preserve through the phase chain so Phase 1b can route by type. When calling `setup-craft.sh` in Phase 4, pass `cli` for `api` and `hybrid` types (they share the CLI scaffolding templates).
@@ -649,7 +647,6 @@ Echo the script's summary line (kept/added/replaced/backfilled) to the user afte
 **If RESUME_INSPIRATION=true:** Read `.craft/design/.inspiration-session`, check `phase` field, and jump to the matching sub-phase (3a if collecting, 3b if assembling, 3c if riffing). Present a brief summary of what's already captured before continuing.
 
 **If starting fresh:** Create the session file and begin at Phase 3a.
-
 
 #### Phase 3a: Source Collection
 
@@ -1084,7 +1081,6 @@ Proceed to Phase 4.
 
 ### Phase 4: Create Structure
 
-
 Run the setup script with detected project type:
 
 Export `SKIP_INSPIRATION` before calling the setup script. If Phase 3's inspiration session captured `inspiration/sites.md`, the flag prevents the setup script from overwriting it. The setup script never creates or touches `tokens.yaml` - an existing file (mockup-born, inspiration-locked, or prior init) is safe through this phase with no flag needed:
@@ -1354,7 +1350,7 @@ After muse completes, continue to Phase 6 (First Cycle Kickoff). The first cycle
 
 ### Phase 6: First Cycle Kickoff
 
-Show the recap first (Quick setup shows its own recap before arriving here):
+On the Full-setup path, show the recap first. Quick setup already showed its own recap and skips this one:
 
 > "**Project:** [name]
 > **Type:** [ui/cli]

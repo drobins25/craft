@@ -306,6 +306,7 @@ After the walkthrough completes, the **destination-coverage gate** runs:
 - Check every item on the confirmed list from this concept's walkthrough against the concept file's `## Locked decisions`, `pending_decisions[]`, and `## Open questions`; each must have a corresponding entry.
 - If any item on the list has no entry: **refuse story creation, surface the unfiled item by name, route back to alignment** so the user can resolve the unaccounted decision.
 - The gate is **intra-session only** — the confirmed list lives in the conversation. Cross-session integrity is handled by the immediate-write rule (decisions hit disk the moment they resolve), not by the gate.
+- If the list is no longer in the conversation (for example after compaction), re-run Enumerate candidates and restate the confirmed list before checking - a missing list never passes as an empty one.
 
 If every strategic decision is already Locked or Blocked (in Open questions with an owner) and `pending_decisions[]` is empty, the walkthrough is a fast pass-through — the confirmed list is empty and the gate trivially passes.
 
@@ -401,7 +402,7 @@ For the concept being aligned, extract candidate strategic sub-decisions (the on
 
 > "This concept has N candidate sub-decisions. Roughly: [grouped overview]. Anything to add or strike?"
 
-After confirmation, state the confirmed candidates in your reply as a numbered list, one line per sub-decision. This list is the orchestrator's speculative working queue.
+After confirmation, state the confirmed candidates in your reply as a numbered list, one line per sub-decision. This is the confirmed list the rest of this file refers to: the orchestrator's speculative working queue.
 
 ### Walk the list one decision at a time
 
@@ -438,7 +439,7 @@ Step 8's existing grep already handles this format. **Blocked items do NOT retur
 
 ### Opt-in drill-down
 
-If the user explicitly signals depth intent during conversation about a strategic decision ("let's drill in", "go deeper on this one", "I want to think through this carefully"), the orchestrator can offer to break the current decision into sub-questions and walk them via the same numbered list + conversation pattern. After the drill-down completes, return to the main list. **The orchestrator never proposes sub-sub-decisions on its own — only on explicit user request.**
+If the user explicitly signals depth intent during conversation about a strategic decision ("let's drill in", "go deeper on this one", "I want to think through this carefully"), the orchestrator can offer to break the current decision into sub-questions and walk them as a numbered sub-list under the current item (3a, 3b, ...), same conversation pattern; sub-list items are part of the confirmed list for the coverage gate. After the drill-down completes, return to the main list. **The orchestrator never proposes sub-sub-decisions on its own — only on explicit user request.**
 
 ### Resume behavior
 

@@ -510,7 +510,7 @@ Concepts in `.craft/planning/` (managed by `/craft:planning`) have an alignment 
 
 **Three completion destinations.** Every sub-decision terminates in exactly one place: `## Locked decisions` (conversational resolution + explicit lock-confirmation ask - the orchestrator must ask "Want me to lock this as X?" before writing), `pending_decisions[]` frontmatter (user deferred - returns to the confirmed list next session), or `## Open questions` with owner annotation (blocked on someone else - doesn't auto-nag).
 
-**Step 9 destination-coverage gate (intra-session).** Before story creation runs, the gate checks that every item on the concept's confirmed list landed in one of the three destinations. An item with no entry blocks story creation and route back to alignment with the unaccounted items named. Cross-session integrity is handled by the immediate-write rule (Locked entries hit disk at the moment of resolution), not by the gate.
+**Step 9 destination-coverage gate (intra-session).** Before story creation runs, the gate checks that every item on the concept's confirmed list landed in one of the three destinations. An item with no entry blocks story creation and routes back to alignment with the unaccounted items named. Cross-session integrity is handled by the immediate-write rule (Locked entries hit disk at the moment of resolution), not by the gate.
 
 The depth ceiling is prose-enforced: planning is for strategic decisions (the ones that shape which stories come out of the concept), not implementation detail. If candidate extraction returns more than ~10 items, the orchestrator reframes some as story-new / plan-chunks work and defers them.
 

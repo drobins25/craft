@@ -491,7 +491,7 @@ Read the script's stdout to see the validation report.
 
 **If passed-with-issues:** Show the issue list. Ask the user whether to address them or leave for later.
 
-Print the stage list once more from the Progress table. Show:
+Show:
 
 > "Session complete: {session name}. {N} stages done. {Validation summary}."
 
