@@ -85,9 +85,9 @@ List every claim this fix depends on: about the code you change, and about what 
 
 Write the list in the Confidence Check section as `claim | evidence | holds`. You're about to edit code, and a claim you never checked is where a confident fix goes wrong.
 
-**If a Seen by others row says changed** and does not go on to say "decided:", a reader that works today would show something else after your edit, and what it should show is the user's choice, not yours. The fix waits for that choice, and the row stays in Seen by others. Stop before editing: tell the user what the reader shows today and after, the ways it could go, and your pick.
+**If a Seen by others row says changed** and does not go on to say "decided:", a reader that works today would show something else after your edit, so what it should show is a decision, not a side effect of the fix. The same goes for a new look or wording the fix has to pick that nothing in the surrounding code decides, such as the color of something that would otherwise match its background. The fix waits for the decision, and the row stays in Seen by others. Stop before editing, with what people see today, what each way would show, and your pick. A subagent running this flow returns them as its decision block; the shell decides as `references/fix-handoff.md` H-3 says.
 
-**If every claim holds** and no row says changed without a decision - continue to Step 4.
+**If every claim holds** and no decision is waiting - continue to Step 4.
 
 **If a result contradicts a claim**, or the Root Cause you wrote is a different cause than the one the fix was approved or classified for - this is more complex than an adhoc fix, because a real adhoc fix runs straight from symptom to root cause to solution. Escalate:
 
@@ -113,7 +113,7 @@ This is not "run the build and see if it passes." You must verify the **original
 
 Run every command on the Solution's Run list and quote each command with its result. Write what you checked and what you observed in the Validation section.
 
-If validation fails - the symptom persists or a new problem appeared - update the fix file with what happened and reassess. You might need to escalate to a story at this point.
+If validation fails - the symptom persists or a new problem appeared - update the fix file with what happened and reassess. A new problem that is a look or wording to pick, as Step 3 describes, is that decision: stop for it with your edits in place. You might need to escalate to a story at this point.
 
 If validation passes: update `status: validated`. Hand back to the shell for the commit (Step 5 there), then return here for lesson capture.
 

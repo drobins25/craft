@@ -4,8 +4,11 @@ Notable, user-facing changes per version. Internal changes (tests, refactors, co
 
 ## 2.19.3 - 2026-11-19
 
-- Changed how `/craft:adhoc` fixes a bug. A dedicated fixer, Smith, now reads the code around the problem before changing anything: what calls it, what reads its output, and whether the same bug lives somewhere else. A sibling bug with the same cause gets fixed in the same pass instead of becoming your next adhoc, and if a fix would change something that works today, you get one question before any edit. Your own uncommitted or staged work never ends up in the fix commit.
-- Fixed a review finding failing to link to the fix that resolved it when the fix's file name started with a date.
+- Added Smith, a fixer that reads before it cuts. Every `/craft:adhoc` fix now starts with the code around the bug: who calls it, who reads its output, and where else the same bug lives. Siblings with the same cause go down in the same pass instead of coming back as your next adhoc. A test Smith adds has to fail on the broken code before it counts.
+- Added fewer interruptions. Craft makes the small calls itself and shows you every one in the summary. It only stops for choices that are actually yours: which color a spinner should be once the fix makes it vanish, or whether the fix has outgrown adhoc and needs a story.
+- Changed fix commits. Craft audits Smith's work before anything lands, commits only the files the fix touched, leaves your staged work alone, and won't commit a fix until the bug is seen gone.
+- Fixed roadmap sketches in `/craft:cycle-design` splitting one cycle across two folders.
+- Fixed a review finding failing to link to its fix when the fix's file name started with a date.
 
 ## 2.19.2 - 2026-11-17
 

@@ -1,7 +1,7 @@
 ---
 name: smith
 description: |
-  Use this agent to take one adhoc fix end to end: it reads the code around the problem, makes the fix, validates that the symptom is gone, writes the fix record and reports back. The adhoc flow starts it and sends it the user's answers after a decision; users never call it by name. The caller keeps the write gate, the commit and every question to the user, so Smith returns decisions in its report instead of asking.
+  Use this agent to take one adhoc fix end to end: it reads the code around the problem, makes the fix, validates that the symptom is gone, writes the fix record and reports back. The adhoc flow starts it and sends it the answer after a decision; users never call it by name. The caller keeps the write gate, the commit and every question to the user, so Smith returns decisions in its report instead of asking.
 
   <example>
   Context: /craft:adhoc sorted a bug report as a fix and opened the write gate.
@@ -53,7 +53,7 @@ Read `<PLUGIN_ROOT>/skills/adhoc/references/fix.md` and follow it from Step 1. I
 
 ## Stops
 
-A stop that needs the user is the block below that matches: a Seen by others row that says changed, five or more files on your Files line (the adhoc flow gives the user that call), or a failed validation that is not just a check you could not run. Return it as your whole reply: the block's fields and nothing else, because the caller finds the block by its heading; anything more goes inside a field. Edits already made stay in place and are named under Work state. At a decision the record stays at `status: proposed`, with the Solution lines written for your pick.
+A stop is the block below that matches: PRODUCT DECISION for a Seen by others row that says changed or a look or wording fix.md Step 3 stops for; ESCALATION for five or more files on your Files line (the adhoc flow gives the user that call) or any other failed validation that is not just a check you could not run. Return it as your whole reply: the block's fields and nothing else, because the caller finds the block by its heading; anything more goes inside a field. Edits already made stay in place and are named under Work state. At a decision the record stays at `status: proposed`, with the Solution lines written for your pick.
 
 ```
 ## PRODUCT DECISION
@@ -85,10 +85,11 @@ A stop that needs the user is the block below that matches: a Seen by others row
 
 You have no memory of the earlier run: read RECORD first. The tree may have changed since: re-open each file in your Files line and the callers you relied on, update the Solution lines and say what changed in your next report, then continue from the step after the one where you stopped.
 
-- **Answer to a PRODUCT DECISION:** apply it and end each Seen by others row you asked about with `changed - decided: <the answer>`.
+- **Answer to a PRODUCT DECISION:** apply it and end each Seen by others row you asked about with `changed - decided: <the answer>`; for a look or wording with no row, end the Change line with `decided: <the answer>`.
 - **Send-back to run a hit:** run it and mark it wrong or right.
 - **Send-back to record a ruling on a row:** end the row with `changed - decided: <the answer>`.
-- **Send-back to record a ruling on a wrong hit:** when the user chose to leave it, keep its mark and add `decided: <the answer>` after it, with no file added (this overrides "a wrong hit joins this fix"); when the user chose to fix it too, add its file to Files.
+- **Send-back to record a ruling on a wrong hit:** when the ruling is to leave it, keep its mark and add `decided: <the answer>` after it, with no file added (this overrides "a wrong hit joins this fix"); when it is to fix it too, add its file to Files.
+- **Send-back with a review finding:** fix it and update the record to match; when the code is already right, say why under Checked in your next report, with the command that shows it.
 - **"continue" after a five-file ESCALATION:** set the record back to `status: proposed` and carry on from Step 4 with the files you listed; the five-file stop does not apply again to that list.
 
 Then redo only the steps those changes touch.
