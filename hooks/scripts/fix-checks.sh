@@ -144,20 +144,40 @@ case "$CMD" in
     #    verdict is the row's last word, or follows " - ", "->" or ": "; the
     #    word inside another word or a sentence ("unchanged", "0 changed
     #    lines") is not a verdict, and neither is a quoted output ("status:
-    #    changed"). An indented line continues the row above
-    #    it, so a decision written on the next line still counts.
+    #    changed"). An indented line continues the row above it, so a decision
+    #    written on the next line still counts, but a new bullet (indented or
+    #    not) starts a new row. A row is split at each file:line it names, the
+    #    way check 2 does, and each reader is judged on its own part, so one
+    #    "decided:" does not clear its neighbours. A row naming no file:line is
+    #    judged whole.
     while IFS= read -r row; do
       [ -n "$row" ] || continue
       echo "1 undecided reader: $row"
       FOUND=$((FOUND + 1))
     done < <(record_field "$RECORD" "Seen by others" | awk '
-      function judge(r,  low) {
-        if (r == "") return
-        low = tolower(r)
+      function verdict(s,  low) {
+        low = tolower(s)
         gsub(/"[^"]*"/, "", low); gsub(/`[^`]*`/, "", low)
-        if (low ~ /decided:/) return
-        if (low ~ /( - |-> ?|: )changed([^a-z0-9]|$)/ || low ~ /(^|[^a-z0-9])changed[^a-z0-9]*$/) print r
+        if (low ~ /decided:/) return 0
+        return (low ~ /( - |-> ?|: )changed([^a-z0-9]|$)/ || low ~ /(^|[^a-z0-9])changed[^a-z0-9]*$/)
       }
+      function judge(r,  rest, off, n, i, starts, ends, seg) {
+        if (r == "") return
+        n = 0; rest = r; off = 0
+        while (match(rest, /[][A-Za-z0-9_.\/@()+-]+\.[A-Za-z0-9]+:[0-9]/)) {
+          n++
+          starts[n] = off + RSTART
+          ends[n] = off + RSTART + RLENGTH - 1
+          off += RSTART + RLENGTH - 2
+          rest = substr(rest, RSTART + RLENGTH - 1)
+        }
+        if (n == 0) { if (verdict(r)) print r; return }
+        for (i = 1; i <= n; i++) {
+          seg = (i < n) ? substr(r, starts[i], starts[i + 1] - starts[i]) : substr(r, starts[i])
+          if (verdict(seg)) print substr(r, 1, starts[1] - 1) seg
+        }
+      }
+      /^[ \t]*[-*+][ \t]/ { judge(row); row = $0; next }
       /^[ \t]/ && row != "" { row = row " " $0; next }
       { judge(row); row = $0 }
       END { judge(row) }

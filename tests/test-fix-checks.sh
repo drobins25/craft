@@ -279,6 +279,25 @@ assert_eq "only the closing line" "checks run: 0 found" "$OUT"
 rm -rf "$TEST_DIR"
 echo ""
 
+begin_test "an undecided reader next to a decided one is reported, as indented bullets or as prose"
+make_repo
+SNAP=$(bash "$FIX_CHECKS" snapshot "$TEST_DIR")
+write_record "- src/keep.txt - modify" "
+  - a.sh:1 - today X, after Y - changed
+  - b.sh:2 - today X, after Y - changed - decided: keep" "none"
+OUT=$(bash "$FIX_CHECKS" run "$TEST_DIR" "$SNAP" "$REC")
+assert_contains_literal "indented bullet a" "1 undecided reader:   - a.sh:1" "$OUT"
+assert_not_contains "decided bullet b" "b.sh:2" "$OUT"
+assert_contains_literal "one found" "checks run: 1 found" "$OUT"
+write_record "- src/keep.txt - modify" " src/a.js:3 - today X, after Y - changed. tests/b.test.js:5 parse these lines - same. lib/c.js:7 - today X, after Y - changed - decided: keep." "none"
+OUT=$(bash "$FIX_CHECKS" run "$TEST_DIR" "$SNAP" "$REC")
+assert_contains_literal "prose reader a" "src/a.js:3" "$OUT"
+assert_not_contains "same reader b" "b.test.js" "$OUT"
+assert_not_contains "decided reader c" "lib/c.js" "$OUT"
+assert_contains_literal "one found in prose" "checks run: 1 found" "$OUT"
+rm -rf "$TEST_DIR"
+echo ""
+
 # --- run: check 2, hits marked wrong ---
 
 begin_test "a hit marked wrong in a file outside Files is reported, however it is written"
