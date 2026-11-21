@@ -2,7 +2,7 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
-## 2.19.3 - 2026-11-19
+## 2.20.0 - 2026-11-20
 
 - Added Smith, a fixer that reads before it cuts. Every `/craft:adhoc` fix now starts with the code around the bug: who calls it, who reads its output, and where else the same bug lives. Siblings with the same cause go down in the same pass instead of coming back as your next adhoc. A test Smith adds has to fail on the broken code before it counts.
 - Added fewer interruptions. Craft makes the small calls itself and shows you every one in the summary. It only stops for choices that are actually yours: which color a spinner should be once the fix makes it vanish, or whether the fix has outgrown adhoc and needs a story.
