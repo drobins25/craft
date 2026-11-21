@@ -306,7 +306,9 @@ case "$CMD" in
 
     # 5. Paths already staged that no Files line names: the user's own staged
     #    work, which a plain commit would carry into the fix commit.
-    STAGED="$(git diff --cached -z --name-only --no-renames --relative -- . ':(exclude).craft' 2>/dev/null | tr '\0' '\n' || true)"
+    #    An index git cannot read stops the run; it is not "nothing staged".
+    STAGED="$(git diff --cached -z --name-only --no-renames --relative -- . ':(exclude).craft' | tr '\0' '\n')" \
+      || { echo "fix-checks: could not read git's index (git's message is above)" >&2; exit 2; }
     while IFS= read -r path; do
       [ -n "$path" ] || continue
       if ! on_files "$path" whole; then

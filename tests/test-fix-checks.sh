@@ -459,6 +459,22 @@ assert_contains_literal "one found" "checks run: 1 found" "$OUT"
 rm -rf "$TEST_DIR"
 echo ""
 
+begin_test "an index git cannot read stops check 5 with exit 2 instead of passing as nothing staged"
+make_repo
+SNAP=$(bash "$FIX_CHECKS" snapshot "$TEST_DIR")
+echo "fix" >> "$TEST_DIR/src/keep.txt"
+(cd "$TEST_DIR" && git add scratch-note.txt)
+write_record "- src/keep.txt - modify" "" "none"
+echo junk > "$TEST_DIR/.git/index"
+set +e
+OUT=$(bash "$FIX_CHECKS" run "$TEST_DIR" "$SNAP" "$REC" 2>"$TEST_DIR/err"); CODE=$?
+set -e
+assert_eq "exits 2" "2" "$CODE"
+assert_not_contains "no passing closing line" "checks run:" "$OUT"
+assert_contains_literal "names the reason" "could not read git's index" "$(cat "$TEST_DIR/err")"
+rm -rf "$TEST_DIR"
+echo ""
+
 # --- bad calls ---
 
 begin_test "bad calls exit 2 and say why"
