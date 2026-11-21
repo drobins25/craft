@@ -56,6 +56,7 @@ EXCLUSIONS=(
   "commands/craft-analyze.md"           # describes analyzer browser access; the analyzers themselves carry the clear
   "commands/craft-init.md"              # drives the browser but always navigates fresh URLs first - the reload wipes any injection
   "agents/alchemist.md"                 # names the DevTools product in performance advice; never drives a browser
+  "agents/smith.md"                     # runs the fix flow in references/fix.md, which carries the clear
   "commands/references/taste-pass.md"   # prose reference; the actual browsing happens in the tweak flow, which carries the clear
 )
 

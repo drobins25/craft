@@ -588,7 +588,7 @@ Not for new features or for choosing between creative directions; adding somethi
 
 ## Agents
 
-27 agents across six categories. See `docs/agent-catalog.md` for full descriptions, model assignments, and when to use each.
+28 agents across six categories. See `docs/agent-catalog.md` for full descriptions, model assignments, and when to use each.
 
 **Core Workflow** - run inside the implementation pipeline
 
@@ -596,6 +596,7 @@ Not for new features or for choosing between creative directions; adding somethi
 |-------|------|
 | `implementer` | Owns the implement → validate → refine loop per chunk |
 | `tester` | Integration tests, E2E, final validation |
+| `smith` | Takes one adhoc fix end to end, reading the code around the problem first |
 | `chunk-validator` | Runs quality checks, returns structured report (haiku model) |
 | `plan-chunks-agent` | Autonomous chunk planning per story - used in batch mode |
 | `project-scanner` | Full project analysis for documentation updates |

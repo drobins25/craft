@@ -2,6 +2,11 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.19.3 - 2026-11-19
+
+- Changed how `/craft:adhoc` fixes a bug. A dedicated fixer, Smith, now reads the code around the problem before changing anything: what calls it, what reads its output, and whether the same bug lives somewhere else. A sibling bug with the same cause gets fixed in the same pass instead of becoming your next adhoc, and if a fix would change something that works today, you get one question before any edit. Your own uncommitted or staged work never ends up in the fix commit.
+- Fixed a review finding failing to link to the fix that resolved it when the fix's file name started with a date.
+
 ## 2.19.2 - 2026-11-17
 
 - Changed the question at the end of a cycle. Craft now asks whether to run a Craft review on the cycle you just finished, with a review of everything your branch's pull request would contain as the second choice. The old Start new cycle, Review backlog and Take a break choices are gone.

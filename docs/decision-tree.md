@@ -873,6 +873,7 @@ See `docs/agent-catalog.md` for full descriptions, model assignments, and usage 
 |-------|----------------|---------|
 | `implementer` | story-implement | Owns implement→validate→refine loop per chunk |
 | `tester` | story-implement | Integration tests, E2E, final validation |
+| `smith` | adhoc (fix) | Takes one adhoc fix end to end, reading the code around the problem first |
 | `chunk-validator` | validate-chunk | Runs quality checks, returns structured report (haiku) |
 | `claims-auditor` | story-implement (story-final) | Verifies completion claims against on-disk artifacts (haiku) |
 | `plan-chunks-agent` | plan-chunks (batch) | Autonomous chunk planning per story |

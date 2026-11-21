@@ -1,6 +1,6 @@
 # Agent Catalog
 
-> Reference for all 27 agents in the Craft plugin. Agents run in isolated context - they receive only what you pass in their prompt.
+> Reference for all 28 agents in the Craft plugin. Agents run in isolated context - they receive only what you pass in their prompt.
 
 *Last reviewed: 2026-06-08 - current as of plugin v1.89.x.*
 
@@ -16,12 +16,13 @@ These agents run inside the implementation pipeline. The orchestrator invokes th
 |-------|-------|---------|
 | `implementer` | sonnet | Owns the implement-validate-refine loop per chunk. Full write access within the active story scope. The workhorse of the pipeline. |
 | `tester` | sonnet | Integration tests and E2E after all chunks complete. Runs the full test suite, fixes failures. |
+| `smith` | sonnet | Takes one adhoc fix end to end. Reads the callers and readers around the problem before editing, fixes it, checks the symptom is gone and writes the fix record. Started by `/craft:adhoc` for a fix; hands product decisions back to the orchestrator instead of asking. |
 | `chunk-validator` | haiku | Runs quality checks (TypeScript strict, lint, no-any, build, tests and coverage, design tokens, Visual Binding Assignment, Verified Command Gates, Citation Scan) and returns a structured validation report. Reports only - never fixes. Haiku keeps this fast and cheap. |
 | `plan-chunks-agent` | opus | Autonomous chunk planning for a single story - researches the codebase, writes the Pitch and chunk-by-chunk contracts and named tests into the story file. Used by `plan-chunks` for single and batch planning. |
 | `project-scanner` | opus | Full project analysis for documentation updates. Invoked by `/craft:update-docs`. |
 | `claims-auditor` | haiku | Verifies the orchestrator's completion claims against on-disk artifacts (git diff, validation receipt, story file) once per story at story-final, before complete-story.sh. Audits the narrator, not the code. |
 
-**Key constraint:** `implementer` and `tester` receive full write access. `chunk-validator` and `claims-auditor` are read-only. `plan-chunks-agent` writes only the story file it plans (never source code). `project-scanner` writes only to `.craft/`.
+**Key constraint:** `implementer` and `tester` receive full write access. `smith` writes only while the adhoc write gate is open, and never opens or closes it. `chunk-validator` and `claims-auditor` are read-only. `plan-chunks-agent` writes only the story file it plans (never source code). `project-scanner` writes only to `.craft/`.
 
 ---
 

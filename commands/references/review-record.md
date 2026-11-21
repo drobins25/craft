@@ -285,8 +285,6 @@ Follow `${CLAUDE_PLUGIN_ROOT}/commands/references/bugs-record.md` and the open-p
 
 Adhoc runs inline. Read `${CLAUDE_PLUGIN_ROOT}/skills/adhoc/SKILL.md` and follow it in this turn, never through the Skill tool: a Skill-tool call ends the turn and control does not come back to the close-out for the next finding.
 
-Before the first run starts, create one task per pending adhoc run, so the close-out survives adhoc's own questions and its gate tasks between runs. Complete each task once its graduation is written (or once the run is known to leave the finding blank).
-
 The brief for each run names:
 
 - the review record's name and path;

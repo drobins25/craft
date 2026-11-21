@@ -319,6 +319,17 @@ run_graduate "$NAME" 3 t1
 assert_eq "done todo rc" "0" "$RC"
 rm -f "$COPY"
 
+begin_test "graduate finds a fix record whose file name puts a date before its name"
+mk_three_record
+mkdir -p "$ROOT/.craft/fixes"; : > "$ROOT/.craft/fixes/2026-11-20-farewell-exits-zero.md"
+run_graduate "$NAME" 1 farewell-exits-zero
+assert_eq "dated fix file matched by its name rc" "0" "$RC"
+: > "$ROOT/.craft/fixes/profile-crash.md"
+run_graduate "$NAME" 2 crash
+assert_eq "a name that only ends another fix's name is not a match rc" "2" "$RC"
+assert_contains "names the value" "^no such artifact: crash$" "$ERR"
+rm -f "$COPY"
+
 begin_test "graduate refuses already graduated, unknown number, missing artifact, bad dismissal flags"
 mk_three_record
 run_graduate "$REC" 1 fix-a
