@@ -32,7 +32,7 @@
 #         checks run: <N> found
 #       Every numbered line above the closing line means the fix is not ready
 #       to commit. A wrong hit whose file is on a Files line was cured by this
-#       fix and prints nothing; so does one that carries the user's
+#       fix and prints nothing; so does one that carries a
 #       "decided:" ruling. With "-" for the snapshot id, check 3 is skipped
 #       and the first line, which is not numbered, says so and what to
 #       compare by hand: "note: check 3 skipped, no snapshot; ...".
@@ -230,8 +230,9 @@ case "$CMD" in
     # 2. A Same construct elsewhere hit marked wrong whose file is not in the
     #    fix. A row (an indented line continues the row above it) that says
     #    wrong is split at each file:line it names; each hit runs from its
-    #    file:line to the next one. A hit is skipped when its own part says
-    #    right and not wrong, or carries the user's "decided:" ruling. Every
+    #    file:line to the next one. Quoted and backticked text (run output) is
+    #    not read, as in check 1. A hit is skipped when its own part says
+    #    right and not wrong, or carries a "decided:" ruling. Every
     #    other hit's file is looked up on the Files lines. A wrong row that
     #    names no file:line cannot be checked, so it is reported too.
     while IFS="$(printf '\t')" read -r hit_file row; do
@@ -246,6 +247,8 @@ case "$CMD" in
     done < <(record_field "$RECORD" "Same construct elsewhere" \
       | A="$ROOT_GIVEN/" B="$ROOT_REAL/" awk '
       function word(s, w) { return s ~ ("(^|[^a-z0-9])" w "([^a-z0-9]|$)") }
+      # Quoted and backticked text is run output, not the verdict.
+      function unquote(s) { gsub(/"[^"]*"/, "", s); gsub(/`[^`]*`/, "", s); return s }
       function rel(p,  a, b) {
         a = ENVIRON["A"]; b = ENVIRON["B"]
         if (length(b) > length(a)) { t = a; a = b; b = t }
@@ -257,7 +260,7 @@ case "$CMD" in
       function judge(r,  low, rest, n, i, starts, ends, toks, seg, tok) {
         if (r == "") return
         low = tolower(r)
-        if (!word(low, "wrong")) return
+        if (!word(unquote(low), "wrong")) return
         # every file:line in the row, with where it starts and ends
         n = 0; rest = r; off = 0
         while (match(rest, /[][A-Za-z0-9_.\/@()+-]+\.[A-Za-z0-9]+:[0-9]/)) {
@@ -268,9 +271,10 @@ case "$CMD" in
           off += RSTART + RLENGTH - 2
           rest = substr(rest, RSTART + RLENGTH - 1)
         }
-        if (n == 0) { if (low !~ /decided:/) print "-\t" r; return }
+        if (n == 0) { if (unquote(low) !~ /decided:/) print "-\t" r; return }
         for (i = 1; i <= n; i++) {
           seg = (i < n) ? substr(low, ends[i] + 1, starts[i + 1] - ends[i] - 1) : substr(low, ends[i] + 1)
+          seg = unquote(seg)
           if (seg ~ /decided:/) continue
           if (word(seg, "right") && !word(seg, "wrong")) continue
           tok = rel(toks[i])
@@ -292,8 +296,7 @@ case "$CMD" in
       fi
     done <<< "$CHANGED"
 
-    # 4. The record's status. Only a validated fix is ready to commit; any
-    #    other status needs the user's answer first.
+    # 4. The record's status. Only a validated fix is ready to commit.
     STATUS="$(awk '
       NR == 1 && $0 != "---" { exit }
       NR > 1 && $0 == "---"  { exit }

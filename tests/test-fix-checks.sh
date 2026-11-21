@@ -426,6 +426,25 @@ assert_eq "only the closing line" "checks run: 0 found" "$OUT"
 rm -rf "$TEST_DIR"
 echo ""
 
+begin_test "a right hit whose quoted or backticked run output says wrong is not reported"
+make_repo
+SNAP=$(bash "$FIX_CHECKS" snapshot "$TEST_DIR")
+write_record "- src/keep.txt - modify" "" "lib/q.py:9 - ran, returned \"wrong value\" - right
+lib/r.py:2 - ran, printed \`wrong\` - right"
+OUT=$(bash "$FIX_CHECKS" run "$TEST_DIR" "$SNAP" "$REC")
+assert_eq "nothing found" "checks run: 0 found" "$OUT"
+rm -rf "$TEST_DIR"
+echo ""
+
+begin_test "a wrong hit that quotes run output is still reported"
+make_repo
+SNAP=$(bash "$FIX_CHECKS" snapshot "$TEST_DIR")
+write_record "- src/keep.txt - modify" "" "lib/q.py:9 - ran, returned \"right value\" - wrong"
+OUT=$(bash "$FIX_CHECKS" run "$TEST_DIR" "$SNAP" "$REC")
+assert_contains_literal "reported" "2 wrong hit outside Files: lib/q.py in:" "$OUT"
+rm -rf "$TEST_DIR"
+echo ""
+
 # --- run: check 4, record status ---
 
 begin_test "a record whose status is not validated is reported"
