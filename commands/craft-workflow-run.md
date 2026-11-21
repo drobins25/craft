@@ -11,12 +11,6 @@ Execute a session of an existing workflow. Owns the full session lifecycle: star
 
 ---
 
-⛔ **CRITICAL: ALWAYS USE TASKCREATE FOR STAGE PROGRESS**
-
-When executing a session, you MUST call **TaskCreate** for every stage in the workflow before starting Stage 1. This produces the live progress checklist that you and the user both see in the terminal UI. Narrating stage advances in prose without TaskCreate is NOT acceptable - the user has no progress signal, you have no compaction-recoverable state, and the system has no record of where you are.
-
----
-
 ⛔ **CRITICAL: ALWAYS CALL THE TRANSITION SCRIPTS**
 
 For every state transition, invoke the appropriate script via the Bash tool. Never use Edit/Write/sed to modify `session.md` frontmatter or stage status tags directly:
@@ -130,7 +124,7 @@ No prompts in the session - those stay in stage files and are loaded on demand a
 ### 1.5: Activate or Draft
 
 - **If "Draft only":** Done. Show the session file path. Stop here.
-- **If "Interactive" or "Auto":** Run `start-workflow-session.sh {session-dir}` to set status to active and inject `session_dir` into variables. The script enforces the sibling-active guard - if another session in this workflow is already active, the script exits 1; surface the error and stop. After successful activation, jump to **Step 2** (TaskCreate setup).
+- **If "Interactive" or "Auto":** Run `start-workflow-session.sh {session-dir}` to set status to active and inject `session_dir` into variables. The script enforces the sibling-active guard - if another session in this workflow is already active, the script exits 1; surface the error and stop. After successful activation, jump to **Step 2** (stage list).
 
 ---
 
@@ -208,7 +202,7 @@ No-prompt shortcut: finds the next runnable session, activates it, runs to compl
 3. Count total remaining runnable sessions for context.
 4. Show: "Activating session: {name} ({M} of {N} remaining)"
 5. Activate via `start-workflow-session.sh` (respect sibling-active guard).
-6. Execute per **Steps 2-5** (TaskCreate, execute stages, transition, finalize).
+6. Execute per **Steps 2-5** (stage list, execute stages, transition, finalize).
 7. On completion, show: "Session complete. {N-1} sessions remaining. Run `/craft:workflow-run next {name}` for the next one."
 8. **Stop.** Do not auto-advance to the next session.
 
@@ -296,7 +290,7 @@ Find the active session and resume it.
 1. Use **Glob** to find all `session.md` files: `$PROJECT/.craft/workflows/*/sessions/*/session.md`.
 2. Read each with `limit: 10` to check frontmatter. Filter for `status: active`.
 
-**If an active session exists:** Auto-select (or pick via AskUserQuestion if multiple). Jump to **Step 2** (TaskCreate setup) and resume execution from `current_stage`.
+**If an active session exists:** Auto-select (or pick via AskUserQuestion if multiple). Jump to **Step 2** (stage list) and resume execution from `current_stage`.
 
 **If NO active session exists:** Check for runnable sessions (draft or ready) across all workflows using Step 1c logic.
 
@@ -326,41 +320,19 @@ If no runnable sessions found: "No active, draft, or ready sessions found." Stop
 
 ---
 
-## Step 2: Create Tasks for Live Progress Tracking
+## Step 2: Show the Stage List
 
-**Use the built-in Task tools to create a live checklist visible in the terminal UI.** This is the primary progress display - not custom text output.
-
-Read the workflow's `definition.md` `## Stages` routing table. Each row gives the stage number, name, execution mode, and file path.
-
-For each stage, call **TaskCreate**:
+**Print the stage list in your reply.** It is the user's progress display. Build it from the `## Progress` table in `session.md`, one line per row:
 
 ```
-TaskCreate({
-  subject: "Stage {N}: {Name}",
-  description: "{execution mode} | {one-line stage description}",
-  activeForm: "Running Stage {N}: {Name}"
-})
+[x] Stage 1: {Stage}
+[>] Stage 2: {Stage}
+[ ] Stage 3: {Stage}
 ```
 
-Then set up dependencies with **TaskUpdate**:
+`[x]` complete, `[>]` active, `[-]` skipped, `[ ]` pending.
 
-```
-TaskUpdate({
-  taskId: "{stage-2-id}",
-  addBlockedBy: ["{stage-1-id}"]
-})
-```
-
-This produces a persistent, visible checklist that:
-
-- Shows completed/in-progress/pending status for every stage
-- Updates in real-time as stages advance
-- Survives context compaction (recover state via TaskList)
-- Is visible to both the agent and the user at all times
-
-Set Stage 1 to `in_progress` immediately after creating all tasks (or set the resume stage to `in_progress` if continuing).
-
-**After context compaction or session restart:** Call **TaskList** to recover current workflow state. The task with `status: in_progress` is the current stage. All `completed` tasks are done stages. This replaces the need to re-read session.md for live state.
+**After context compaction or session restart:** read `session.md` and continue from `current_stage`.
 
 ---
 
@@ -467,9 +439,9 @@ If "Approve" -> advance. If "Needs work" -> get feedback, re-run stage. If "Manu
 
 ---
 
-## Step 4: Stage Transition (MANDATORY - BOTH SCRIPT AND TASKS)
+## Step 4: Stage Transition
 
-After completing a stage, do BOTH. Do not skip either.
+After completing a stage, run the transition script, then print the stage list.
 
 **1. Run the transition script** (updates session.md - the permanent record):
 
@@ -485,12 +457,7 @@ ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/complete-workflow-stage.sh ".craft/workflows
 
 The script updates the Progress table row (status -> complete, adds date and notes), checks `- [ ]` items in the stage's checklist section, updates stage heading status tags, increments `current_stage`, marks next stage active in both the Progress table and checklist heading. Also verifies artifact existence for non-manual stages with `produces:`.
 
-**2. Update Tasks** (updates live UI - what you and the user see):
-
-```
-TaskUpdate({ taskId: "{completed-stage-task-id}", status: "completed" })
-TaskUpdate({ taskId: "{next-stage-task-id}", status: "in_progress" })
-```
+**2. Print the stage list again** from the updated Progress table, as in Step 2.
 
 **If the script reports "ALL STAGES COMPLETE":** Jump to Step 5 (Session Finalization).
 
@@ -524,7 +491,7 @@ Read the script's stdout to see the validation report.
 
 **If passed-with-issues:** Show the issue list. Ask the user whether to address them or leave for later.
 
-Mark all remaining Task entries as `completed`. Show:
+Print the stage list once more from the Progress table. Show:
 
 > "Session complete: {session name}. {N} stages done. {Validation summary}."
 
@@ -536,7 +503,7 @@ If the user needs to stop mid-session:
 
 - The session stays `active` with `current_stage` pointing to where they stopped.
 - `/craft:workflow-run continue` picks up exactly here next time.
-- No state is lost - everything is in `session.md` and recoverable via TaskList.
+- No state is lost - everything is in `session.md` and recoverable from it.
 - `session-start.sh` surfaces active workflow sessions as a reminder (same pattern as active stories).
 
 ---

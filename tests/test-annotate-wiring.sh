@@ -556,7 +556,7 @@ assert_contains_literal "the stamps are the first two lines of the baked element
 
 begin_test "mockup: no new widget and no new task"
 assert_eq "AskUserQuestion mentions are frozen" "10" "$(grep -c 'AskUserQuestion' "$MOCKUP" || true)"
-assert_eq "TaskCreate mentions are frozen" "1" "$(grep -c 'TaskCreate' "$MOCKUP" || true)"
+assert_eq "TaskCreate mentions are frozen" "0" "$(grep -c 'TaskCreate' "$MOCKUP" || true)"
 assert_eq "the proof sheet section names no widget" "0" "$(grep -c 'AskUserQuestion' <<< "$SHEET" || true)"
 assert_contains_literal "arming is a substep" "substep" "$SHEET"
 

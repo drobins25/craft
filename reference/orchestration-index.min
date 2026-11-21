@@ -48,7 +48,6 @@ adhoc→classify|bug:investigate→confidence→edit→validate|tweak:fit-check�
 +breadcrumb before nested skill invocation
 +clean up breadcrumb on ALL exit paths
 !stop after chunk/story completes—continue to next chunk or next story
-!conflate notebook todos with TaskCreate—different lifetimes (notebook=persistent across sessions, TaskCreate=ephemeral, /craft:adhoc=act-now bug/tweak)
 !stack inline offers—max one per turn
 =SCRIPTS
 start-cycle.sh [cycle]|activate,set ACTIVE_CYCLE

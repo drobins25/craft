@@ -17,7 +17,6 @@ How to orchestrate parallel story planning using Claude Code agent teams. This i
 | Capability | Agent Teams | Task Subagents |
 |-----------|-------------|----------------|
 | Inter-agent messaging | Yes — teammates message each other | No — fully isolated |
-| Shared task list | Yes — via TaskCreate/TaskUpdate | No |
 | Idle notifications | Yes — notified when teammate finishes | No — poll or wait |
 | Live coordination | Yes — detect file overlap during planning | No — post-hoc cohesion check by orchestrator |
 | Batch size control | Same — dependency graph levels | Same |
@@ -94,7 +93,6 @@ Stories are planned in **dependency graph levels** — not fixed-size batches:
 ## Monitoring Completion
 
 **Agent teams mode:**
-- Teammates signal completion via task list updates
 - Orchestrator receives idle notifications when teammates finish
 - Wait for all teammates in the current batch before proceeding
 

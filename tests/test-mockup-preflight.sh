@@ -103,7 +103,5 @@ assert_contains "prior mockup silences it" 'a project that has mocked before nev
 # --- Load-bearing guards survive ---
 begin_test "load-bearing guards survive"
 assert_file_contains "no-default-palette contract intact" 'no default palette ever reaches a brief' "$MOCKUP"
-assert_file_contains "substeps-never-tasks intact" 'Substeps never become tasks' "$MOCKUP"
-assert_file_contains "pre-flight named as substep with no rail entry" 'no entry on the task rail' "$MOCKUP"
 
 finish_tests

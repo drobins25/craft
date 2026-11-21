@@ -61,9 +61,7 @@ Show this recap before the Phase 6 question:
 
 Quick setup never scans, so `.craft/design/.confidence-signals.yaml` carries no `total_files` key on this path - per Phase 6's marker rule, NO option carries (Recommended). `PROJECT_TYPE` comes from the type question above (UI / Web app -> `ui`; CLI / Backend / Plugin -> `cli`) and gates the mockup option as usual.
 
-**If "Full setup":** Create the task rail, then continue to Phase 0.5 below.
-
-**The task rail (Full setup only - Quick setup is seconds long and never builds one):** six TaskCreate tasks, blockedBy-chained in order: **Intent -> Scan -> Shape -> Design -> Scaffold -> Kickoff**. Task SUBJECTS are exactly the six beat names - no "Init:" prefix, no descriptive suffix; the subject is a label, detail goes in the task description. Beat-to-phase mapping: Intent = Phase 0.5, Scan = Phase 0a/0b + Phase 1, Shape = Phase 1b + 2 + 2b, Design = Phase 3 (the whole inspiration session - ONE task across all sources and riffs, like mockup's Polish), Scaffold = Phase 4 + 5 + 5b, Kickoff = Phase 6. Substeps never become tasks - no AskUserQuestion, agent spawn, or script run gets its own task. Beats the flow bypasses complete-with-note, never delete. The rail ENDS at Kickoff - whatever the first move routes into (mockup, cycle creation) creates its own tasks.
+**If "Full setup":** Continue to Phase 0.5 below.
 
 **If invoked with `RESUME_INSPIRATION=true`:**
 
@@ -74,7 +72,6 @@ Read `.craft/design/.inspiration-session`. Check the `phase` field:
 
 Skip Phase 0, 0a, 0b, 1, 2, and 2b entirely - the session file already has all context needed.
 
-Recreate the task rail (tasks are session-ephemeral - the previous session's rail is gone): create the six tasks exactly as the Full-setup rail block above specifies, immediately complete Intent, Scan, and Shape with the note "pre-resume - settled in the original init session", and leave Design open. The `.inspiration-session` file is the durable truth the rail is rebuilt from - the same role record.md plays for mockup.
 
 ---
 
@@ -95,7 +92,7 @@ options:
     description: "No intent capture - skip the muse session later too"
 ```
 
-**If "Skip":** Set `INTENT_CAPTURED=false`. Complete the Intent task with a note (skipped - no intent capture). Continue to Phase 0a. Phase 5b will skip muse session.
+**If "Skip":** Set `INTENT_CAPTURED=false`. Continue to Phase 0a. Phase 5b will skip muse session.
 
 **If "Yes":** Set `INTENT_CAPTURED=true` and ask the two intent prompts:
 
@@ -103,7 +100,7 @@ Ask the user directly:
 
 > "What's the one thing this app helps people do? (One sentence is enough.)"
 
-Capture their next response as `PROJECT_INTENT_Q1`. If the response is whitespace-only or empty, treat as Skip — set `INTENT_CAPTURED=false`, complete Intent with the same skipped note, and continue to Phase 0a.
+Capture their next response as `PROJECT_INTENT_Q1`. If the response is whitespace-only or empty, treat as Skip — set `INTENT_CAPTURED=false` and continue to Phase 0a.
 
 Then ask:
 
@@ -115,7 +112,7 @@ Both answers will be:
 1. Written verbatim into `project.md` as a `## Project Intent` section in Phase 5
 2. Used as substrate for the muse session in Phase 5b (which generates the Emotional Core)
 
-Mark Intent complete. Continue to Phase 0a.
+Continue to Phase 0a.
 
 ---
 
@@ -241,7 +238,7 @@ Glob "**/*.sh" → count → SH_COUNT
 
 Use these counts to infer project type and stack.
 
-**If reached from empty-directory pre-check (Phase 0a):** Skip Phase 1 (nothing to confirm — directory is empty). Ask the user the project-type question below directly, complete Scan with a note (empty directory - nothing to scan), then continue to Phase 1b.
+**If reached from empty-directory pre-check (Phase 0a):** Skip Phase 1 (nothing to confirm — directory is empty). Ask the user the project-type question below directly, then continue to Phase 1b.
 
 **If reached from agent failure:** Continue to Phase 1 with partial findings.
 
@@ -299,7 +296,6 @@ options:
 
 **If "Needs significant changes":** Fall back to asking key questions (project type, language, framework). Don't ask about things that are verifiable from files.
 
-Mark Scan complete once findings are settled.
 
 **Store confirmed values:**
 - `PROJECT_TYPE` = `ui` | `cli` | `api` | `hybrid` — preserve through the phase chain so Phase 1b can route by type. When calling `setup-craft.sh` in Phase 4, pass `cli` for `api` and `hybrid` types (they share the CLI scaffolding templates).
@@ -533,7 +529,7 @@ Store the captured energy as `ENERGY_LEVEL`.
 
 **Step 2 — Path selection:**
 
-**If PROJECT_TYPE is `cli` or `api`:** Mark Shape complete; complete Design with a note (no inspiration session for CLI/backend). Skip to Phase 4 (setup-craft.sh).
+**If PROJECT_TYPE is `cli` or `api`:** CLI and backend projects get no inspiration session. Skip to Phase 4 (setup-craft.sh).
 
 **If PROJECT_TYPE is `ui` or `hybrid`:** Ask the inspiration question. The gate is conditional on whether Phase 0.5 captured intent - the suggest option only exists when there is substrate to seed it.
 
@@ -575,7 +571,7 @@ options:
 
 Proceed to Phase 3 (Inspiration Design Session).
 
-**If "No":** Mark Shape complete; complete Design with a note (skipped - riding on Phase 2's token decision). Skip Phase 3. Continue to Phase 4 (setup-craft.sh).
+**If "No":** Skip Phase 3; Phase 2's token decision stands. Continue to Phase 4 (setup-craft.sh).
 
 **Step 2b - The suggestion beat** (reached only from "Suggest some for me"):
 
@@ -654,7 +650,6 @@ Echo the script's summary line (kept/added/replaced/backfilled) to the user afte
 
 **If starting fresh:** Create the session file and begin at Phase 3a.
 
-**Rail:** on any entry to Phase 3, mark Shape complete if it is still open - the suggestion beat's pick, fallback, and degrade paths all land here, so this one site covers them all. Design is now the open beat; it stays ONE task across every source and riff below.
 
 #### Phase 3a: Source Collection
 
@@ -1083,13 +1078,12 @@ Step 7 - Confirm to user:
 >
 > Let's continue setup."
 
-Mark Design complete. Proceed to Phase 4.
+Proceed to Phase 4.
 
 ---
 
 ### Phase 4: Create Structure
 
-**Rail sweep on entry:** any beat still open ahead of Scaffold completes-with-note now, stating why the flow bypassed it - "parked - inspiration session saved for resume" for Phase 3's Done-for-now / Save-for-later doors, "skipped" for anything else. This single site backstops every early-exit door so no beat is left dangling.
 
 Run the setup script with detected project type:
 
@@ -1360,7 +1354,7 @@ After muse completes, continue to Phase 6 (First Cycle Kickoff). The first cycle
 
 ### Phase 6: First Cycle Kickoff
 
-On the Full-setup path, mark Scaffold complete (Quick setup has no rail), then show the recap first (Quick setup shows its own recap before arriving here):
+Show the recap first (Quick setup shows its own recap before arriving here):
 
 > "**Project:** [name]
 > **Type:** [ui/cli]
@@ -1400,7 +1394,7 @@ options:
 - **"Describe a feature"** -> [User describes it] -> creates first cycle -> enters Creative Phase -> starts riffing on stories
 - **"I'll take it from here"** -> clean exit; init is complete
 
-Whichever option resolves, complete the Kickoff task first (Full setup only) - the rail ends here; the destination flow (mockup, cycle creation) creates its own tasks.
+Whichever option resolves, init ends here; the destination flow (mockup, cycle creation) runs as its own thread.
 
 ---
 

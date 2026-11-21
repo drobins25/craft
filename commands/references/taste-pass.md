@@ -112,7 +112,7 @@ After selection, offer to start immediately - this is NOT deferral:
 - **"start with the first"** -> hand winner 1 to `/craft:mockup`, fully open, one at a time.
 - **"trust you, go"** -> march the family tag in order, each its own open mockup session.
 
-Live progress is an ephemeral Task rail; the todos are the durable backing. Do NOT create the mockups
+Do NOT create the mockups
 here - each winner goes to `/craft:mockup` as its own thread, fully open (the user may go COMPLETELY
 different from the seed - that freedom is the point). Mockup's own graduation ramps decide each fate.
 

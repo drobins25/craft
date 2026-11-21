@@ -439,7 +439,6 @@ After your text, one question, "Anything to add for future-you, or skip?", and o
 - **Done always confirms first,** because the file moves out of view. Passing mentions never mark anything done.
 - **Craft offers, you decide.** On "later", "don't let me forget" or "side note", one ignorable line: "Worth dropping in /craft:notebook? I'd tag it #verifier #cycle-9. Otherwise I'll continue." Yes captures silently with the conversation as context.
 - **Notes come back as "as of".** Every session loads a one-line index of your notes, and craft reads the full note when the work matches. A recalled note is true as of its date: verify before acting.
-- **Not TaskCreate.** TaskCreate lasts one conversation. Notebook todos persist across sessions and survive cycle completion.
 
 Entries link. `graduated_to` can point at a story, fix, tweak or dial, and a `source` written as `[[slug]]` points back at the record that spawned the entry. `/craft:dashboard` resolves them into one graph.
 
