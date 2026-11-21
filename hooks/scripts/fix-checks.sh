@@ -207,7 +207,9 @@ case "$CMD" in
     # not found inside "b.txt.bak"; a full stop straight after it still counts,
     # as at the end of a sentence. With "tail", a bare or partial path counts
     # when a Files path ends with it ("tracker_issue.py" names
-    # "hooks/scripts/tracker_issue.py"), because a hit is written as file:line.
+    # "hooks/scripts/tracker_issue.py"), because a hit is written as file:line;
+    # check 2 then also requires that no second file in the project answers to
+    # that name (count_named).
     on_files() {
       printf '%s\n' "$FILES_TEXT" | P="$1" awk -v mode="$2" '
         BEGIN { p = ENVIRON["P"] }
@@ -227,6 +229,19 @@ case "$CMD" in
       '
     }
 
+    # count_named <path>: how many files in the project (tracked, or untracked
+    # and not ignored) are that path or end with "/<path>". A bare or partial
+    # hit that more than one file answers to is not settled by a Files path
+    # that merely ends with it: the unfixed copy may be the one meant.
+    count_named() {
+      git ls-files -z --cached --others --exclude-standard | tr '\0' '\n' | P="$1" awk '
+        BEGIN { p = ENVIRON["P"]; n = length(p) }
+        { l = length($0)
+          if ($0 == p || (l > n && substr($0, l - n + 1) == p && substr($0, l - n, 1) == "/")) c++ }
+        END { print c + 0 }
+      '
+    }
+
     # 2. A Same construct elsewhere hit marked wrong whose file is not in the
     #    fix. A row (an indented line continues the row above it) that says
     #    wrong is split at each file:line it names; each hit runs from its
@@ -240,7 +255,10 @@ case "$CMD" in
       if [ "$hit_file" = "-" ]; then
         echo "2 wrong hit names no file:line: $row"
         FOUND=$((FOUND + 1))
-      elif case "$hit_file" in /*) ! on_files "$hit_file" whole ;; *) ! on_files "$hit_file" tail ;; esac; then
+      elif case "$hit_file" in
+             /*) ! on_files "$hit_file" whole ;;
+             *) ! on_files "$hit_file" whole && { ! on_files "$hit_file" tail || [ "$(count_named "$hit_file")" -gt 1 ]; } ;;
+           esac; then
         echo "2 wrong hit outside Files: $hit_file in: $row"
         FOUND=$((FOUND + 1))
       fi

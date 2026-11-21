@@ -445,6 +445,32 @@ assert_contains_literal "reported" "2 wrong hit outside Files: lib/q.py in:" "$O
 rm -rf "$TEST_DIR"
 echo ""
 
+begin_test "a bare-name wrong hit is reported when another file has that name, even if a Files path ends with it"
+make_repo
+mkdir -p "$TEST_DIR/data" "$TEST_DIR/other"
+echo "x" > "$TEST_DIR/data/a.py"
+echo "x" > "$TEST_DIR/other/a.py"
+SNAP=$(bash "$FIX_CHECKS" snapshot "$TEST_DIR")
+write_record "- data/a.py - modify" "" "a.py:3 - ran other/a.py on the input, returned the bad value - wrong"
+OUT=$(bash "$FIX_CHECKS" run "$TEST_DIR" "$SNAP" "$REC")
+assert_contains_literal "two files are named a.py" "2 wrong hit outside Files: a.py in:" "$OUT"
+rm -rf "$TEST_DIR"
+echo ""
+
+begin_test "a bare-name wrong hit is cleared when one file has that name, and a full path is cleared when a longer path shares its tail"
+make_repo
+mkdir -p "$TEST_DIR/data" "$TEST_DIR/x/data"
+echo "x" > "$TEST_DIR/data/a.py"
+echo "x" > "$TEST_DIR/x/data/a.py"
+echo "x" > "$TEST_DIR/src/only.py"
+SNAP=$(bash "$FIX_CHECKS" snapshot "$TEST_DIR")
+write_record "- data/a.py - modify
+- src/only.py - modify" "" "only.py:3 - ran, bad - wrong. data/a.py:3 - ran, bad - wrong"
+OUT=$(bash "$FIX_CHECKS" run "$TEST_DIR" "$SNAP" "$REC")
+assert_eq "nothing found" "checks run: 0 found" "$OUT"
+rm -rf "$TEST_DIR"
+echo ""
+
 # --- run: check 4, record status ---
 
 begin_test "a record whose status is not validated is reported"
