@@ -61,7 +61,8 @@ begin_test "close-out runs adhoc inline, never through the Skill tool"
 assert_contains_literal "reference names the adhoc skill file" '${CLAUDE_PLUGIN_ROOT}/skills/adhoc/SKILL.md' "$REF_TEXT"
 assert_contains_literal "reference forbids the Skill tool" "never through the Skill tool" "$REF_TEXT"
 assert_contains_literal "reference reads the skill inline" "inline" "$REF_TEXT"
-assert_contains_literal "one task per pending adhoc run is created first" "one task per pending adhoc run" "$REF_TEXT"
+assert_contains_literal "adhoc runs go one at a time" "Adhoc runs, one at a time." "$REF_TEXT"
+assert_not_contains "no task tool step (the tool no longer exists)" "one task per pending adhoc run" "$REF_TEXT"
 
 # quote_pair <source file> <sentence> - the sentence sits verbatim in the reference and in its source
 quote_pair() {

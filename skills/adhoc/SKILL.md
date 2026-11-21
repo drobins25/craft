@@ -1,16 +1,17 @@
 ---
 name: adhoc
 description: "Adhoc workflow for small targeted changes to existing behavior or appearance, without the full story ceremony. Use when the orchestrator encounters a bug with a clear root cause and surgical solution, OR a small enhancement to something already built (a different icon, wording, spacing, color). Triggers on: 'fix this', 'this is broken', 'the alignment is off', 'that button doesn't work', 'quick fix', 'patch this', 'tweak this', 'change the icon', 'adjust the wording', post-story corrections, or any situation where the write gate blocks a small targeted change. Acts NOW - a defect to file and fix later belongs in /craft:bugs, other deferred work in the notebook. Do NOT use for new features, design exploration, or changes requiring creative spark."
-allowed-tools: ["Read", "Edit", "Write", "Glob", "Grep", "Bash", "AskUserQuestion", "TaskCreate", "TaskUpdate"]
+allowed-tools: ["Read", "Edit", "Write", "Glob", "Grep", "Bash", "AskUserQuestion", "Task", "SendMessage"]
 ---
 
 <!-- EDITORS: This file is the shared SHELL only - guards, classification, write gate,
-     todo-satisfaction detection, commit step. The actual flows live in references/fix.md
+     todo-satisfaction detection, commit step. A fix is handed to the smith agent through
+     references/fix-handoff.md. The actual flows live in references/fix.md
      (bugs) and references/tweak.md (enhancements). Flow changes go THERE, not here. -->
 
 # Adhoc
 
-You are the orchestrator making a small targeted change. No implementer agent, no chunks, no story ceremony. Adhoc work comes in two flavors: a **fix** (something is broken and you can see why) and a **tweak** (something works as built, but the user wants it different). This shell classifies which one you're holding, then runs the matching flow from its reference file.
+You are the orchestrator making a small targeted change. No implementer agent, no chunks, no story ceremony. A fix goes to the smith agent for the work itself, and a tweak you run inline. Adhoc work comes in two flavors: a **fix** (something is broken and you can see why) and a **tweak** (something works as built, but the user wants it different). This shell classifies which one you're holding, then runs the matching flow from its reference file.
 
 ## Why This Exists
 
@@ -42,27 +43,22 @@ ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/update-global-state.sh CRAFT_WRITE_ENABLED "
 echo "$(date -u +%Y-%m-%dT%H:%M:%S)" > "${CRAFT_PROJECT_ROOT:-.}/.craft/.active-fix"
 ```
 
-Create the close-obligation task pair so the open gate stays visible even if the conversation drifts:
-
-1. **TaskCreate** - "Adhoc [fix|tweak]: [brief description]" - set `in_progress`.
-2. **TaskCreate** - "Close write gate" (description: "Set CRAFT_WRITE_ENABLED='' after the adhoc work is done.") - set `addBlockedBy` to the work task's ID.
-
-The gate stays open for the whole work thread - including follow-up requests and tweak attempt loops. The pending "Close write gate" task is the closure obligation.
+The gate stays open for the whole work thread - including follow-up requests and tweak attempt loops - and closing it at Step 6 is yours to do; the status line shows "write gate open" until you do.
 
 ## Step 4: Run the Flow
 
 Read the matching reference file and execute it inline (never via the Skill tool):
 
-- **Fix** -> Read `${CLAUDE_PLUGIN_ROOT}/skills/adhoc/references/fix.md`
+- **Fix** -> Read `${CLAUDE_PLUGIN_ROOT}/skills/adhoc/references/fix-handoff.md` and follow it. The smith agent runs `references/fix.md`; you keep Steps 1 to 3, 5 and 6 here and the todo detection below.
 - **Tweak** -> Read `${CLAUDE_PLUGIN_ROOT}/skills/adhoc/references/tweak.md`
 
 The reference owns the record file, the gate question (confidence vs fit), the edits, and validation. It hands back here for each commit.
 
-**Soft scope check (both flavors):** If you find yourself touching 5+ files, pause and tell the user: "This is touching [N] files - that's getting bigger than a typical adhoc change. Want me to continue or create a story?" Let them decide.
+**Soft scope check (both flavors; for a fix the smith agent applies it and returns it as an escalation):** If you find yourself touching 5+ files, pause and tell the user: "This is touching [N] files - that's getting bigger than a typical adhoc change. Want me to continue or create a story?" Let them decide.
 
 ## Step 5: Commit
 
-Runs after each validated set of edits (a fix's single pass, or each tweak attempt). Stage ONLY the files the change touched - never the whole tree. The staged set comes from the record file's `files_changed`; if that list is empty or stale, fall back to `git diff --name-only HEAD` so real changes are never silently dropped.
+Runs after each validated set of edits (a fix's single pass, or each tweak attempt). Stage ONLY the files the change touched - never the whole tree. The staged set comes from the record file's `files_changed`; if that list is empty or stale, fall back to `git diff --name-only HEAD` so real changes are never silently dropped. For a fix the smith agent ran, `files_changed` is a count, so the staged set is the paths on the record's Solution Files lines, after the checks in `references/fix-handoff.md`.
 
 ```bash
 cd "${CRAFT_PROJECT_ROOT:-.}"
@@ -82,7 +78,7 @@ Commit message prefix: `fix:` for fixes, `tweak:` for tweaks. Example: `tweak: s
 
 ## Step 6: Close the Gate
 
-At **thread end** - the fix validated, or the tweak record reached accepted/abandoned/escalated, or the user has visibly moved on:
+At **thread end** - the fix validated, escalated or left uncommitted, or the tweak record reached accepted/abandoned/escalated, or the user has visibly moved on, or a fix hand-off ended any other way (blocked, no report, dropped):
 
 ```bash
 # Close the write gate
@@ -91,8 +87,6 @@ ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/update-global-state.sh CRAFT_WRITE_ENABLED "
 # Remove safety marker
 rm -f "${CRAFT_PROJECT_ROOT:-.}/.craft/.active-fix"
 ```
-
-Then complete both tasks (work task, then "Close write gate").
 
 A tweak record left `status: open` does NOT keep the gate open - the record's openness is bookkeeping in `.craft/tweaks/`; the gate closes with the thread. Cross-session state lives ONLY in the record.
 

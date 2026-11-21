@@ -12,7 +12,7 @@ For definitions of cycle, story, chunk, and the workshop concepts, see README.md
 plugins/craft/
 ├── .claude-plugin/
 │   └── plugin.json            ← Plugin manifest (name, version)
-├── agents/                    ← Isolated-context specialist agents (27 agents)
+├── agents/                    ← Isolated-context specialist agents (28 agents)
 │   ├── alchemist.md           ← CSS interaction physicist (crystallized)
 │   ├── become-researcher.md   ← Psychological material collector for /craft:become
 │   ├── chunk-validator.md     ← Quality check executor (haiku model)
@@ -32,6 +32,7 @@ plugins/craft/
 │   ├── qa-analyzer.md         ← Bug hunting via browser inspection
 │   ├── researcher.md          ← Research sub-question extractor (haiku)
 │   ├── research-synthesizer.md ← Cross-branch synthesis: writes _plan.md + _sources.md (sonnet)
+│   ├── smith.md               ← Takes one adhoc fix end to end; reads around the problem first (sonnet)
 │   ├── style-analyzer.md      ← Token compliance, pattern consistency
 │   ├── tester.md              ← Integration tests, E2E, final validation
 │   ├── ux-analyzer.md         ← Nielsen heuristics, accessibility
@@ -90,7 +91,7 @@ plugins/craft/
 │   ├── content-spark/         ← Surface content assumptions before creative/planning
 │   ├── creative-spark/        ← Generate creative options; supports muse/alchemist drivers
 │   ├── design-vibe/           ← Visual cohesion review across stories
-│   ├── adhoc/                 ← Adhoc fix or tweak; shell + references/{fix,tweak}.md
+│   ├── adhoc/                 ← Adhoc fix or tweak; shell + references/{fix,fix-handoff,tweak}.md
 │   ├── lock-decision/         ← Formalize approved decisions
 │   ├── plan-chunks/           ← Batch planning with file-based dependency verification
 │   ├── validate-chunk/        ← Validation via git diff (not spec file list)
@@ -338,6 +339,7 @@ The band reads `.craft/.global-state`, the active cycle's `.state`, story files'
 | `complete-workflow-stage.sh` | Advance workflow to the next stage |
 | `get-latest-cycle.sh` | Resolve the most recent cycle directory path (`--status=` filters by cycle status) |
 | `update-global-state.sh` | Update .global-state key-value pairs |
+| `fix-checks.sh` | The checks an adhoc fix passes before it is committed: a snapshot of the working tree before the fix, then its undecided readers, its hits marked wrong, the files it changed that it did not declare, a record not yet validated, and files the user had already staged |
 | `update-cycle-state.sh` | Update cycle .state file |
 | `update-story-status.sh` | Change story status in frontmatter; clears the story's planning stage on ready, active and complete |
 | `planning-stage.sh` | Write, rewrite or clear a story's `planning_stage` frontmatter field, the one line the progress band's planning view reads |

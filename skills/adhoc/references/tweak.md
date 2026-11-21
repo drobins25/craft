@@ -6,7 +6,7 @@
      graduate into taste. Every field below exists to serve that pass. Dropping a
      field or paraphrasing user reactions destroys the signal. -->
 
-This is the TWEAK flavor: nothing is broken - something works as built, and the user wants it different. A different icon, tighter spacing, calmer wording. The gate here is not root-cause confidence ("will it work") but **fit** ("will it fit"). The shell has already classified the request, opened the write gate, and created the close-obligation tasks - this file owns the tweak record, the Fit Check, the attempt loop, and the close-out. Hand back to the shell for each commit and the final gate close.
+This is the TWEAK flavor: nothing is broken - something works as built, and the user wants it different. A different icon, tighter spacing, calmer wording. The gate here is not root-cause confidence ("will it work") but **fit** ("will it fit"). The shell has already classified the request, and opened the write gate - this file owns the tweak record, the Fit Check, the attempt loop, and the close-out. Hand back to the shell for each commit and the final gate close.
 
 The word "enhancement" never appears in tweak filenames or frontmatter values - "tweak" is the term, everywhere. This keeps the corpus fully separate from craft:analyze's `enhance-*` proposal records: those are agent-generated ideas; these are user-driven changes with real reactions attached.
 
@@ -209,7 +209,7 @@ There is NO lesson-capture step on the tweak path - that belongs to fixes. The r
 
 ## Step 3b: Reapplying Elsewhere
 
-The user chose to propagate an accepted move. The original record is already closed; the work thread (gate, task pair) stays open.
+The user chose to propagate an accepted move. The original record is already closed; the work thread and its write gate stay open.
 
 1. **Ask where - never scan by default.** "Where else should this land?" The user usually knows ("also the profile cards"). Offer the scan as a visibly priced opt-in in the same breath: "Or I can look for candidates - that means scanning [named scope, e.g. the components directory] for similar [kind] patterns." Run a scan ONLY on explicit acceptance, and scope it by the tweak's kind and surface - grep for the matching pattern, never a whole-project read. An unrequested full-project scan is the failure mode this step exists to prevent.
 2. **One record per target.** Each target surface gets its own `tweak-[slug].md` with `reapplies:` set to the original's name. One file per surface - the family tree lives in the backlinks, never in one bloated record.

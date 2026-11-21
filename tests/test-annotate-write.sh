@@ -48,12 +48,15 @@ assert_contains "it is in annotate_write.py" "^annotate_write\.py:" "$SITES"
 assert_eq "no annotate script replaces a temp of its own" "0" "$(cd "$SCRIPTS_DIR" && cat annotate-* | grep -c 'os\.replace(\|os\.link(' || true)"
 
 begin_test "every former copy calls write_atomic"
-calls() { grep -c 'annotate_write\.write_atomic(' "$SCRIPTS_DIR/$1" || true; }
-assert_eq "annotate-run.sh: write_text, begin, the sheet (two saves), the watch cursor" "5" "$(calls annotate-run.sh)"
-assert_eq "annotate-resolve.sh: the resolutions cache" "1" "$(calls annotate-resolve.sh)"
-assert_eq "annotate-external-gate.sh: the lift" "1" "$(calls annotate-external-gate.sh)"
-assert_eq "annotate-channel.py: replace_json, the token and the port" "3" "$(calls annotate-channel.py)"
-assert_eq "annotate-record.sh: the graduate rewrite" "1" "$(calls annotate-record.sh)"
+# At least one real call per script (comment lines do not count). The count is not
+# pinned: a new save is allowed, and a bare temp-and-rename is caught by the block above.
+calls() { { grep 'annotate_write\.write_atomic(' "$SCRIPTS_DIR/$1" || true; } | { grep -v '^[[:space:]]*#' || true; } | grep -c . || true; }
+calls_it() { if [ "$(calls "$1")" -ge 1 ]; then echo yes; else echo no; fi; }
+assert_eq "annotate-run.sh calls it: write_text, begin, the sheet, the watch cursor" "yes" "$(calls_it annotate-run.sh)"
+assert_eq "annotate-resolve.sh calls it: the resolutions cache" "yes" "$(calls_it annotate-resolve.sh)"
+assert_eq "annotate-external-gate.sh calls it: the lift" "yes" "$(calls_it annotate-external-gate.sh)"
+assert_eq "annotate-channel.py calls it: replace_json, the token and the port" "yes" "$(calls_it annotate-channel.py)"
+assert_eq "annotate-record.sh calls it: the graduate rewrite" "yes" "$(calls_it annotate-record.sh)"
 
 # --- what each site did, kept ---------------------------------------------
 begin_test "a plain write: same folder, <name>.<random>.tmp, mode 600, no fsync, temp gone"

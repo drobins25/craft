@@ -90,7 +90,7 @@ else
     FOUND=0
     CRAFT="$ROOT/.craft"
     for candidate in \
-      "$CRAFT/fixes/$VALUE.md" "$CRAFT/tweaks/$VALUE.md" \
+      "$CRAFT/fixes/$VALUE.md" "$CRAFT"/fixes/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-"$VALUE.md" "$CRAFT/tweaks/$VALUE.md" \
       "$CRAFT/bugs/$VALUE.md" "$CRAFT/bugs/closed/$VALUE.md" \
       "$CRAFT/backlog/$VALUE.md" \
       "$CRAFT"/cycles/*/stories/"$VALUE.md" "$CRAFT"/cycles/*/stories/*-"$VALUE.md" \
