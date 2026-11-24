@@ -47,6 +47,7 @@ INVENTORY = {
     ("mockup", "origin"),
     ("mockup", "solidify_outcome"),
     ("fix", "review"),
+    ("fix", "bug"),
     ("tweak", "review"),
     ("bug", "review"),
     ("story", "review"),

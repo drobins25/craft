@@ -347,14 +347,24 @@ assert_contains_literal \
   "$FIX_STEP8"
 
 assert_contains_literal \
-  "Step 8 says what started-from means" \
-  "Started from means the request pointed at that record" \
+  "Step 8 keys the close on the record's bug line" \
+  'its `bug:` line names a bug record' \
   "$FIX_STEP8"
 
 assert_contains_literal \
-  "the hand-off says what started-from means" \
-  "Started from means the request pointed at that record" \
+  "the hand-off keys the close on the record's bug line" \
+  'its `bug:` line names a bug record' \
   "$HANDOFF_H5"
+
+assert_contains_literal \
+  "the fix record template carries a bug line" \
+  "bug: [name of the bug record this fix was started from" \
+  "$(cat "$FIX_MD")"
+
+assert_contains_literal \
+  "the Smith brief carries BUG:" \
+  '- `BUG:` only when the request pointed at a bug record' \
+  "$(cat "$HANDOFF_MD")"
 
 assert_contains_literal \
   "the hand-off waits for a pending send-back before closing" \

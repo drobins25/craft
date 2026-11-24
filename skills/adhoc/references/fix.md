@@ -19,6 +19,7 @@ source_story: [story that introduced the bug, if known - e.g. riff-the-game]
 source_cycle: [cycle name, if known]
 planned_test: [for a defect found after source_story completed - the planned test case in that story that should have caught it, quoted as the plan names it, or none; blank when there is no source story]
 review: [name of the review record this fix came from, e.g. 2026-10-18-branch-feature-x - empty when not from a review]
+bug: [name of the bug record this fix was started from, e.g. 2026-11-20-save-button - empty otherwise]
 files_changed: 0
 lines_changed: 0
 trigger: [how the problem was discovered]
@@ -67,6 +68,8 @@ claim | evidence | holds
 **`planned_test`** (filled at record creation, one line, no question asked): when `source_story` names a story and the defect was found after that story completed - a review finding, a bug from the pile, an analyze finding, something the user hit - open the story file and read every chunk's `**Test cases:**` list. Write the one planned case whose name covers the behavior that broke, quoted exactly as the plan names it. When no planned case covers that behavior, write `none`. Leave it blank only when there is no source story. Judge by the behavior, not the file: a case that touches the same file but pins a different behavior is not a match. Over a cycle, the `none` count is the planner's miss rate, read straight from the records.
 
 **`review`**: when the handoff brief names a review record, set `review:` to that record's name. This flow never opens or edits the review record - the review's close-out fills the finding's line once this record lands.
+
+**`bug`**: the bug record in `.craft/bugs/` this fix was started from, as its file name without `.md` (the `FILE=` line `bash "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/bugs-list.sh" --status=open` prints for it). The caller fills it only when the user's request pointed at that record: its file, its slug or its line in the open pile. A subagent fills it only from its brief's `BUG:` line. Anything else leaves it empty, including an open bug that only looks like this defect or one a search turns up, because Step 8 and the hand-off close the named bug without asking anyone.
 
 ## Step 2: Investigate
 
@@ -143,9 +146,9 @@ Run the shared detection from the shell's `## Todo Satisfaction Detection` secti
 
 ## Step 8: Close
 
-When the record reads `status: validated` and this fix was started from a bug record in `.craft/bugs/`, close that bug first, whether or not the fix is committed. Started from means the request pointed at that record: its file, its slug or its line in the open pile. A bug that only looks like the one this fix cured stays open, because this close asks no one. Ask nothing. A subagent skips it, because its caller closes the bug after checking the report. A caller following `fix-handoff.md` skips it too, because H-5 already ran it, and a second run on a record that has moved can close another open bug with a similar name.
+When the record reads `status: validated` and its `bug:` line names a bug record, close that bug first, whether or not the fix is committed. An empty `bug:` line closes nothing. Ask nothing. A subagent skips it, because its caller closes the bug after checking the report. A caller following `fix-handoff.md` skips it too once H-5's Bug bullet has run for this record, because that bullet already closed the bug or left it open on purpose.
 
-Read the bug record first: one that gives its layer as `judgment` stays open, because only the user's eye on the result closes that kind, and the summary says it is fixed and theirs to close. Otherwise run:
+Read `.craft/bugs/<the name on that line>.md` under the project root first. When it is not there, the bug is already closed: run nothing, because the close command given a name it cannot find closes an open bug whose name contains it. One that gives its layer as `judgment` stays open, because only the user's eye on the result closes that kind, and the summary says it is fixed and theirs to close. Otherwise run:
 
 ```bash
 bash "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/bugs-close.sh" "<the bug record's path>" --status=fixed --fixed-by="fix record <the record's name>"
@@ -164,7 +167,7 @@ Validation: [what was checked, result]
 Planned test: ["<name>" from the source story / none / no source story]
 Lesson: [one sentence, or "none"]
 Todo: [closed <todo-slug> / none matched]
-Bug: [closed <bug title> / fixed, yours to close / none]
+Bug: [closed <bug title> / already closed / fixed, yours to close / left open: <the refusal> / none]
 ```
 
 Then hand back to the shell to close the gate (Step 6 there).

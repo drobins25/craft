@@ -364,6 +364,7 @@ FIELDS = {
         {"kind": "references", "inventory": "body_wikilinks"},
     ("mockup", "solidify_outcome"): {},
     ("fix", "review"): {},
+    ("fix", "bug"): {"inventory": None},
     ("tweak", "review"): {},
     ("bug", "review"): {},
     ("story", "review"): {},
