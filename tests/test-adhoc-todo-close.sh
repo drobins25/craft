@@ -353,6 +353,26 @@ assert_contains_literal \
   "$FIX_STEP8"
 
 assert_contains_literal \
+  "Step 8 looks in the closed folder before calling a bug closed" \
+  '.craft/bugs/closed/<the name on that line>.md' \
+  "$FIX_STEP8"
+
+assert_contains_literal \
+  "Step 8 reports a name found in neither folder as not found" \
+  'the bug named on the record was not found' \
+  "$FIX_STEP8"
+
+assert_contains_literal \
+  "the hand-off looks in the closed folder before calling a bug closed" \
+  '.craft/bugs/closed/<the name on that line>.md' \
+  "$HANDOFF_H5"
+
+assert_contains_literal \
+  "the hand-off reports a name found in neither folder as not found" \
+  'the bug named on the record was not found' \
+  "$HANDOFF_H5"
+
+assert_contains_literal \
   "the hand-off keys the close on the record's bug line" \
   'its `bug:` line names a bug record' \
   "$HANDOFF_H5"

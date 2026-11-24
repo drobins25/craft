@@ -69,7 +69,7 @@ claim | evidence | holds
 
 **`review`**: when the handoff brief names a review record, set `review:` to that record's name. This flow never opens or edits the review record - the review's close-out fills the finding's line once this record lands.
 
-**`bug`**: the bug record in `.craft/bugs/` this fix was started from, as its file name without `.md` (the `FILE=` line `bash "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/bugs-list.sh" --status=open` prints for it). The caller fills it only when the user's request pointed at that record: its file, its slug or its line in the open pile. A subagent fills it only from its brief's `BUG:` line. Anything else leaves it empty, including an open bug that only looks like this defect or one a search turns up, because Step 8 and the hand-off close the named bug without asking anyone.
+**`bug`**: the bug record in `.craft/bugs/` this fix was started from, as its dated file name without `.md`, taken from the end of the `FILE=` path and not from the `SLUG=` value (the `FILE=` line `bash "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/bugs-list.sh" --status=open` prints for it). The caller fills it only when the user's request pointed at that record: its file, its slug or its line in the open pile. A subagent fills it only from its brief's `BUG:` line. Anything else leaves it empty, including an open bug that only looks like this defect or one a search turns up, because Step 8 and the hand-off close the named bug without asking anyone.
 
 ## Step 2: Investigate
 
@@ -148,7 +148,7 @@ Run the shared detection from the shell's `## Todo Satisfaction Detection` secti
 
 When the record reads `status: validated` and its `bug:` line names a bug record, close that bug first, whether or not the fix is committed. An empty `bug:` line closes nothing. Ask nothing. A subagent skips it, because its caller closes the bug after checking the report. A caller following `fix-handoff.md` skips it too once H-5's Bug bullet has run for this record, because that bullet already closed the bug or left it open on purpose.
 
-Read `.craft/bugs/<the name on that line>.md` under the project root first. When it is not there, the bug is already closed: run nothing, because the close command given a name it cannot find closes an open bug whose name contains it. One that gives its layer as `judgment` stays open, because only the user's eye on the result closes that kind, and the summary says it is fixed and theirs to close. Otherwise run:
+Read `.craft/bugs/<the name on that line>.md` under the project root first. When it is not there, look for `.craft/bugs/closed/<the name on that line>.md`: when that exists the bug is already closed, so run nothing; when neither file exists the name on the line is wrong, so close nothing and say in the summary that the bug named on the record was not found. Never run the close command on a name whose file is missing, because given a name it cannot find it closes an open bug whose name contains it. One that gives its layer as `judgment` stays open, because only the user's eye on the result closes that kind, and the summary says it is fixed and theirs to close. Otherwise run:
 
 ```bash
 bash "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/bugs-close.sh" "<the bug record's path>" --status=fixed --fixed-by="fix record <the record's name>"
@@ -167,7 +167,7 @@ Validation: [what was checked, result]
 Planned test: ["<name>" from the source story / none / no source story]
 Lesson: [one sentence, or "none"]
 Todo: [closed <todo-slug> / none matched]
-Bug: [closed <bug title> / already closed / fixed, yours to close / left open: <the refusal> / none]
+Bug: [closed <bug title> / already closed / bug named on the record not found / fixed, yours to close / left open: <the refusal> / none]
 ```
 
 Then hand back to the shell to close the gate (Step 6 there).
