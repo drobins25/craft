@@ -13,7 +13,8 @@
 # The move is destination-first: the finished file is written in closed/
 # before the source is removed, so an interruption never loses a record.
 # The target is resolved in the open room only; a trailing fragment that
-# matches two or more open records is refused, never guessed.
+# matches two or more open records is refused, never guessed. A path or a full
+# dated name that matches no open record is refused, never read as a fragment.
 #
 # Output (stdout): TITLE=<symptom line>, then the closed absolute path
 # Exit: 0 on success, 2 on any refusal (nothing written)
@@ -96,10 +97,17 @@ if [ -f "$TARGET" ]; then
   fi
 fi
 
+# A path or a full dated name (<YYYY-MM-DD>-<slug>) names one record exactly:
+# when no open record has that name it is refused, never matched as a fragment.
+# Only a short undated name is a fragment.
+EXACT=0
+case "$TARGET" in */*) EXACT=1 ;; esac
+[[ "$NAME.md" =~ $DATED_RE ]] && EXACT=1
+
 if [ -z "$SRC" ]; then
   if [ -f "$OPEN_DIR/$NAME.md" ]; then
     SRC="$OPEN_DIR/$NAME.md"
-  else
+  elif [ "$EXACT" -eq 0 ]; then
     MATCHES=()
     for f in "$OPEN_DIR"/*.md; do
       [ -f "$f" ] || continue
@@ -123,7 +131,11 @@ if [ -z "$SRC" ]; then
     [ -f "$f" ] || continue
     b="$(basename "$f")"
     [[ "$b" =~ $DATED_RE ]] || continue
-    case "$b" in *"$NAME"*) echo "already closed: ${b%.md}" >&2; exit 2 ;; esac
+    if [ "$EXACT" -eq 1 ]; then
+      [ "$b" = "$NAME.md" ] && { echo "already closed: $NAME" >&2; exit 2; }
+    else
+      case "$b" in *"$NAME"*) echo "already closed: ${b%.md}" >&2; exit 2 ;; esac
+    fi
   done
   echo "not found: $NAME" >&2
   exit 2
