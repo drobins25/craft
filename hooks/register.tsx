@@ -372,8 +372,14 @@ export const register: Register = on => {
     if (held.mode !== '') return drawChooser($.ui.resolve(e), held, e.props.bodyColumns, chooserActions($))
     const snap = await read($, progress)
     if (!snap) return next(e)
-    return draw($.ui.resolve(e), snap, await read($, progressFrame), () => {
-      void openChooser($)
-    })
+    return draw(
+      $.ui.resolve(e),
+      snap,
+      await read($, progressFrame),
+      () => {
+        void openChooser($)
+      },
+      e.props.bodyColumns,
+    )
   })
 }
