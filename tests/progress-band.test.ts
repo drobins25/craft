@@ -2808,3 +2808,26 @@ test('a wide pane keeps the whole name, the title and the hint', async ($, on) =
   expect(drawn.join('')).toContain(`✶ Planning ${LONG_NAME} · alignment check · First title`)
   expect(drawn).toContain(' · next: direction')
 })
+
+test('a held ready row drops "after ..." before the story name is cut', async ($, on) => {
+  const files: Files = new Map()
+  await readyRow($, on, files, { slot: '29-build-progress-band' })
+
+  const wide = await drawAt($, 56)
+  const narrow = await drawAt($, 55)
+
+  expect(wide.join('')).toContain(`Story 6 · ${READY} · after Story 29`)
+  expect(narrow.join('')).toContain(`Story 6 · ${READY}`)
+  expect(narrow.join('')).not.toContain('after')
+  expect(narrow.join('')).not.toContain('…')
+})
+
+test('a held ready row on a very narrow pane keeps the whole name and the ready words', async ($, on) => {
+  const files: Files = new Map()
+  await readyRow($, on, files, { slot: 'a-very-long-plain-name-that-is-a-file-name' })
+
+  const drawn = await drawAt($, 40)
+
+  expect(drawn.join('')).toContain(`Story 6 · ${READY}`)
+  expect(drawn.join('')).not.toContain('after')
+})

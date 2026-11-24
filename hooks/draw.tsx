@@ -134,12 +134,16 @@ function stateSlot(
   els: ElementTable,
   snap: ProgressSnapshot,
   onPress: () => void,
+  columns: number,
 ): { el: RenderElement; text: string } | null {
   const { Button, Text } = els
   if (snap.view === 'planning-many') return null
   if (snap.stage === 'ready') {
     if (snap.slotHolder !== '') {
-      const text = `${READY} · after ${whoHolds(snap.slotHolder)}`
+      // "· after ..." gives way, whole, before the story name is touched: it shows
+      // only when the name fits whole beside it.
+      const full = `${READY} · after ${whoHolds(snap.slotHolder)}`
+      const text = 2 + 8 + 1 + snap.label.length + 3 + full.length <= columns ? full : READY
       return { el: <Text color="success" bold>{text}</Text>, text }
     }
     return {
@@ -165,7 +169,7 @@ const MIN_LABEL = 10
 function fit(snap: ProgressSnapshot, state: { text: string } | null, two: LineTwo, columns: number) {
   const base = 2 + 8 + 1 + (state ? 3 + state.text.length : 0)
   // The waiting words give way before the label is cut below ten columns (or its
-  // whole length when shorter), so a number in "Story 12" is never cut ahead of them.
+  // whole length when shorter), so a short label is never cut ahead of them.
   const minimum = Math.min(snap.label.length, MIN_LABEL)
   const waiting = snap.waitingOnUser && columns - base - WAITING.length >= minimum
   const room = Math.max(1, columns - base - (waiting ? WAITING.length : 0))
@@ -208,7 +212,7 @@ export function draw(
       {ch}
     </Text>
   ))
-  const state = stateSlot(els, snap, onPress)
+  const state = stateSlot(els, snap, onPress, columns)
   const two = lineTwo(els, snap)
   const shown = fit(snap, state, two, columns)
 
