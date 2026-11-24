@@ -2731,3 +2731,103 @@ test('an empty refreshed list draws only cancel, with 0 ready', async ($, on) =>
   expect(text).toContain(' · 0 ready')
   expect(buttons).toEqual(['cancel'])
 })
+
+// ---- A narrow pane: what gives way, in order ----
+
+const LONG_NAME = 'bulk-upload-wait-and-finished-screens-redesign'
+
+// A backlog story with no number (its label is its file name) planned at the given step.
+async function narrowStory($: Engine, on: On, stage: string, title = 'First title') {
+  const files: Files = new Map()
+  files.set(`${ROOT}/.craft/.global-state`, 'LAST_ACTIVITY="x"\nACTIVE_CYCLE=""\n')
+  const path = `${ROOT}/.craft/backlog/${LONG_NAME}.md`
+  files.set(path, storyFile({ number: '', stage, title }))
+  const world = await open($, on, files)
+  await stageCall($, world, path)
+  return world
+}
+
+test('on a pane too narrow for both, the waiting words give way before the name is cut under ten', async ($, on) => {
+  const world = await narrowStory($, on, 'alignment-check')
+  const card = openCard($, world.cards)
+  await world.clock.settle()
+
+  const drawn = await drawAt($, 40)
+  await card.close()
+
+  const line = drawn.slice(0, 13).join('')
+  expect(line).toBe('✶ Planning bulk-uploa… · alignment check')
+  expect(line.length).toBeLessThanOrEqual(40)
+  expect(drawn.join('')).not.toContain('waiting on you')
+})
+
+test('the waiting words stay when the pane has room for them and the name at ten', async ($, on) => {
+  const world = await narrowStory($, on, 'alignment-check')
+  const card = openCard($, world.cards)
+  await world.clock.settle()
+
+  const drawn = await drawAt($, 56)
+  await card.close()
+
+  const line = drawn.slice(0, 14).join('')
+  expect(line).toBe('✶ Planning bulk-uplo… · alignment check · waiting on you')
+  expect(line.length).toBeLessThanOrEqual(56)
+})
+
+async function drawAt($: Engine, columns: number) {
+  const ui = await mountAt($, columns)
+  const found = await ui.findAll({ type: 'Text' })
+  await ui.unmount()
+  return texts(found.map(el => ({ text: el.text, color: el.props.color, bold: el.props.bold })))
+}
+
+test('a narrow pane cuts the story name at its end and keeps the view word and step name whole', async ($, on) => {
+  await narrowStory($, on, 'alignment-check')
+
+  const drawn = await drawAt($, 45)
+
+  expect(drawn.slice(0, 13).join('')).toBe('✶ Planning bulk-upload-wai… · alignment check')
+  expect(drawn.slice(0, 13).join('').length).toBeLessThanOrEqual(45)
+  expect(drawn.join('')).not.toContain(' · First title')
+})
+
+test('a narrow pane drops the hint rather than cutting it', async ($, on) => {
+  await narrowStory($, on, 'alignment-check')
+
+  const drawn = await drawAt($, 45)
+
+  expect(drawn.join('')).not.toContain('next')
+  expect(drawn).toContain(' step 2 of 6 · 0m')
+})
+
+test('a wide pane keeps the whole name, the title and the hint', async ($, on) => {
+  await narrowStory($, on, 'alignment-check')
+
+  const drawn = await drawAt($, 120)
+
+  expect(drawn.join('')).toContain(`✶ Planning ${LONG_NAME} · alignment check · First title`)
+  expect(drawn).toContain(' · next: direction')
+})
+
+test('a held ready row drops "after ..." before the story name is cut', async ($, on) => {
+  const files: Files = new Map()
+  await readyRow($, on, files, { slot: '29-build-progress-band' })
+
+  const wide = await drawAt($, 56)
+  const narrow = await drawAt($, 55)
+
+  expect(wide.join('')).toContain(`Story 6 · ${READY} · after Story 29`)
+  expect(narrow.join('')).toContain(`Story 6 · ${READY}`)
+  expect(narrow.join('')).not.toContain('after')
+  expect(narrow.join('')).not.toContain('…')
+})
+
+test('a held ready row on a very narrow pane keeps the whole name and the ready words', async ($, on) => {
+  const files: Files = new Map()
+  await readyRow($, on, files, { slot: 'a-very-long-plain-name-that-is-a-file-name' })
+
+  const drawn = await drawAt($, 40)
+
+  expect(drawn.join('')).toContain(`Story 6 · ${READY}`)
+  expect(drawn.join('')).not.toContain('after')
+})

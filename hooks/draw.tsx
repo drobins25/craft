@@ -37,9 +37,13 @@ export function moves(snap: ProgressSnapshot): boolean {
 const READY = 'ready to implement'
 const HINT = ' · enter to choose a story (ctrl+x tab to focus)'
 
-// Line two: the balls and words that never shrink, and the grey hint that may
-// be cut short on a narrow terminal.
-type LineTwo = { whole: RenderElement[]; hint: string }
+// Line two: the balls and words that never shrink, and the grey hint that shows
+// whole or not at all. `width` is the columns `whole` takes: its items plus the
+// one-column gap between them.
+type LineTwo = { whole: RenderElement[]; width: number; hint: string }
+
+// The columns a row takes: `balls` one-column items and one text after them.
+const rowWidth = (balls: number, tail: string): number => balls + tail.length + balls
 
 const stepName = (stage: PlanStage): string => stage.replace(/-/g, ' ')
 
@@ -72,6 +76,7 @@ function chunkRow(els: ElementTable, snap: ProgressSnapshot): LineTwo {
       ...snap.chunks.map(c => <Text key={String(c.n)} color={BALL_COLOR[c.state]}>{BALL[c.state]}</Text>),
       <Text key="detail">{` ${detail}`}</Text>,
     ],
+    width: rowWidth(total, ` ${detail}`),
     hint: '',
   }
 }
@@ -82,13 +87,15 @@ function stepRow(els: ElementTable, snap: ProgressSnapshot): LineTwo {
   const { Text } = els
   const k = STAGES.indexOf(snap.stage as PlanStage) + 1
   const after = STAGES[k]
+  const step = ` step ${k} of ${STAGES.length} · ${snap.minutes}m`
   return {
     whole: [
       ...STAGES.map((stage, i) => (
         <Text key={stage} color={i + 1 <= k ? 'success' : 'inactive'}>{i + 1 < k ? '●' : '○'}</Text>
       )),
-      <Text key="step">{` step ${k} of ${STAGES.length} · ${snap.minutes}m`}</Text>,
+      <Text key="step">{step}</Text>,
     ],
+    width: rowWidth(STAGES.length, step),
     hint: ` · next: ${after ? stepName(after) : READY}`,
   }
 }
@@ -101,6 +108,7 @@ function groupRow(els: ElementTable, snap: ProgressSnapshot): LineTwo {
       ...snap.stages.map((_, i) => <Text key={String(i)} color="success">○</Text>),
       <Text key="minutes">{` ${snap.minutes}m`}</Text>,
     ],
+    width: rowWidth(snap.stages.length, ` ${snap.minutes}m`),
     hint: '',
   }
 }
@@ -114,27 +122,64 @@ function readyRow(els: ElementTable, snap: ProgressSnapshot): LineTwo {
       ...STAGES.map(stage => <Text key={stage} color="success">●</Text>),
       <Text key="done">{` all ${STAGES.length} steps done`}</Text>,
     ],
+    width: rowWidth(STAGES.length, ` all ${STAGES.length} steps done`),
     hint: snap.slotHolder === '' ? HINT : '',
   }
 }
 
 // The state slot of line one: a word, the control on a ready row that nothing
 // blocks, or the same words as plain text while a story is running.
-function stateSlot(els: ElementTable, snap: ProgressSnapshot, onPress: () => void): RenderElement | null {
+// Returns the element and the words it shows, so the caller can count its columns.
+function stateSlot(
+  els: ElementTable,
+  snap: ProgressSnapshot,
+  onPress: () => void,
+  columns: number,
+): { el: RenderElement; text: string } | null {
   const { Button, Text } = els
   if (snap.view === 'planning-many') return null
   if (snap.stage === 'ready') {
     if (snap.slotHolder !== '') {
-      return <Text color="success" bold>{`${READY} · after ${whoHolds(snap.slotHolder)}`}</Text>
+      // "· after ..." gives way, whole, before the story name is touched: it shows
+      // only when the name fits whole beside it.
+      const full = `${READY} · after ${whoHolds(snap.slotHolder)}`
+      const text = 2 + 8 + 1 + snap.label.length + 3 + full.length <= columns ? full : READY
+      return { el: <Text color="success" bold>{text}</Text>, text }
     }
-    return (
-      <Button label={READY} plain onPress={onPress}>
-        <Text color="success" bold>{READY}</Text>
-      </Button>
-    )
+    return {
+      el: (
+        <Button label={READY} plain onPress={onPress}>
+          <Text color="success" bold>{READY}</Text>
+        </Button>
+      ),
+      text: READY,
+    }
   }
   const state = stateOf(snap)
-  return <Text color={state.color} bold>{state.text}</Text>
+  return { el: <Text color={state.color} bold>{state.text}</Text>, text: state.text }
+}
+
+const WAITING = ' · waiting on you'
+// The least of a cut label that stays readable, counting its "…".
+const MIN_LABEL = 10
+
+// What gives way on a narrow pane, in order: the title (it truncates itself and
+// is dropped once the label is cut), then the label's end, marked "…". The view
+// word and the state are never cut, and the hint shows whole or not at all.
+function fit(snap: ProgressSnapshot, state: { text: string } | null, two: LineTwo, columns: number) {
+  const base = 2 + 8 + 1 + (state ? 3 + state.text.length : 0)
+  // The waiting words give way before the label is cut below ten columns (or its
+  // whole length when shorter), so a short label is never cut ahead of them.
+  const minimum = Math.min(snap.label.length, MIN_LABEL)
+  const waiting = snap.waitingOnUser && columns - base - WAITING.length >= minimum
+  const room = Math.max(1, columns - base - (waiting ? WAITING.length : 0))
+  const cut = snap.label.length > room
+  return {
+    waiting,
+    label: cut ? `${snap.label.slice(0, Math.max(1, room - 1))}…` : snap.label,
+    title: cut ? '' : snap.title,
+    hint: two.hint !== '' && 2 + two.width + two.hint.length <= columns ? two.hint : '',
+  }
 }
 
 function lineTwo(els: ElementTable, snap: ProgressSnapshot): LineTwo {
@@ -144,7 +189,14 @@ function lineTwo(els: ElementTable, snap: ProgressSnapshot): LineTwo {
 }
 
 // `onPress` runs when the ready row's control is pressed; the caller owns what it does.
-export function draw(els: ElementTable, snap: ProgressSnapshot, frame: number, onPress: () => void): RenderElement {
+// `columns` is the pane's width, which decides what gives way when the band does not fit.
+export function draw(
+  els: ElementTable,
+  snap: ProgressSnapshot,
+  frame: number,
+  onPress: () => void,
+  columns: number,
+): RenderElement {
   const { Box, Text } = els
 
   if (snap.error) {
@@ -160,8 +212,9 @@ export function draw(els: ElementTable, snap: ProgressSnapshot, frame: number, o
       {ch}
     </Text>
   ))
-  const state = stateSlot(els, snap, onPress)
+  const state = stateSlot(els, snap, onPress, columns)
   const two = lineTwo(els, snap)
+  const shown = fit(snap, state, two, columns)
 
   return (
     <Box flexDirection="column" marginTop={1}>
@@ -170,16 +223,16 @@ export function draw(els: ElementTable, snap: ProgressSnapshot, frame: number, o
           <Text color={look.base} bold>{'✶ '}</Text>
           {word}
           <Text>{' '}</Text>
-          <Text bold>{snap.label}</Text>
+          <Text bold>{shown.label}</Text>
           {state ? <Text>{' · '}</Text> : null}
-          {state}
-          {snap.waitingOnUser ? <Text color="text">{' · waiting on you'}</Text> : null}
+          {state?.el}
+          {shown.waiting ? <Text color="text">{WAITING}</Text> : null}
         </Box>
-        {snap.title ? <Text color="subtle" wrap="truncate-end">{` · ${snap.title}`}</Text> : null}
+        {shown.title ? <Text color="subtle" wrap="truncate-end">{` · ${shown.title}`}</Text> : null}
       </Box>
       <Box paddingLeft={2}>
         <Box gap={1} flexShrink={0}>{two.whole}</Box>
-        {two.hint ? <Text color="inactive" wrap="truncate-end">{two.hint}</Text> : null}
+        {shown.hint ? <Text color="inactive" wrap="truncate-end">{shown.hint}</Text> : null}
       </Box>
     </Box>
   )

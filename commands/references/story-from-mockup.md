@@ -76,6 +76,6 @@ Type is almost always `ui`. Set `alignment: pending` - the alignment check fires
 
 ## Phase 4: Backlinks and close
 
-Write both directions: the story frontmatter carries `mockup:` and, when the record had an `origin`, `grew_from:` (both done above); the record gets `graduated_to: [story name]` and `status: graduated-story` (the destination fork may have written these already - verify, don't duplicate).
+Write both directions: the story frontmatter carries `mockup:` and, when the record had an `origin`, `grew_from:` (both done above); the record gets `graduated_to: [story name]` and `status: graduated-story`. Write the record only after the story file exists, so a session that ends first leaves the mockup waiting to be built, never pointing at a story that was not written.
 
 Report the created story path and its pre-filled sections. The parent flow is DONE - the story takes the normal path from here (cycle-assign, plan-chunks, implement).
