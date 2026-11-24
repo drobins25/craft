@@ -266,4 +266,147 @@ assert_contains_literal \
 
 echo ""
 
+# A fix started from a bug record closes that bug. The close is keyed on the
+# fix record reading validated, never on the commit, so a fix held for a later
+# commit still closes its bug. Two paths carry it: the hand-off (the caller,
+# after the fixer's report) and fix.md Step 8 (the caller running the flow
+# itself).
+HANDOFF_MD="$SCRIPT_DIR/../skills/adhoc/references/fix-handoff.md"
+HANDOFF_H5="$(section "H-5" "$HANDOFF_MD")"
+FIX_STEP8="$(section "Step 8: Close" "$FIX_MD")"
+HANDOFF_H5_BUG="$(grep -F -- '- **Bug:**' <<< "$HANDOFF_H5" | head -1 || true)"
+
+# Test 16: the hand-off closes the bug the fix was started from
+begin_test "hand-off closes the bug a fix was started from, at validated"
+
+assert_contains_literal \
+  "hand-off carries the bug close call" \
+  'bugs-close.sh" "<the bug record'"'"'s path>" --status=fixed --fixed-by="fix record' \
+  "$HANDOFF_H5"
+
+assert_contains_literal \
+  "the close is keyed on the record reading validated" \
+  'reads `status: validated`' \
+  "$HANDOFF_H5"
+
+assert_contains_literal \
+  "the close does not wait for the commit" \
+  "whether or not the fix is committed" \
+  "$HANDOFF_H5"
+
+assert_contains_literal \
+  "the close asks nothing" \
+  "Ask nothing" \
+  "$HANDOFF_H5"
+
+assert_contains_literal \
+  "a judgment-layer bug stays open" \
+  'gives its layer as `judgment` stays open' \
+  "$HANDOFF_H5"
+
+# The no-commit rule sends the reader straight to Close, so the bug close must
+# come before the commit bullet or a held fix skips it.
+BUG_LN="$(grep -n -F -- '- **Bug:**' <<< "$HANDOFF_H5" | head -1 | cut -d: -f1 || true)"
+COMMIT_LN="$(grep -n -F -- '- **Commit:**' <<< "$HANDOFF_H5" | head -1 | cut -d: -f1 || true)"
+ORDER="no"
+if [ -n "$BUG_LN" ] && [ -n "$COMMIT_LN" ] && [ "$BUG_LN" -lt "$COMMIT_LN" ]; then
+  ORDER="yes"
+fi
+assert_eq "the bug close comes before the commit bullet" "yes" "$ORDER"
+
+echo ""
+
+# Test 17: the inline path closes the bug at Step 8
+begin_test "fix flow Step 8 closes the bug a fix was started from"
+
+assert_contains_literal \
+  "Step 8 carries the bug close call" \
+  'bugs-close.sh" "<the bug record'"'"'s path>" --status=fixed --fixed-by="fix record' \
+  "$FIX_STEP8"
+
+assert_contains_literal \
+  "Step 8 keys the close on validated" \
+  'reads `status: validated`' \
+  "$FIX_STEP8"
+
+assert_contains_literal \
+  "Step 8 leaves a judgment-layer bug open" \
+  'gives its layer as `judgment` stays open' \
+  "$FIX_STEP8"
+
+assert_contains_literal \
+  "Step 8 marks the close as the caller's" \
+  "A subagent skips it" \
+  "$FIX_STEP8"
+
+# The hand-off sends its reader through Step 7, which continues here. A second
+# close on a record that already moved can close a similar-named open bug, so
+# Step 8 tells that reader to skip it.
+assert_contains_literal \
+  "a hand-off caller does not close the bug a second time" \
+  'A caller following `fix-handoff.md` skips it too' \
+  "$FIX_STEP8"
+
+assert_contains_literal \
+  "Step 8 keys the close on the record's bug line" \
+  'its `bug:` line names a bug record' \
+  "$FIX_STEP8"
+
+assert_contains_literal \
+  "Step 8 looks in the closed folder before calling a bug closed" \
+  '.craft/bugs/closed/<the name on that line>.md' \
+  "$FIX_STEP8"
+
+assert_contains_literal \
+  "Step 8 reports a name found in neither folder as not found" \
+  'the bug named on the record was not found' \
+  "$FIX_STEP8"
+
+assert_contains_literal \
+  "the hand-off looks in the closed folder before calling a bug closed" \
+  '.craft/bugs/closed/<the name on that line>.md' \
+  "$HANDOFF_H5"
+
+assert_contains_literal \
+  "the hand-off reports a name found in neither folder as not found" \
+  'the bug named on the record was not found' \
+  "$HANDOFF_H5"
+
+assert_contains_literal \
+  "the hand-off keys the close on the record's bug line" \
+  'its `bug:` line names a bug record' \
+  "$HANDOFF_H5"
+
+assert_contains_literal \
+  "the fix record template carries a bug line" \
+  "bug: [name of the bug record this fix was started from" \
+  "$(cat "$FIX_MD")"
+
+assert_contains_literal \
+  "the Smith brief carries BUG:" \
+  '- `BUG:` only when the request pointed at a bug record' \
+  "$(cat "$HANDOFF_MD")"
+
+assert_contains_literal \
+  "the hand-off waits for a pending send-back before closing" \
+  "no send-back to Smith is waiting for a reply" \
+  "$HANDOFF_H5"
+
+assert_contains_literal \
+  "the hand-off keeps the bug open while a review finding is left standing" \
+  "no review finding is left standing, and the record reads" \
+  "$HANDOFF_H5_BUG"
+
+assert_contains_literal \
+  "the hand-off says the bug stays open and the done message says why" \
+  "the bug stays open and the done message says why" \
+  "$HANDOFF_H5_BUG"
+
+assert_contains_literal \
+  "the summary reports the bug" \
+  "Bug: [" \
+  "$FIX_STEP8"
+
+echo ""
+
 finish_tests

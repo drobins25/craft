@@ -531,6 +531,29 @@ assert_eq "rc" "0" "$RC"
 assert_file_exists "exact one closed" "$B/closed/2026-10-01-save.md"
 assert_file_exists "sibling untouched" "$B/2026-10-01-save-2.md"
 
+begin_test "close: a path or full dated name with no open record is refused, never closes a similar bug"
+fresh_root
+B="$ROOT/.craft/bugs"
+write_record "$B/2026-10-01-save-button.md" "2026-10-01T10:00:00Z" "run" "Save"
+write_record "$B/2026-10-01-save-button-2.md" "2026-10-01T11:00:00Z" "run" "Save two"
+write_record "$B/2026-10-02-save-button-safari.md" "2026-10-02T11:00:00Z" "run" "Safari"
+write_record "$B/closed/2026-09-01-save-button.md" "2026-09-01T10:00:00Z" "run" "Old" "" "fixed"
+run_close "$B/2026-10-01-save-button.md" --status=fixed
+assert_eq "first close by path rc" "0" "$RC"
+SUM_BEFORE=$(cksum "$B"/*.md "$B"/closed/*.md)
+run_close "$B/2026-10-01-save-button.md" --status=fixed
+assert_eq "path to a gone file: rc" "2" "$RC"
+assert_eq "path to a gone file: stderr" "already closed: 2026-10-01-save-button" "$ERR"
+run_close 2026-10-01-save-button --status=fixed
+assert_eq "gone dated name: rc" "2" "$RC"
+run_close "$B/save-button.md" --status=fixed
+assert_eq "undated missing path: rc" "2" "$RC"
+assert_eq "undated missing path: stderr" "not found: save-button" "$ERR"
+run_close 2026-10-02-save-button --status=fixed
+assert_eq "dated prefix of another record: rc" "2" "$RC"
+assert_eq "dated prefix: stderr" "not found: 2026-10-02-save-button" "$ERR"
+assert_eq "nothing else closed" "$SUM_BEFORE" "$(cksum "$B"/*.md "$B"/closed/*.md)"
+
 begin_test "close: destination-first - the closed copy exists even when the source cannot be removed"
 fresh_root
 file_bug "Order matters"; F="$OUT"

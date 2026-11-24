@@ -2,6 +2,11 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.20.2 - 2026-11-23
+
+- Fixed bugs staying in your open pile after an adhoc fix cured them. When you fix a filed bug through `/craft:adhoc`, Craft now closes that bug as soon as the fix is seen working and notes which fix closed it, so the pile only shows what is still broken.
+- Fixed closing a bug sometimes closing a different bug with a similar name. Closing a bug by its full name now closes that bug or tells you it could not be found.
+
 ## 2.20.1 - 2026-11-20
 
 - Fixed approvals, workflow runs and planning leaning on a task checklist that current Claude models don't provide, so those steps were quietly skipped. Approving a write now prints what you approved, a workflow run prints its stage list as it goes, and planning walks its open decisions as a numbered list. Init and mockup no longer show a step checklist.

@@ -45,6 +45,8 @@ RULED_OUT = {
         "shared tweak vocabulary -> envelope attribute, not a link",
     ("dial", "offered"):
         "comma string of candidate values, not references",
+    ("fix", "bug"):
+        "names the bug the close step reads - no parser emits a link for it in v1",
     ("notebook", "tags"):
         "facets -> envelope attribute, not links",
     ("riff", "riff"):
