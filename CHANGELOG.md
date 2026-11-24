@@ -2,6 +2,11 @@
 
 Notable, user-facing changes per version. Internal changes (tests, refactors, contributor tooling) bump the version without an entry, so version numbers here may skip.
 
+## 2.20.3 - 2026-11-24
+
+- Fixed the progress band squeezing its words on a narrow terminal. When the band does not fit, the story's title goes first and a long story name is shortened with "…", instead of every word being squeezed at once.
+- Fixed a mockup being marked as a story before the story existed. Choosing "Make it a story" at the end of `/craft:mockup` now leaves the mockup waiting until the story is written, so a session that ends in between no longer leaves it pointing at a story that was never created.
+
 ## 2.20.2 - 2026-11-23
 
 - Fixed bugs staying in your open pile after an adhoc fix cured them. When you fix a filed bug through `/craft:adhoc`, Craft now closes that bug as soon as the fix is seen working and notes which fix closed it, so the pile only shows what is still broken.
