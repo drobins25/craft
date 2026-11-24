@@ -274,6 +274,7 @@ echo ""
 HANDOFF_MD="$SCRIPT_DIR/../skills/adhoc/references/fix-handoff.md"
 HANDOFF_H5="$(section "H-5" "$HANDOFF_MD")"
 FIX_STEP8="$(section "Step 8: Close" "$FIX_MD")"
+HANDOFF_H5_BUG="$(grep -F -- '- **Bug:**' <<< "$HANDOFF_H5" | head -1 || true)"
 
 # Test 16: the hand-off closes the bug the fix was started from
 begin_test "hand-off closes the bug a fix was started from, at validated"
@@ -370,6 +371,16 @@ assert_contains_literal \
   "the hand-off waits for a pending send-back before closing" \
   "no send-back to Smith is waiting for a reply" \
   "$HANDOFF_H5"
+
+assert_contains_literal \
+  "the hand-off keeps the bug open while a review finding is left standing" \
+  "no review finding is left standing, and the record reads" \
+  "$HANDOFF_H5_BUG"
+
+assert_contains_literal \
+  "the hand-off says the bug stays open and the done message says why" \
+  "the bug stays open and the done message says why" \
+  "$HANDOFF_H5_BUG"
 
 assert_contains_literal \
   "the summary reports the bug" \
