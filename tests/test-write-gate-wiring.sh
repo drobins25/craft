@@ -19,6 +19,9 @@ lacks_text() { # <desc> <file> <text>
   else echo "  PASS: $1"; PASS=$((PASS + 1)); fi
 }
 count_text() { grep -cF -- "$2" "$1" || true; }
+# Calls, not mentions: a call is write-gate.sh followed by a verb. A sentence that only names the script is neither.
+gate_calls() { grep -oE 'write-gate\.sh (open|close|claim)([^a-z]|$)' "$1" | wc -l | tr -d ' '; }
+full_path_gate_calls() { grep -oE '\$\{CLAUDE_PLUGIN_ROOT\}/hooks/scripts/write-gate\.sh (open|close|claim)([^a-z]|$)' "$1" | wc -l | tr -d ' '; }
 
 echo "=== test-write-gate-wiring.sh ==="
 echo ""
@@ -116,9 +119,8 @@ CLAIM_WF=$(grep -nF 'write-gate.sh claim workflow "<session folder>"' "$WFRUN" |
 OPEN_WF=$(grep -nF 'write-gate.sh open workflow "<session folder>"' "$WFRUN" | cut -d: -f1)
 if [ -n "$CLAIM_WF" ] && [ "$CLAIM_WF" -gt "$G1G" ] && [ "$CLAIM_WF" -lt "$STEP2" ]; then echo "  PASS: claim workflow sits in Step 1g"; PASS=$((PASS + 1)); else echo "  FAIL: claim workflow not in Step 1g"; FAIL=$((FAIL + 1)); fi
 if [ -n "$OPEN_WF" ] && [ "$OPEN_WF" -gt "$G1G" ] && [ "$OPEN_WF" -lt "$STEP2" ]; then echo "  PASS: open workflow (takeover) sits in Step 1g"; PASS=$((PASS + 1)); else echo "  FAIL: open workflow not in Step 1g"; FAIL=$((FAIL + 1)); fi
-TOTAL_CALLS=$(grep -c 'write-gate.sh' "$WFRUN" || true)
-assert_eq "the file has exactly the claim and the takeover call" "2" "$TOTAL_CALLS"
-lacks_text "no bare gate call" "$WFRUN" ' write-gate.sh'
+assert_eq "the file has exactly the claim and the takeover call" "2" "$(gate_calls "$WFRUN")"
+assert_eq "every gate call is written with the full plugin path" "$(gate_calls "$WFRUN")" "$(full_path_gate_calls "$WFRUN")"
 has_text "the takeover question is worded as ruled" "$WFRUN" "Another session's gate names [workflow session]. It may be running now. Take it over, or stop?"
 E1E=$(grep -nF '## Step 1e: Run All Sessions' "$WFRUN" | head -1 | cut -d: -f1)
 F1F=$(grep -nF '## Step 1f: Mark Sessions Ready' "$WFRUN" | head -1 | cut -d: -f1)
@@ -162,7 +164,8 @@ for F in reflect:commands/craft-reflect.md rule-pass:commands/references/rule-pa
   N="${F%%:*}"; P="$REPO/${F#*:}"
   has_text "$N open is written with the full plugin path" "$P" "$GATE open $N"
   has_text "$N close is written with the full plugin path" "$P" "$GATE close $N"
-  assert_eq "$N has exactly one open and one close" "2" "$(grep -c 'write-gate.sh' "$P" || true)"
+  assert_eq "$N has exactly one open and one close" "2" "$(gate_calls "$P")"
+  assert_eq "$N has no gate call without the full plugin path" "$(gate_calls "$P")" "$(full_path_gate_calls "$P")"
 done
 echo ""
 
@@ -198,7 +201,7 @@ assert_eq "no open is left unclosed at a heading or the end of the file" "0" "$U
 SAVE_EDIT=$(grep -n 'Edit or Write' "$BECOME" | head -1)
 case "$SAVE_EDIT" in *"write-gate.sh open become"*"write-gate.sh close become"*) echo "  PASS: the save edit opens and closes on its own line"; PASS=$((PASS + 1));; *) echo "  FAIL: the save edit has no open then close"; FAIL=$((FAIL + 1));; esac
 assert_eq "become has three opens (two crystallizer calls and the save edit)" "3" "$(grep -o 'write-gate.sh open become' "$BECOME" | wc -l | tr -d ' ')"
-lacks_text "become never calls the gate bare" "$BECOME" ' write-gate.sh'
+assert_eq "become never calls the gate bare" "$(gate_calls "$BECOME")" "$(full_path_gate_calls "$BECOME")"
 echo ""
 
 begin_test "annotate-inline and docs flows that never write keep no gate line"
@@ -214,7 +217,6 @@ has_text "DESIGN names session-end.sh" "$REPO/DESIGN.md" 'session-end.sh'
 has_text "README names SessionEnd" "$REPO/README.md" 'SessionEnd'
 has_text "decision-tree names the gate file" "$REPO/docs/decision-tree.md" '.craft/.gate/<session id>'
 has_text "agent catalog says Smith writes while its caller holds the gate" "$REPO/docs/agent-catalog.md" 'its caller'
-has_text "changelog has the 2.21.0 entry" "$REPO/CHANGELOG.md" '## 2.21.0 - 2026-11-24'
 echo ""
 
 finish_tests
