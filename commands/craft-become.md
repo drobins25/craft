@@ -249,7 +249,7 @@ If "No" - omit handbook fields. The agent is fully portable with no external ref
 
 ### Phase 3: Crystallization
 
-This is where the magic happens. The crystallizer writes the agent file directly to disk - the orchestrator NEVER touches agent content.
+This is where the magic happens. The crystallizer writes the agent file directly to disk - the orchestrator never writes agent content. Its one change to the file is the `name:` line on save in Phase 4.
 
 **Determine initial output path:**
 - Slugify input for filename: `$PROJECT/.claude/agents/become-{slug}.md`
@@ -257,7 +257,7 @@ This is where the magic happens. The crystallizer writes the agent file directly
 
 **Read 2-3 existing crystallized agents** from `${CLAUDE_PLUGIN_ROOT}/agents` as format exemplars. Pick agents that are well-structured (e.g., `pr-reviewer-expert.md`, `crystallizer.md`).
 
-**Invoke the crystallizer agent via the Task tool:**
+**Open this session's write gate, then invoke the crystallizer agent via the Task tool.** Run `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh open become` now. If the open exits non-zero, do not call the crystallizer: stop and show the gate script's message.
 
 ```
 Task tool:
@@ -289,7 +289,9 @@ Task tool:
   6. Return a brief summary: identity (1 sentence), top 3 generative beliefs, blind spots
 ```
 
-The crystallizer writes directly. Wait for it to complete and capture its summary.
+Wait for the crystallizer to return, then close the gate before the summary or any question: run `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh close become`.
+
+The crystallizer writes directly. Capture its summary from that return.
 
 ### Phase 4: Review & Save
 
@@ -321,7 +323,9 @@ options:
 
 **If "Save with different name or path":** Ask for the name/path, move the file.
 
-**If "Iterate with feedback":** Ask what to adjust. Re-invoke the crystallizer with feedback:
+**On either save:** a rename or move with `mv` needs no gate. If you change the file's content with Edit or Write (for example the `name:` line, to match the new name), run `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh open become` right before that edit (if the open exits non-zero, stop and show the gate script's message), and run `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh close become` right after it.
+
+**If "Iterate with feedback":** Ask what to adjust. Once you have the answer, run `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh open become`. If the open exits non-zero, do not call the crystallizer: stop and show the gate script's message. Otherwise re-invoke the crystallizer with the feedback:
 
 ```
 Task tool:
@@ -341,6 +345,8 @@ Task tool:
 
   Return updated summary: identity, top 3 beliefs, blind spots.
 ```
+
+Wait for the crystallizer to return, then close the gate before the summary or any question: run `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh close become`.
 
 Then re-present Phase 4 with the updated agent.
 

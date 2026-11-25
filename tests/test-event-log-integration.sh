@@ -10,6 +10,10 @@ set -e
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPTS_DIR="$TESTS_DIR/../hooks/scripts"
 
+# This file does not source test_helper.sh, so it pins the session id itself: the
+# story scripts open and close a gate named by it, and CI has none.
+export CLAUDE_CODE_SESSION_ID=craft-test-session
+
 # Test infrastructure
 PASS=0
 FAIL=0

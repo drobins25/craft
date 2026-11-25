@@ -156,6 +156,15 @@ rm -f "$SESSION_FILE.bak"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 "$SCRIPT_DIR/update-global-state.sh" CURRENT_WORKFLOW_SESSION ""
 
+# Give up this session's hold on the workflow (and a workflow line waiting under a
+# story). Completing must never fail on the gate, and another session's gate is
+# never touched: the script removes only the file named by this session's id.
+GATE_ROOT_ARGS=()
+case "$SESSION_DIR" in
+  */.craft/*) GATE_ROOT_ARGS=(--root "${SESSION_DIR%/.craft/*}") ;;
+esac
+"$SCRIPT_DIR/write-gate.sh" "${GATE_ROOT_ARGS[@]}" close workflow "$SESSION_DIR" >/dev/null 2>&1 || true
+
 # Print report to stdout
 echo ""
 echo "=== Session Validation ==="

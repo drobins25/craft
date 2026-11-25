@@ -137,8 +137,23 @@ if [ -n "$CURRENT_WORKFLOW_SESSION" ] && [ -d "$CURRENT_WORKFLOW_SESSION" ]; the
       # Count stages from Progress table (stages-v1 format)
       wf_total=$(awk '/^\| [0-9]/' "$wf_session_file" 2>/dev/null | wc -l | tr -d ' ')
       [ -z "$wf_total" ] || [ "$wf_total" = "0" ] && wf_total="?"
+      # "writes allowed" is true only in the session whose gate names this workflow.
+      # The prompt's session_id is read from stdin (only here, and never from a
+      # terminal); a missing or unusable one counts as not holding the gate.
+      wf_sid=""
+      if [ ! -t 0 ]; then
+        wf_sid=$(python3 -c 'import json,sys
+try:
+    v = json.load(sys.stdin).get("session_id", "")
+except Exception:
+    v = ""
+sys.stdout.write(v if isinstance(v, str) else "")' 2>/dev/null || true)
+      fi
+      wf_hold=$(CLAUDE_CODE_SESSION_ID="$wf_sid" "$SCRIPT_DIR/write-gate.sh" --root "$PROJECT_ROOT" check workflow "$CURRENT_WORKFLOW_SESSION" 2>/dev/null || true)
+      wf_writes=""
+      [ "$wf_hold" = "mine" ] && wf_writes=" - writes allowed (active session)"
       context="${context:+$context
-}[Craft:Workflow '$wf_workflow' session '$wf_name' - stage $wf_stage/$wf_total - writes allowed (active session)]"
+}[Craft:Workflow '$wf_workflow' session '$wf_name' - stage $wf_stage/$wf_total${wf_writes}]"
     fi
   fi
 fi

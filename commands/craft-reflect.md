@@ -118,9 +118,19 @@ options:
     description: "Keep learnings pending"
 ```
 
+**If "Review each":** ask about each learning and failure pattern here, before Step 3, and take only the approved ones into Step 3. Step 3 runs with the write gate open, and the gate is never open while a question waits.
+
 ---
 
 ### Step 3: Write to Harness
+
+Before the first write, open this session's write gate:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh open reflect
+```
+
+If the open exits non-zero, stop this write step and show the gate script's message. Then end reflect here, without Step 4, which would mark as written learnings that were never written. This step asks the user nothing, so the gate is never open while a question waits.
 
 **Ensure directories exist:**
 ```bash
@@ -294,6 +304,12 @@ argument-hint: [component-name]
 ```
 
 ---
+
+**Close the gate now, before Step 4 or anything else:**
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh close reflect
+```
 
 ### Step 4: Mark as Written
 

@@ -244,7 +244,7 @@ Write access restricted to `.craft/` and `.claude/`. Used for story creation, de
 
 ### Implement Phase
 
-Full write access, gated by `CRAFT_WRITE_ENABLED` in `.global-state`.
+Full write access, gated by the session's own gate file, `.craft/.gate/<session id>`.
 
 **Allowed tools:** Read, Write, Edit, Glob, Grep, Bash, Task
 **Included skills:** validate-chunk, refine-chunk, test-fix
@@ -268,8 +268,12 @@ All hooks defined in `hooks/hooks.json`. Scripts in `hooks/scripts/`.
 - **`session-start.sh`** (once) - Detects active cycle, sets status line, loads context, runs the annotate sweep
 - **`post-compact-reinject.sh`** (on compact) - Re-injects craft context after context compaction
 
+### SessionEnd
+- **`session-end.sh`** - Removes the ending session's gate file, so a session that ends does not leave its gate behind. A crashed session's file stays until that session is resumed and ends. Does the least it can inside the hook's short time budget and always exits 0.
+
 ### PreToolUse (Write|Edit)
-- **`check-write-permission.py`** - Enforces write permission gating. Checks for active story/cycle context, `CRAFT_WRITE_ENABLED` flag, active workflow session, and allowed paths. Also denies the Write tool on an existing `.craft/design/tokens.yaml` (merge target - redirects to `merge-tokens.py`; Edit and creation stay allowed). Uses hardcoded logic (no external config file).
+- **`write-gate.sh`** - Not a hook: the one script that opens, closes and reports a session's gate file, called by stories, adhoc, approve, workflow sessions, and the reflect, rule pass, become, research and docs flows. Line 1 of `.craft/.gate/<session id>` names the holder; line 2 exists only under a story and keeps the holder the story replaced, so that holder holds the gate again when the story closes. Continuing a story or workflow asks before taking over a gate another session holds.
+- **`check-write-permission.py`** - Enforces write permission gating. Checks for active story/cycle context, whether the writing session holds a gate file (`.craft/.gate/<session id>`, opened and closed only through `write-gate.sh`; a workflow session's writes pass on the gate of the session that holds it), and allowed paths. Also denies the Write tool on an existing `.craft/design/tokens.yaml` (merge target - redirects to `merge-tokens.py`; Edit and creation stay allowed). Uses hardcoded logic (no external config file).
 - **`check-craft-vocab.py`** - Denies writes whose code comments carry craft planning citations ("Chunk 3", "Story 4", tokens.yaml key paths). Off switch: `VOCAB_GATE=false` in the written file's project `.global-state`. Also a CLI: `--scan <files>` reports leaks for validation sweeps, checking only the lines each file adds against the last commit and falling back to the whole file when git cannot tell; `--scan --all` reads whole files. A comma-joined argument is split into paths; a path it cannot read (and git does not show deleted) is printed as not scanned, and the scan fails when it could read none of its files.
 - **`merge-tokens.py`** - Not a hook: a CLI invoked by craft-init's token phases. The sole writer for merges into an existing tokens.yaml - `report` mode emits a mechanical per-key CONFLICT/NEW/SAME diff for the token AUQs; `merge` mode does a line-surgical keyed union (snapshot, self-verify, restore-on-violation). Lives here beside the hook that enforces it.
 
@@ -463,14 +467,13 @@ CURRENT_STORY=""
 DEFAULT_MODE="creative"
 BACKLOG_COUNT="10"
 PLANNING_CYCLE=""
-CRAFT_WRITE_ENABLED=""
 CYCLE_STATUS=""
 CURRENT_WORKFLOW_SESSION=""
 RUN_MODE=""
 ```
 
 Key fields:
-- `CRAFT_WRITE_ENABLED` - gates writes outside `.craft/`. Set to `"true"` by active stories, the `adhoc` skill, and the `approve` skill. Empty string means closed.
+- The write gate is not a `.global-state` field: each session holds its own file, `.craft/.gate/<session id>`, written only through `write-gate.sh`. No file means closed.
 - `CURRENT_WORKFLOW_SESSION` - active workflow session path (set when a workflow session is running).
 - `RUN_MODE` - `autonomous` when an unattended run is active (set by `story-implement-auto`), empty otherwise. Normal cruise runs leave it empty; cruise is craft's single default behavior (chains chunks and stories, stops only at decision points or on failure), not a stored mode. A Go run is decided from the copied Go, never from `RUN_MODE`; `RUN_MODE` becomes `autonomous` only once a build-stage Go run hands off to `story-implement-auto`.
 - `CYCLE_STATUS` - current state of the active cycle.

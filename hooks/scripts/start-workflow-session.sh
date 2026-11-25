@@ -54,6 +54,15 @@ if [ "$CURRENT_STATUS" = "active" ]; then
   exit 1
 fi
 
+# The gate lives in the project that holds this session folder. A session id the
+# gate cannot use stops the start here, before session.md changes.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GATE_ROOT_ARGS=()
+case "$SESSION_DIR" in
+  */.craft/*) GATE_ROOT_ARGS=(--root "${SESSION_DIR%/.craft/*}") ;;
+esac
+"$SCRIPT_DIR/write-gate.sh" "${GATE_ROOT_ARGS[@]}" preflight >/dev/null
+
 # Update frontmatter: status -> active, current_stage -> 1
 sed -i.bak "s/^status:.*/status: active/" "$SESSION_FILE"
 sed -i.bak "s/^current_stage:.*/current_stage: 1/" "$SESSION_FILE"
@@ -72,14 +81,18 @@ awk '
     gsub(/pending/, "active")
   }
   { print }
-' "$SESSION_FILE" > "$SESSION_FILE.tmp" && mv "$SESSION_FILE.tmp" "$SESSION_FILE"
+' "$SESSION_FILE" > "$SESSION_FILE.tmp"
+mv "$SESSION_FILE.tmp" "$SESSION_FILE"
 sed -i.bak -E "s/(## Stage 1:.*)\[pending\]/\1[active]/" "$SESSION_FILE"
 
 rm -f "$SESSION_FILE.bak"
 
 # Set CURRENT_WORKFLOW_SESSION in .global-state for compaction recovery
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 "$SCRIPT_DIR/update-global-state.sh" CURRENT_WORKFLOW_SESSION "$SESSION_DIR"
+
+# Last state change: any earlier failure exits under set -e before this, so a
+# failed start writes no gate file and leaves a gate the session already held as it was.
+"$SCRIPT_DIR/write-gate.sh" "${GATE_ROOT_ARGS[@]}" open workflow "$SESSION_DIR" >/dev/null
 
 echo "Session activated: $(grep '^name:' "$SESSION_FILE" | sed 's/name: *//')"
 echo "Starting at Stage 1."

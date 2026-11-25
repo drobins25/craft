@@ -40,38 +40,151 @@ RESULT=$(run_check_write "$JSON")
 assert_not_contains "no deny for .claude/ file" "deny" "$RESULT"
 echo ""
 
-# Test 3: Write with CRAFT_WRITE_ENABLED=true in global state — allowed
-begin_test "CRAFT_WRITE_ENABLED=true in global state — allowed"
+# Gate fixtures. The gate is a file named by the writing session's id; macOS
+# mktemp returns /var/... while the hook's cwd resolves to /private/var/..., so
+# every fixture here uses the resolved path.
+SESSION_A="session-a"
+SESSION_B="session-b"
+EXPECTED_DENY_REASON="BLOCKED: No active story or workflow session. For workflow sessions, run start-workflow-session.sh to activate the session first. For small targeted changes to existing behavior or appearance - a bug with a known root cause OR a small enhancement to something already built (different icon, wording, spacing) - use Skill(craft:adhoc). For new features or complex changes, use Skill(craft:craft-story-new) or Skill(craft:craft-story-implement)."
 
-TEST_DIR=$(create_minimal_craft)
-trap cleanup_test_dir EXIT
-# Set CRAFT_WRITE_ENABLED=true in global state
-echo 'CRAFT_WRITE_ENABLED="true"' >> "$TEST_DIR/.craft/.global-state"
+# Prints the resolved path of a fresh minimal Craft project
+fresh_project() {
+  local d
+  d=$(create_minimal_craft)
+  (cd "$d" && pwd -P)
+}
 
-JSON="{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"$TEST_DIR/src/app.ts\"},\"cwd\":\"$TEST_DIR\"}"
-# Must cd to TEST_DIR so _find_nearest_craft resolves correctly
-RESULT=$(cd "$TEST_DIR" && unset CRAFT_PROJECT_ROOT && run_check_write "$JSON")
-assert_not_contains "no deny when CRAFT_WRITE_ENABLED" "deny" "$RESULT"
+# hold_gate <project> <session id> [content]
+hold_gate() {
+  mkdir -p "$1/.craft/.gate"
+  printf '%s' "${3-/some/story.md
+}" > "$1/.craft/.gate/$2"
+}
 
-cleanup_test_dir
+# hook_json <session id|-> <project> <relative file> [extra json fields]
+hook_json() {
+  local sid_field=""
+  [ "$1" != "-" ] && sid_field="\"session_id\":\"$1\","
+  printf '{%s"tool_name":"Write","tool_input":{"file_path":"%s/%s"},"cwd":"%s"%s}' "$sid_field" "$2" "$3" "$2" "${4:-}"
+}
+
+# run_hook_in <dir> <json>: as Claude Code runs it - cwd in the project, no CRAFT_PROJECT_ROOT
+run_hook_in() {
+  (cd "$1" && unset CRAFT_PROJECT_ROOT && run_check_write "$2")
+}
+
+# Test 3: this session's gate file allows its write; another session is denied
+begin_test "Session A's gate file allows A's write; session B is denied"
+
+TEST_DIR=$(fresh_project)
+hold_gate "$TEST_DIR" "$SESSION_A"
+RESULT=$(run_hook_in "$TEST_DIR" "$(hook_json $SESSION_A "$TEST_DIR" src/app.ts)")
+assert_not_contains "A's write allowed" "deny" "$RESULT"
+RESULT=$(run_hook_in "$TEST_DIR" "$(hook_json $SESSION_B "$TEST_DIR" src/app.ts)")
+assert_contains "B's write denied" "deny" "$RESULT"
+
+rm -rf "$TEST_DIR"
 echo ""
 
-# Test 4: Write denied when no CRAFT_WRITE_ENABLED — blocks
-# NOTE: Must use resolved paths on macOS because mktemp returns /var/folders/...
-# but Python os.getcwd() resolves to /private/var/folders/...
-# BUG: check-write-permission.py compares paths without resolving symlinks,
-# so /var/... != /private/var/... and it thinks the file is "outside" the project.
-# Using resolved paths here to test the gate logic correctly.
-begin_test "Write denied when no CRAFT_WRITE_ENABLED — blocks"
+# Test 4: no gate file - denied, with today's message byte for byte
+begin_test "No gate file - write denied with the unchanged block message"
 
-TEST_DIR=$(create_minimal_craft)
-RESOLVED_DIR=$(cd "$TEST_DIR" && pwd -P)
-
-JSON="{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"$RESOLVED_DIR/src/app.ts\"},\"cwd\":\"$RESOLVED_DIR\"}"
-RESULT=$(cd "$TEST_DIR" && unset CRAFT_PROJECT_ROOT && run_check_write "$JSON")
+TEST_DIR=$(fresh_project)
+RESULT=$(run_hook_in "$TEST_DIR" "$(hook_json $SESSION_A "$TEST_DIR" src/app.ts)")
 assert_contains "deny for unprotected write" "deny" "$RESULT"
+REASON=$(printf '%s' "$RESULT" | python3 -c 'import json,sys; sys.stdout.write(json.load(sys.stdin)["hookSpecificOutput"]["permissionDecisionReason"])')
+assert_eq "deny reason is byte-identical" "$EXPECTED_DENY_REASON" "$REASON"
 
-cleanup_test_dir
+rm -rf "$TEST_DIR"
+echo ""
+
+# Test 4b: an implementer-shaped input carries the building session's id
+begin_test "Implementer-shaped input keys on session_id alone"
+
+TEST_DIR=$(fresh_project)
+hold_gate "$TEST_DIR" "$SESSION_A"
+EXTRA=',"agent_type":"craft:implementer","agent_id":"agent-123","transcript_path":"/x/y.jsonl"'
+RESULT=$(run_hook_in "$TEST_DIR" "$(hook_json $SESSION_A "$TEST_DIR" src/app.ts "$EXTRA")")
+assert_not_contains "implementer on the building session's gate is allowed" "deny" "$RESULT"
+RESULT=$(run_hook_in "$TEST_DIR" "$(hook_json $SESSION_B "$TEST_DIR" src/app.ts "$EXTRA")")
+assert_contains "same implementer input with another session is denied" "deny" "$RESULT"
+
+rm -rf "$TEST_DIR"
+echo ""
+
+# Test 4c: ids that could name something other than a gate file never match
+begin_test "Unusable session_id values are denied"
+
+TEST_DIR=$(fresh_project)
+mkdir -p "$TEST_DIR/.craft/.gate"
+printf '*\n' > "$TEST_DIR/.craft/.gate/.gitignore"
+for BAD in '"../.global-state"' '".gitignore"' '""' '42' 'null'; do
+  JSON="{\"session_id\":$BAD,\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"$TEST_DIR/src/app.ts\"},\"cwd\":\"$TEST_DIR\"}"
+  RESULT=$(run_hook_in "$TEST_DIR" "$JSON")
+  assert_contains "session_id $BAD denied" "deny" "$RESULT"
+done
+RESULT=$(run_hook_in "$TEST_DIR" "$(hook_json - "$TEST_DIR" src/app.ts)")
+assert_contains "missing session_id denied" "deny" "$RESULT"
+
+rm -rf "$TEST_DIR"
+echo ""
+
+# Test 4d: blank and two-line gate files both count (the file existing is the gate)
+begin_test "Blank and two-line gate files allow"
+
+TEST_DIR=$(fresh_project)
+hold_gate "$TEST_DIR" "$SESSION_A" ""
+RESULT=$(run_hook_in "$TEST_DIR" "$(hook_json $SESSION_A "$TEST_DIR" src/app.ts)")
+assert_not_contains "blank gate file allows" "deny" "$RESULT"
+hold_gate "$TEST_DIR" "$SESSION_A" "/some/story.md
+workflow /some/session
+"
+RESULT=$(run_hook_in "$TEST_DIR" "$(hook_json $SESSION_A "$TEST_DIR" src/app.ts)")
+assert_not_contains "two-line gate file allows" "deny" "$RESULT"
+
+rm -rf "$TEST_DIR"
+echo ""
+
+# Test 4e: an active workflow session allows nothing by itself; its writes pass on the running session's gate
+begin_test "Active workflow session, no gate file - denied; the twin with this session's workflow gate is allowed"
+
+TEST_DIR=$(fresh_project)
+mkdir -p "$TEST_DIR/.craft/workflows/wf/sessions/s1"
+printf -- '---\nname: One\nstatus: active\n---\n' > "$TEST_DIR/.craft/workflows/wf/sessions/s1/session.md"
+RESULT=$(run_hook_in "$TEST_DIR" "$(hook_json $SESSION_A "$TEST_DIR" src/app.ts)")
+assert_contains "active session.md alone is denied" "deny" "$RESULT"
+hold_gate "$TEST_DIR" "$SESSION_A" "workflow $TEST_DIR/.craft/workflows/wf/sessions/s1
+"
+RESULT=$(run_hook_in "$TEST_DIR" "$(hook_json $SESSION_A "$TEST_DIR" src/app.ts)")
+assert_not_contains "the running session's gate allows" "deny" "$RESULT"
+RESULT=$(run_hook_in "$TEST_DIR" "$(hook_json $SESSION_B "$TEST_DIR" src/app.ts)")
+assert_contains "a session not running it is denied" "deny" "$RESULT"
+
+rm -rf "$TEST_DIR"
+echo ""
+
+# Test 4e: the old shared value opens nothing any more
+begin_test "A leftover CRAFT_WRITE_ENABLED in .global-state with no gate file is denied"
+
+TEST_DIR=$(fresh_project)
+echo 'CRAFT_WRITE_ENABLED="true"' >> "$TEST_DIR/.craft/.global-state"
+RESULT=$(run_hook_in "$TEST_DIR" "$(hook_json $SESSION_A "$TEST_DIR" src/app.ts)")
+assert_contains "old shared value is denied" "deny" "$RESULT"
+
+rm -rf "$TEST_DIR"
+echo ""
+
+# Test 4f: a gate file alone does not make a folder a Craft project
+begin_test "Never-inited folder holding only a gate file - source write allowed"
+
+BARE_DIR=$(mktemp -d)
+BARE_RESOLVED=$(cd "$BARE_DIR" && pwd -P)
+mkdir -p "$BARE_DIR/.craft/.gate"
+printf '/x.md\n' > "$BARE_DIR/.craft/.gate/$SESSION_A"
+RESULT=$(run_hook_in "$BARE_RESOLVED" "$(hook_json $SESSION_B "$BARE_RESOLVED" src/app.ts)")
+assert_not_contains "not a Craft project, so ungated" "deny" "$RESULT"
+
+rm -rf "$BARE_DIR"
 echo ""
 
 # Test 5: Write with dev_mode: true in settings — allowed
@@ -162,18 +275,18 @@ set -e
 assert_eq "exits 0 on empty stdin" "0" "$EXIT_CODE"
 echo ""
 
-# Test 11: CRAFT_PROJECT_ROOT env var — used for resolution
-begin_test "CRAFT_PROJECT_ROOT env var — used for project root resolution"
+# Test 11: CRAFT_PROJECT_ROOT env var - used for resolution
+begin_test "CRAFT_PROJECT_ROOT env var - gate file under it allows, twin without it denies"
 
-TEST_DIR=$(create_minimal_craft)
-
-JSON="{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"$TEST_DIR/src/app.ts\"},\"cwd\":\"$TEST_DIR\"}"
-# Set CRAFT_WRITE_ENABLED so we can verify the root was found via env var
-echo 'CRAFT_WRITE_ENABLED="true"' >> "$TEST_DIR/.craft/.global-state"
+TEST_DIR=$(fresh_project)
+JSON=$(hook_json $SESSION_A "$TEST_DIR" src/app.ts)
 RESULT=$(CRAFT_PROJECT_ROOT="$TEST_DIR" python3 "$CHECK_WRITE_SCRIPT" <<< "$JSON" 2>/dev/null || true)
-assert_not_contains "no deny with env var root" "deny" "$RESULT"
+assert_contains "no gate file: denied" "deny" "$RESULT"
+hold_gate "$TEST_DIR" "$SESSION_A"
+RESULT=$(CRAFT_PROJECT_ROOT="$TEST_DIR" python3 "$CHECK_WRITE_SCRIPT" <<< "$JSON" 2>/dev/null || true)
+assert_not_contains "gate file under the env root: allowed" "deny" "$RESULT"
 
-cleanup_test_dir
+rm -rf "$TEST_DIR"
 echo ""
 
 # Test 12: Always exits 0 — even when denying
@@ -254,6 +367,70 @@ RESULT=$(cd "$TOK_DIR" && unset CRAFT_PROJECT_ROOT && run_check_write "$JSON")
 assert_not_contains "other .craft/design writes unaffected" "deny" "$RESULT"
 
 rm -rf "$TOK_DIR"
+echo ""
+
+# --- Monorepo: the opener and the hook may resolve different roots ---
+
+# make_monorepo: a git repo with a top-level Craft project and two registered
+# active sub-projects A and B. Prints the resolved top-level path.
+make_monorepo() {
+  local top
+  top=$(mktemp -d)
+  top=$(cd "$top" && pwd -P)
+  (
+    cd "$top"
+    git init -q
+    git config user.name "Test"
+    git config user.email "test@example.com"
+    mkdir -p .craft/projects A/.craft A/src B/.craft B/src
+    printf 'ACTIVE_CYCLE=""\nCURRENT_STORY=""\n' > .craft/.global-state
+    printf 'ACTIVE_CYCLE="c1"\nCURRENT_STORY=""\n' > A/.craft/.global-state
+    printf 'ACTIVE_CYCLE="c1"\nCURRENT_STORY=""\n' > B/.craft/.global-state
+    printf -- '---\nname: a\npath: A\n---\n' > .craft/projects/a.md
+    printf -- '---\nname: b\npath: B\n---\n' > .craft/projects/b.md
+  )
+  printf '%s' "$top"
+}
+
+begin_test "Monorepo, no pin, several active sub-projects: gate opened for A allows A's write"
+
+TOP=$(make_monorepo)
+(unset CRAFT_PROJECT_ROOT; CLAUDE_CODE_SESSION_ID=$SESSION_A "$SCRIPTS_DIR/write-gate.sh" --root "$TOP/A" open docs >/dev/null)
+RESULT=$(run_hook_in "$TOP" "$(hook_json $SESSION_A "$TOP" A/src/x.ts)")
+assert_not_contains "A's write allowed" "deny" "$RESULT"
+RESULT=$(run_hook_in "$TOP" "$(hook_json $SESSION_B "$TOP" A/src/x.ts)")
+assert_contains "session B denied" "deny" "$RESULT"
+RESULT=$(run_hook_in "$TOP" "$(hook_json $SESSION_A "$TOP" B/src/x.ts)")
+assert_contains "A's gate does not cover B's folder" "deny" "$RESULT"
+
+rm -rf "$TOP"
+echo ""
+
+begin_test "Monorepo, pin names A: a gate opened at the top level still allows A's write"
+
+TOP=$(make_monorepo)
+printf '%s\na\n' "$TOP/A" > "$TOP/.craft/.pinned-project"
+hold_gate "$TOP" "$SESSION_A"
+RESULT=$(run_hook_in "$TOP" "$(hook_json $SESSION_A "$TOP" A/src/x.ts)")
+assert_not_contains "top-level gate allows A's write" "deny" "$RESULT"
+RESULT=$(run_hook_in "$TOP" "$(hook_json $SESSION_B "$TOP" A/src/x.ts)")
+assert_contains "session B denied" "deny" "$RESULT"
+
+rm -rf "$TOP"
+echo ""
+
+begin_test "Monorepo, pin names B: only a gate in B lets B's write through"
+
+TOP=$(make_monorepo)
+printf '%s\nb\n' "$TOP/B" > "$TOP/.craft/.pinned-project"
+hold_gate "$TOP/A" "$SESSION_A"
+hold_gate "$TOP/B" "$SESSION_B"
+RESULT=$(run_hook_in "$TOP" "$(hook_json $SESSION_A "$TOP" B/src/x.ts)")
+assert_contains "gate only in A: B's write denied" "deny" "$RESULT"
+RESULT=$(run_hook_in "$TOP" "$(hook_json $SESSION_B "$TOP" B/src/x.ts)")
+assert_not_contains "gate in B: B's write allowed" "deny" "$RESULT"
+
+rm -rf "$TOP"
 echo ""
 
 # --- Summary ---

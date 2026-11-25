@@ -20,6 +20,12 @@ SCRIPTS_DIR="$TEST_HELPER_DIR/../hooks/scripts"
 TEMPLATES_DIR="$TEST_HELPER_DIR/../templates"
 PLUGIN_ROOT="$TEST_HELPER_DIR/.."
 
+# --- Session identity ---
+# One fixed fake session id for every test. CI has no CLAUDE_CODE_SESSION_ID and a
+# builder's shell carries the real one, so without this a test's gate close could
+# reach the gate of the session that is building.
+export CLAUDE_CODE_SESSION_ID=craft-test-session
+
 # --- Strict YAML readers ---
 # A flat YAML file read by a real parser (PyYAML, else ruby's Psych) and printed as
 # JSON, so a test can prove a value round-trips through a strict reader. Returns 127

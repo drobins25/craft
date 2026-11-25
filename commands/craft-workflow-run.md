@@ -214,7 +214,7 @@ No-prompt shortcut: finds the next runnable session, activates it, runs to compl
 
 Chains through all runnable sessions in sequence. Only stops when no sessions remain or the user interrupts.
 
-1. If an active session exists for this workflow, resume it first (same as `continue`).
+1. If an active session exists for this workflow, resume it first (same as `continue`). Before it runs any stage, run "Hold This Session's Gate" in Step 1g with that session's folder. This is a run-all, so an unanswered takeover question takes over (Step 1g says how), and the final summary carries the takeover line.
 2. Use Step 1c to count all runnable sessions. Add 1 if resuming an active session.
 3. If none (no active, no runnable): "No sessions to run for {workflow-name}." Stop.
 4. Show: "Running {N} sessions for {workflow-name} in sequence."
@@ -225,7 +225,7 @@ Chains through all runnable sessions in sequence. Only stops when no sessions re
    d. On completion, run `complete-workflow-session.sh`, show validation.
    e. Use Step 1c to find next runnable session.
    f. If found, continue. If none, done.
-6. Final summary: "All {N} sessions complete for {workflow-name}."
+6. Final summary: "All {N} sessions complete for {workflow-name}." If the gate step took the active session over from another session (it printed `other` and nothing answered the question), add: `Another session's gate named {session name}; this run took it over.`
 
 **Interruption:** If the user stops mid-session, the active session stays active. Resume with `/craft:workflow-run continue` or `/craft:workflow-run run-all {name}` (finishes active + chains remaining).
 
@@ -290,7 +290,7 @@ Find the active session and resume it.
 1. Use **Glob** to find all `session.md` files: `$PROJECT/.craft/workflows/*/sessions/*/session.md`.
 2. Read each with `limit: 10` to check frontmatter. Filter for `status: active`.
 
-**If an active session exists:** Auto-select (or pick via AskUserQuestion if multiple). Jump to **Step 2** (stage list) and resume execution from `current_stage`.
+**If an active session exists:** Auto-select (or pick via AskUserQuestion if multiple). Run "Hold This Session's Gate" (the subsection at the end of this step) for it, then jump to **Step 2** (stage list) and resume execution from `current_stage`.
 
 **If NO active session exists:** Check for runnable sessions (draft or ready) across all workflows using Step 1c logic.
 
@@ -318,6 +318,21 @@ options:
 
 If no runnable sessions found: "No active, draft, or ready sessions found." Stop.
 
+### Hold This Session's Gate
+
+Before any stage runs, make sure this Claude Code session holds the active workflow session's write gate, so the stages' writes are not blocked and another session's running workflow is never taken silently. `<session folder>` is the folder that holds the active `session.md` you just selected, for example `$PROJECT/.craft/workflows/{workflow}/sessions/{session}`; `[workflow session]` below is that `session.md`'s `name:`. Run:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh claim workflow "<session folder>"
+```
+
+- It prints `opened …`, `mine`, `held …` or `skipped`: go on and ask nothing.
+- It prints `other`: another session's gate names this workflow session. Ask "Another session's gate names [workflow session]. It may be running now. Take it over, or stop?". "Take it over" runs `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh open workflow "<session folder>"` and goes on. "Stop" runs no stage and ends the command, a run-all included.
+- If the session's `mode:` is `auto`, or you are inside a run-all (Step 1e), the question can come back without an answer: the may-be-away note after a timeout, a denial, an error, no choice returned, or the question tool not being offered. Every one of those takes over: run the same `open workflow` call and go on, and remember it for the closing report (Step 5, or the run-all summary in Step 1e).
+- It, or the takeover's `open workflow` call, exits non-zero: run no stage, and show the gate script's message.
+
+The call opens only this session's own gate and never touches another session's. Nothing reopens the gate between stages: a story run inside a stage hands the gate back to the workflow when it ends.
+
 ---
 
 ## Step 2: Show the Stage List
@@ -332,7 +347,7 @@ If no runnable sessions found: "No active, draft, or ready sessions found." Stop
 
 `[x]` complete, `[>]` active, `[-]` skipped, `[ ]` pending.
 
-**After context compaction or session restart:** read `session.md` and continue from `current_stage`.
+**After context compaction or session restart:** run "Hold This Session's Gate" (Step 1g) for this session's folder, then read `session.md` and continue from `current_stage`. A session that ended gave up its gate; when the gate is still held, the step prints `mine` and asks nothing.
 
 ---
 
@@ -494,6 +509,8 @@ Read the script's stdout to see the validation report.
 Show:
 
 > "Session complete: {session name}. {N} stages done. {Validation summary}."
+
+If "Hold This Session's Gate" (Step 1g) took the session over because its question got no answer, add: `Another session's gate named {session name}; this run took it over.`
 
 ---
 

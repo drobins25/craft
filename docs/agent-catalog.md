@@ -22,7 +22,7 @@ These agents run inside the implementation pipeline. The orchestrator invokes th
 | `project-scanner` | opus | Full project analysis for documentation updates. Invoked by `/craft:update-docs`. |
 | `claims-auditor` | haiku | Verifies the orchestrator's completion claims against on-disk artifacts (git diff, validation receipt, story file) once per story at story-final, before complete-story.sh. Audits the narrator, not the code. |
 
-**Key constraint:** `implementer` and `tester` receive full write access. `smith` writes only while the adhoc write gate is open, and never opens or closes it. `chunk-validator` and `claims-auditor` are read-only. `plan-chunks-agent` writes only the story file it plans (never source code). `project-scanner` writes only to `.craft/`.
+**Key constraint:** `implementer` and `tester` receive full write access. `smith` writes only while its caller's session holds the write gate, and never opens or closes it. `chunk-validator` and `claims-auditor` are read-only. `plan-chunks-agent` writes only the story file it plans (never source code). `project-scanner` writes only to `.craft/`.
 
 ---
 

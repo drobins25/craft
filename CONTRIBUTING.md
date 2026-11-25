@@ -39,7 +39,7 @@ bash hooks/scripts/start-cycle.sh <cycle-dir-name>
 bash hooks/scripts/start-story.sh <story-file-path>
 ```
 
-This sets the story to `active`, initializes chunk state in `.craft/cycles/<cycle>/.state`, and enables the write gate via `CRAFT_WRITE_ENABLED` in `.craft/.global-state`.
+This sets the story to `active`, initializes chunk state in `.craft/cycles/<cycle>/.state`, and opens your session's write gate, the file `.craft/.gate/<session id>`, through `write-gate.sh`.
 
 ### 3. Read the story spec
 

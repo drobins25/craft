@@ -25,18 +25,19 @@ if [ -z "$KEY" ]; then
   exit 1
 fi
 
+# The write gate is a per-session file now; a copied old call must fail loudly
+# rather than set a key nothing reads.
+if [ "$KEY" = "CRAFT_WRITE_ENABLED" ]; then
+  echo "Error: CRAFT_WRITE_ENABLED is no longer a state key - open or close this session's write gate with write-gate.sh"
+  exit 1
+fi
+
 # Ensure .craft exists
 if [ ! -d "${PROJECT_ROOT}/.craft" ]; then
   echo "Error: .craft directory not found. Run /craft:init first."
   exit 1
 fi
 
-# The write gate guards only a project with .global-state or project.md
-# (check-write-permission.py). On a never-inited project there is no gate to
-# open or close, and creating the state file here would arm it.
-if [ "$KEY" = "CRAFT_WRITE_ENABLED" ] && [ ! -f "$STATE_FILE" ] && [ ! -f "${PROJECT_ROOT}/.craft/project.md" ]; then
-  exit 0
-fi
 
 # Create state file if missing
 if [ ! -f "$STATE_FILE" ]; then

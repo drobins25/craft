@@ -141,6 +141,17 @@
           }
         ]
       }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/session-end.sh",
+            "timeout": 2
+          }
+        ]
+      }
     ]
   },
   "modules": ["./register.tsx"]

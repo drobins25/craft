@@ -72,21 +72,50 @@ assert_eq "cycle TOTAL_CHUNKS reset to 0" "0" "$TOTAL_CHUNKS"
 cleanup_test_dir
 echo ""
 
-# Test 4: Clears CRAFT_WRITE_ENABLED
-begin_test "Clears CRAFT_WRITE_ENABLED from global state"
+# Test 4: Closes only this session's gate naming the story
+begin_test "Removes this session's gate naming the story, keeps B's and a gate naming docs"
+
+TEST_DIR=$(create_craft_with_story "test-cycle" "login-form" "Login Form" "3" "active")
+STORY_FILE="$TEST_DIR/.craft/cycles/1-test-cycle/stories/1-login-form.md"
+CANON_STORY="$(cd "$(dirname "$STORY_FILE")" && pwd -P)/1-login-form.md"
+mkdir -p "$TEST_DIR/.craft/.gate"
+printf '%s\n' "$CANON_STORY" > "$TEST_DIR/.craft/.gate/craft-test-session"
+printf '%s\n' "$CANON_STORY" > "$TEST_DIR/.craft/.gate/other-session"
+
+set +e
+(cd "$TEST_DIR" && bash "$COMPLETE_STORY_SCRIPT" "$STORY_FILE" >/dev/null 2>&1)
+set -e
+
+assert_file_not_exists "this session's gate removed" "$TEST_DIR/.craft/.gate/craft-test-session"
+assert_eq "session B's gate untouched" "$CANON_STORY" "$(cat "$TEST_DIR/.craft/.gate/other-session")"
+cleanup_test_dir
+
+TEST_DIR=$(create_craft_with_story "test-cycle" "login-form" "Login Form" "3" "active")
+STORY_FILE="$TEST_DIR/.craft/cycles/1-test-cycle/stories/1-login-form.md"
+mkdir -p "$TEST_DIR/.craft/.gate"
+printf 'docs\n' > "$TEST_DIR/.craft/.gate/craft-test-session"
+set +e
+(cd "$TEST_DIR" && bash "$COMPLETE_STORY_SCRIPT" "$STORY_FILE" >/dev/null 2>&1)
+set -e
+assert_eq "a gate naming docs stays" "docs" "$(cat "$TEST_DIR/.craft/.gate/craft-test-session")"
+
+cleanup_test_dir
+echo ""
+
+# Test 4b: Story end never fails on a missing session id
+begin_test "Completes with the session id unset"
 
 TEST_DIR=$(create_craft_with_story "test-cycle" "login-form" "Login Form" "3" "active")
 STORY_FILE="$TEST_DIR/.craft/cycles/1-test-cycle/stories/1-login-form.md"
 
-# Set CRAFT_WRITE_ENABLED first
-echo 'CRAFT_WRITE_ENABLED="true"' >> "$TEST_DIR/.craft/.global-state"
-
 set +e
-(cd "$TEST_DIR" && bash "$COMPLETE_STORY_SCRIPT" "$STORY_FILE" 2>/dev/null)
+RESULT=$(cd "$TEST_DIR" && env -u CLAUDE_CODE_SESSION_ID bash "$COMPLETE_STORY_SCRIPT" "$STORY_FILE" 2>/dev/null)
+EXIT_CODE=$?
 set -e
 
-source "$TEST_DIR/.craft/.global-state"
-assert_eq "CRAFT_WRITE_ENABLED cleared" "" "$CRAFT_WRITE_ENABLED"
+assert_eq "exits 0" "0" "$EXIT_CODE"
+assert_eq "last line unchanged" "Story completed: $STORY_FILE" "$(printf '%s\n' "$RESULT" | tail -1)"
+assert_eq "status is complete" "complete" "$(grep '^status:' "$STORY_FILE" | sed 's/status: *//')"
 
 cleanup_test_dir
 echo ""

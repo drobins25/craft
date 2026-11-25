@@ -214,7 +214,9 @@ fi
 # Clear current story in global state
 "$SCRIPT_DIR/update-global-state.sh" CURRENT_STORY "" "$PROJECT_ROOT"
 "$SCRIPT_DIR/update-global-state.sh" LAST_ACTIVITY "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$PROJECT_ROOT"
-"$SCRIPT_DIR/update-global-state.sh" CRAFT_WRITE_ENABLED "" "$PROJECT_ROOT"
+# Give up only this session's hold on the story; a holder it replaced gets the
+# gate back. A close never fails a story end.
+"$SCRIPT_DIR/write-gate.sh" --root "${PROJECT_ROOT:-.}" close story "$STORY_FILE" >/dev/null || true
 
 # Emit event
 if [ -n "$cycle_name" ] && [ -n "$cycle_dir" ]; then

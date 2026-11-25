@@ -19,7 +19,7 @@ The full story ceremony is right for features and complex work. But when a butto
 
 ## Step 1: Guard Rails
 
-**Active story check:** If CURRENT_STORY is set in `.global-state`, warn: "There's an active story ([name]). Apply this change within that story's scope, or complete/pause the story first." Do not set CRAFT_WRITE_ENABLED if it's already set by a story - that would create overlapping write sessions.
+**Active story check:** If CURRENT_STORY is set in `.global-state`, warn: "There's an active story ([name]). Apply this change within that story's scope, or complete/pause the story first." The open in Step 3 leaves a story's gate as it is, so a story's gate is never replaced by adhoc's.
 
 **No new features:** Adhoc work changes something that already exists. If the solution adds something that wasn't there before (a new component, a new API endpoint, a new element on the page), it's a story.
 
@@ -36,14 +36,11 @@ Apply the tie-breaker:
 ## Step 3: Open the Gate
 
 ```bash
-# Open the write gate
-${CLAUDE_PLUGIN_ROOT}/hooks/scripts/update-global-state.sh CRAFT_WRITE_ENABLED "true" "${CRAFT_PROJECT_ROOT:-.}"
-
-# Safety marker - session-start.sh clears orphans
-echo "$(date -u +%Y-%m-%dT%H:%M:%S)" > "${CRAFT_PROJECT_ROOT:-.}/.craft/.active-fix"
+# Open this session's write gate
+${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh open adhoc
 ```
 
-The gate stays open for the whole work thread - including follow-up requests and tweak attempt loops - and closing it at Step 6 is yours to do; the status line shows "write gate open" until you do.
+Once the fix or tweak record exists, its path goes on the gate with `write-gate.sh open adhoc "<record path>"` (the flow files say when), so the status line can say Fix or Tweak. The gate stays open for the whole work thread - including follow-up requests and tweak attempt loops - and closing it at Step 6 is yours to do; the status line shows "write gate open" until you do.
 
 ## Step 4: Run the Flow
 
@@ -81,11 +78,9 @@ Commit message prefix: `fix:` for fixes, `tweak:` for tweaks. Example: `tweak: s
 At **thread end** - the fix validated, escalated or left uncommitted, or the tweak record reached accepted/abandoned/escalated, or the user has visibly moved on, or a fix hand-off ended any other way (blocked, no report, dropped):
 
 ```bash
-# Close the write gate
-${CLAUDE_PLUGIN_ROOT}/hooks/scripts/update-global-state.sh CRAFT_WRITE_ENABLED "" "${CRAFT_PROJECT_ROOT:-.}"
-
-# Remove safety marker
-rm -f "${CRAFT_PROJECT_ROOT:-.}/.craft/.active-fix"
+# Close this session's adhoc hold on the write gate; it also drops an adhoc line
+# waiting under a story, and never touches a gate another holder keeps
+${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh close adhoc
 ```
 
 A tweak record left `status: open` does NOT keep the gate open - the record's openness is bookkeeping in `.craft/tweaks/`; the gate closes with the thread. Cross-session state lives ONLY in the record.

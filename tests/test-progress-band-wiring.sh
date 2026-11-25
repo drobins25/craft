@@ -2,7 +2,7 @@
 # test-progress-band-wiring.sh - wiring coverage for the progress band's hooks module
 #
 # Freezes the seams CI can check without network or the claude CLI:
-#   1. hooks.json names the module beside its seven classic events
+#   1. hooks.json names the module beside its eight classic events
 #   2. plugin.json names the types contract and the file exists
 #   3. the module registers /craft-progress, and only that command
 #   4. the engine-written types folder is never tracked
@@ -44,12 +44,12 @@ with open(sys.argv[2], encoding="utf-8") as f:
 PY
 }
 
-echo "=== hooks.json keeps seven events and names the module ==="
+echo "=== hooks.json keeps eight events and names the module ==="
 if jq -e . "$HOOKS_JSON" >/dev/null 2>&1; then pass "hooks.json parses"; else fail "hooks.json parses"; fi
 MODULES=$(jq -c '.modules' "$HOOKS_JSON" 2>/dev/null || echo "invalid")
 if [ "$MODULES" = '["./register.tsx"]' ]; then pass "modules names ./register.tsx"; else fail "modules names ./register.tsx" '["./register.tsx"]' "$MODULES"; fi
 EVENTS=$(jq '.hooks | length' "$HOOKS_JSON" 2>/dev/null || echo "invalid")
-if [ "$EVENTS" = "7" ]; then pass "hooks still holds seven events"; else fail "hooks still holds seven events" "7" "$EVENTS"; fi
+if [ "$EVENTS" = "8" ]; then pass "hooks still holds eight events"; else fail "hooks still holds eight events" "8" "$EVENTS"; fi
 if [ -f "$MODULE" ]; then pass "hooks/register.tsx exists"; else fail "hooks/register.tsx exists"; fi
 
 echo "=== plugin.json names the types contract and the file exists ==="

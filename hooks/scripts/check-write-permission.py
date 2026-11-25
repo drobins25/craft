@@ -5,8 +5,9 @@ PreToolUse hook — allows writes if:
   1. File is in .craft/ or .claude/ directory
   2. File is outside the project workspace
   3. dev_mode: true in .craft/settings.yaml
-  4. CRAFT_WRITE_ENABLED=true in .craft/.global-state
-  5. An active workflow session exists (status: active in any session.md)
+  4. The writing session holds a gate file, .craft/.gate/<session_id>
+     (a workflow session's writes pass here too, on the gate of the session
+     running it; an active session.md alone allows nothing)
 
 Otherwise blocks with guidance to use craft workflow.
 
@@ -191,6 +192,39 @@ def find_workshop():
     return nearest
 
 
+SESSION_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
+
+
+def _is_craft_project(folder):
+    craft = os.path.join(folder, ".craft")
+    return os.path.isfile(os.path.join(craft, ".global-state")) or os.path.isfile(
+        os.path.join(craft, "project.md")
+    )
+
+
+def session_holds_gate(session_id, project_root, file_path, cwd):
+    """True when .craft/.gate/<session_id> is a file under the resolved root or
+    under any Craft project that encloses the written file."""
+    if not isinstance(session_id, str) or not SESSION_ID_RE.match(session_id):
+        return False
+
+    roots = [project_root]
+    absolute = file_path if file_path.startswith("/") else os.path.join(cwd, file_path)
+    d = os.path.dirname(os.path.normpath(absolute))
+    while True:
+        if _is_craft_project(d):
+            roots.append(d)
+        parent = os.path.dirname(d)
+        if parent == d:
+            break
+        d = parent
+
+    for root in roots:
+        if os.path.isfile(os.path.join(root, ".craft", ".gate", session_id)):
+            return True
+    return False
+
+
 def deny():
     """Output deny decision in hookSpecificOutput format."""
     result = {
@@ -303,40 +337,12 @@ def main():
                     if value == "true":
                         return
 
-    # Check 4: CRAFT_WRITE_ENABLED in global state?
-    state_file = os.path.join(project_root, ".craft", ".global-state")
-    if os.path.isfile(state_file):
-        state = parse_state_file(state_file)
-        if state.get("CRAFT_WRITE_ENABLED") == "true":
-            return
-
-    # Check 5: Active workflow session? (status: active in any session.md)
-    workflows_dir = os.path.join(project_root, ".craft", "workflows")
-    if os.path.isdir(workflows_dir):
-        for wf_name in os.listdir(workflows_dir):
-            if wf_name.startswith("."):
-                continue
-            sessions_dir = os.path.join(workflows_dir, wf_name, "sessions")
-            if not os.path.isdir(sessions_dir):
-                continue
-            for session_name in os.listdir(sessions_dir):
-                session_file = os.path.join(sessions_dir, session_name, "session.md")
-                if not os.path.isfile(session_file):
-                    continue
-                with open(session_file, "r") as f:
-                    in_fm = False
-                    for line in f:
-                        stripped = line.strip()
-                        if stripped == "---":
-                            if not in_fm:
-                                in_fm = True
-                                continue
-                            else:
-                                break
-                        if in_fm and stripped.startswith("status:"):
-                            val = stripped.split(":", 1)[1].strip()
-                            if val == "active":
-                                return
+    # Check 4: does the writing session hold a gate file? The file's name is the
+    # session id the hook input carries; its content is never read. An opener
+    # resolves its root through CRAFT_PROJECT_ROOT, which hooks never receive, so
+    # the file is also looked for under every Craft project enclosing the file.
+    if session_holds_gate(input_data.get("session_id"), project_root, file_path, cwd):
+        return
 
     # All checks failed — block the write
     deny()

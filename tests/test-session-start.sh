@@ -339,8 +339,21 @@ read_state_key() {
   grep "^${key}=" "$root/.craft/.global-state" 2>/dev/null | sed "s/${key}=\"\(.*\)\"/\1/"
 }
 
-# Test 11: stale write gate with no holders is cleared at session start
-begin_test "stale write gate with no holders is cleared at session start"
+# Gate files: session start never touches them. Two sessions' files and the
+# folder's ignore file are written, a session start runs, and every byte must be
+# the same afterwards.
+gate_fixture() { # <project dir>
+  mkdir -p "$1/.craft/.gate"
+  printf '/some/story.md\nworkflow /some/session\n' > "$1/.craft/.gate/session-a"
+  printf 'docs\n' > "$1/.craft/.gate/session-b"
+  printf '*\n' > "$1/.craft/.gate/.gitignore"
+}
+gate_snapshot() { # <project dir>
+  (cd "$1/.craft/.gate" && for f in .gitignore session-a session-b; do printf '== %s\n' "$f"; cat "$f"; done; ls -A)
+}
+
+# Test 11: no story, no workflow - the gate files stay
+begin_test "session start leaves gate files alone with no story"
 
 TEST_DIR=$(create_minimal_craft)
 ENV_FILE=$(mktemp)
@@ -350,9 +363,10 @@ ACTIVE_CYCLE=""
 CURRENT_STORY=""
 PLANNING_CYCLE=""
 LAST_ACTIVITY=""
-CRAFT_WRITE_ENABLED="true"
 CURRENT_WORKFLOW_SESSION=""
 EOF
+gate_fixture "$TEST_DIR"
+BEFORE=$(gate_snapshot "$TEST_DIR")
 
 set +e
 (cd "$TEST_DIR" && unset PROJECT_ROOT && unset CRAFT_PROJECT_ROOT && unset CRAFT_MULTI_PROJECT && export CLAUDE_ENV_FILE="$ENV_FILE" && bash "$SESSION_SCRIPT" >/dev/null 2>&1)
@@ -360,15 +374,14 @@ SESSION_EXIT=$?
 set -e
 
 assert_eq "exits 0" "0" "$SESSION_EXIT"
-GATE_VALUE=$(read_state_key CRAFT_WRITE_ENABLED "$TEST_DIR")
-assert_eq "stale gate cleared" "" "$GATE_VALUE"
+assert_eq "gate files byte-identical" "$BEFORE" "$(gate_snapshot "$TEST_DIR")"
 
 rm -f "$ENV_FILE"
 cleanup_test_dir
 echo ""
 
-# Test 12: write gate survives when a story is in progress
-begin_test "write gate survives when a story is in progress"
+# Test 12: a story in progress
+begin_test "session start leaves gate files alone with a story in progress"
 
 TEST_DIR=$(create_minimal_craft)
 ENV_FILE=$(mktemp)
@@ -378,9 +391,10 @@ ACTIVE_CYCLE=""
 CURRENT_STORY="some-story"
 PLANNING_CYCLE=""
 LAST_ACTIVITY=""
-CRAFT_WRITE_ENABLED="true"
 CURRENT_WORKFLOW_SESSION=""
 EOF
+gate_fixture "$TEST_DIR"
+BEFORE=$(gate_snapshot "$TEST_DIR")
 
 set +e
 (cd "$TEST_DIR" && unset PROJECT_ROOT && unset CRAFT_PROJECT_ROOT && unset CRAFT_MULTI_PROJECT && export CLAUDE_ENV_FILE="$ENV_FILE" && bash "$SESSION_SCRIPT" >/dev/null 2>&1)
@@ -388,15 +402,14 @@ SESSION_EXIT=$?
 set -e
 
 assert_eq "exits 0" "0" "$SESSION_EXIT"
-GATE_VALUE=$(read_state_key CRAFT_WRITE_ENABLED "$TEST_DIR")
-assert_eq "gate preserved with story in progress" "true" "$GATE_VALUE"
+assert_eq "gate files byte-identical" "$BEFORE" "$(gate_snapshot "$TEST_DIR")"
 
 rm -f "$ENV_FILE"
 cleanup_test_dir
 echo ""
 
-# Test 13: write gate survives when a live workflow session holds it
-begin_test "write gate survives when a live workflow session holds it"
+# Test 13: a live workflow session
+begin_test "session start leaves gate files alone with a live workflow session"
 
 TEST_DIR=$(create_minimal_craft)
 ENV_FILE=$(mktemp)
@@ -414,9 +427,10 @@ ACTIVE_CYCLE=""
 CURRENT_STORY=""
 PLANNING_CYCLE=""
 LAST_ACTIVITY=""
-CRAFT_WRITE_ENABLED="true"
 CURRENT_WORKFLOW_SESSION="$WF_DIR"
 EOF
+gate_fixture "$TEST_DIR"
+BEFORE=$(gate_snapshot "$TEST_DIR")
 
 set +e
 (cd "$TEST_DIR" && unset PROJECT_ROOT && unset CRAFT_PROJECT_ROOT && unset CRAFT_MULTI_PROJECT && export CLAUDE_ENV_FILE="$ENV_FILE" && bash "$SESSION_SCRIPT" >/dev/null 2>&1)
@@ -424,15 +438,15 @@ SESSION_EXIT=$?
 set -e
 
 assert_eq "exits 0" "0" "$SESSION_EXIT"
-GATE_VALUE=$(read_state_key CRAFT_WRITE_ENABLED "$TEST_DIR")
-assert_eq "gate preserved with live workflow session" "true" "$GATE_VALUE"
+assert_eq "gate files byte-identical" "$BEFORE" "$(gate_snapshot "$TEST_DIR")"
+assert_eq "live workflow session kept" "$WF_DIR" "$(read_state_key CURRENT_WORKFLOW_SESSION "$TEST_DIR")"
 
 rm -f "$ENV_FILE"
 cleanup_test_dir
 echo ""
 
-# Test 14: stale workflow session clears both the session key and the gate
-begin_test "stale workflow session clears both the session key and the gate"
+# Test 14: a stale workflow session still clears its key, and the gate files stay
+begin_test "stale workflow session clears its key and leaves gate files alone"
 
 TEST_DIR=$(create_minimal_craft)
 ENV_FILE=$(mktemp)
@@ -450,9 +464,10 @@ ACTIVE_CYCLE=""
 CURRENT_STORY=""
 PLANNING_CYCLE=""
 LAST_ACTIVITY=""
-CRAFT_WRITE_ENABLED="true"
 CURRENT_WORKFLOW_SESSION="$WF_DIR"
 EOF
+gate_fixture "$TEST_DIR"
+BEFORE=$(gate_snapshot "$TEST_DIR")
 
 set +e
 (cd "$TEST_DIR" && unset PROJECT_ROOT && unset CRAFT_PROJECT_ROOT && unset CRAFT_MULTI_PROJECT && export CLAUDE_ENV_FILE="$ENV_FILE" && bash "$SESSION_SCRIPT" >/dev/null 2>&1)
@@ -462,8 +477,21 @@ set -e
 assert_eq "exits 0" "0" "$SESSION_EXIT"
 WF_VALUE=$(read_state_key CURRENT_WORKFLOW_SESSION "$TEST_DIR")
 assert_eq "stale workflow session cleared" "" "$WF_VALUE"
-GATE_VALUE=$(read_state_key CRAFT_WRITE_ENABLED "$TEST_DIR")
-assert_eq "gate cleared after stale workflow clear" "" "$GATE_VALUE"
+assert_eq "gate files byte-identical" "$BEFORE" "$(gate_snapshot "$TEST_DIR")"
+
+rm -f "$ENV_FILE"
+cleanup_test_dir
+echo ""
+
+# Test 14b: a session start with no gate folder never creates one
+begin_test "session start creates no gate folder"
+
+TEST_DIR=$(create_minimal_craft)
+ENV_FILE=$(mktemp)
+set +e
+(cd "$TEST_DIR" && unset PROJECT_ROOT && unset CRAFT_PROJECT_ROOT && unset CRAFT_MULTI_PROJECT && export CLAUDE_ENV_FILE="$ENV_FILE" && bash "$SESSION_SCRIPT" >/dev/null 2>&1)
+set -e
+assert_dir_not_exists "no gate folder created" "$TEST_DIR/.craft/.gate"
 
 rm -f "$ENV_FILE"
 cleanup_test_dir

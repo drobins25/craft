@@ -88,18 +88,24 @@ if [ -n "$MISSING" ]; then
   exit 1
 fi
 
+# A session id the gate cannot use stops the start here, before any state moves.
+"$SCRIPT_DIR/write-gate.sh" --root "${PROJECT_ROOT:-.}" preflight >/dev/null
+
 # Update story status to active
 "$SCRIPT_DIR/update-story-status.sh" "$STORY_FILE" active
 
 # Update global state
 "$SCRIPT_DIR/update-global-state.sh" CURRENT_STORY "$STORY_NAME" "$PROJECT_ROOT"
 "$SCRIPT_DIR/update-global-state.sh" LAST_ACTIVITY "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$PROJECT_ROOT"
-"$SCRIPT_DIR/update-global-state.sh" CRAFT_WRITE_ENABLED "true" "$PROJECT_ROOT"
 
 # Update cycle state
 "$SCRIPT_DIR/update-cycle-state.sh" "$CYCLE_DIR" CURRENT_STORY "$STORY_NAME"
 "$SCRIPT_DIR/update-cycle-state.sh" "$CYCLE_DIR" CURRENT_CHUNK "1"
 "$SCRIPT_DIR/update-cycle-state.sh" "$CYCLE_DIR" TOTAL_CHUNKS "$TOTAL_CHUNKS"
+
+# Last state change: an earlier failure exits under set -e before this, so a
+# failed start leaves no gate file and a gate the session held stays as it was.
+"$SCRIPT_DIR/write-gate.sh" --root "${PROJECT_ROOT:-.}" open story "$STORY_FILE" >/dev/null
 
 # Emit event
 EVENTS_DIR="$CYCLE_DIR/.events"

@@ -184,8 +184,10 @@ If story specified: proceed directly.
 
 Read the story file and determine state:
 
-**If status = `ready` or `active`:**
+**If status = `ready`:**
 > Proceed to implementation
+
+**If status = `active`:** go to Resume Support below, which enters Step 4. Never run Step 3c's `start-story.sh` on it: that sets the chunk back to 1 and opens this session's gate without asking when another session's gate names the story.
 
 ### Step 3: Review Before Starting
 
@@ -368,6 +370,7 @@ This updates:
 - Global: `CURRENT_STORY` set
 - Cycle: `CURRENT_STORY`, `CURRENT_CHUNK=1`, `TOTAL_CHUNKS` set
 - Story: `status = active`
+- Gate: this session's gate file, `.craft/.gate/<session id>`, names the story
 
 ### Step 4: Implementation Loop
 
@@ -429,6 +432,8 @@ fi
    path for potential salvage use.
 
 2. **Implement the Chunk — MANDATORY AGENT INVOCATION**
+
+   First run "Hold This Session's Gate" (Resume Support) for this chunk, including a chunk re-entered through Resume Into Step 4, so a session resumed mid-story holds the story's gate before the implementer writes.
 
    ⛔ **YOU MUST USE THE TASK TOOL TO INVOKE THE `implementer` AGENT.**
 
@@ -1061,6 +1066,20 @@ Re-check before each chunk if parallel stories exist. Files may have been added.
 ## Resume Support
 
 If story has `status: active` (partially implemented):
+
+### Hold This Session's Gate
+
+Before anything else here, make sure this session holds the story's write gate, so no implementer or fix is sent into a blocked write. Run:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh claim story "<story file>"
+```
+
+- It prints `opened …`, `mine`, `held …` or `skipped`: go on and ask nothing.
+- It prints `other`: another session's gate names this story. Ask "Another session's gate names [story]. It may be building now. Take it over, or stop?", where [story] is the story's `title:`. "Take it over" runs `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh open story "<story file>"` and goes on. "Stop" builds nothing and ends here.
+- It, or the takeover's `open story` call, exits non-zero: stop before building and show the gate script's message.
+
+The step is safe to repeat. After a takeover this session's own gate names the story, so a later run prints `mine` and asks nothing. Step 4 runs it again before each chunk's implementer.
 
 ### Show Progress
 

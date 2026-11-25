@@ -234,13 +234,27 @@ Use **Glob** to find all branch files: `$PROJECT/.craft/research/{topic-slug}/[0
 
 Use **Read** to read `${CLAUDE_PLUGIN_ROOT}/commands/references/crystallize-expert.md`.
 
-Follow the template to write the expert agent file. The template contains the full 9-section structure, frontmatter guidance, and the key principles for distilling knowledge into an opinionated persona.
+Use the template for the expert agent file's structure and content. The template contains the full 9-section structure, frontmatter guidance, and the key principles for distilling knowledge into an opinionated persona. Its "Write the Agent File" step is the write in 6.3: make it there, after 6.3 opens the gate.
 
 #### 6.3: Write the Agent File
+
+Before the write, open this session's write gate:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh open research
+```
+
+If the open exits non-zero, stop this write step and show the gate script's message. Then end here, without 6.4, because nothing was saved.
 
 Write to `.claude/agents/{topic-slug}-expert.md` following the template.
 
 #### 6.4: Present Result
+
+First, before anything is shown, close the gate (this step asks nothing):
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh close research
+```
 
 > **Expert crystallized: {topic-slug}-expert**
 >
