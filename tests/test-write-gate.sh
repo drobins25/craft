@@ -13,7 +13,9 @@ WG="$SCRIPTS_DIR/write-gate.sh"
 ID="craft-test-session"
 ERR_FILE=$(mktemp)
 TMP_DIRS=""
-trap 'rm -f "$ERR_FILE"; for d in $TMP_DIRS; do rm -rf "$d"; done' EXIT
+READER=""
+trap '[ -n "$READER" ] && kill "$READER" 2>/dev/null; rm -f "$ERR_FILE"; for d in $TMP_DIRS; do rm -rf "$d"; done' EXIT
+trap 'exit 143' INT TERM HUP
 
 NOT_OPENED="write-gate: CLAUDE_CODE_SESSION_ID is empty or not a session id - the gate was not opened"
 NOTHING_CLOSED="write-gate: CLAUDE_CODE_SESSION_ID is empty or not a session id - nothing closed"
@@ -406,6 +408,7 @@ while [ "$I" -lt 200 ]; do
 done
 touch "$DONE"
 wait "$READER"
+READER=""
 if [ -f "$BAD" ]; then BADN=$(wc -l < "$BAD" | tr -d ' '); else BADN=0; fi
 assert_eq "reader never saw a missing or odd first line in 200 cycles" "0" "$BADN"
 assert_eq "ends with the workflow held" "workflow $W" "$(lines)"
