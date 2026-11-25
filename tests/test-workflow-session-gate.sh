@@ -86,6 +86,7 @@ assert_eq "its two lines" "Session activated: Lesson One
 Starting at Stage 1." "$OUT"
 assert_eq "gate names the canonical folder" "workflow $P/.craft/workflows/wf/sessions/s1" "$(gate_of "$P" $SESSION_A)"
 assert_not_contains "the hook allows the session's write" "deny" "$(hook_decision "$P" $SESSION_A)"
+assert_contains "the hook denies another session's write" "deny" "$(hook_decision "$P" $SESSION_B)"
 rm -rf "$P"; echo ""
 
 begin_test "start and complete run from a folder outside the project still write that project's state and gate"
@@ -179,14 +180,17 @@ set +e
 (cd "$P" && as $SESSION_A bash "$START_WF" "$WF" >/dev/null 2>&1)
 assert_eq "after workflow start" "workflow $WF" "$(gate_of "$P" $SESSION_A)"
 assert_not_contains "allowed after workflow start" "deny" "$(hook_decision "$P" $SESSION_A)"
+assert_contains "another session denied after workflow start" "deny" "$(hook_decision "$P" $SESSION_B)"
 (cd "$P" && as $SESSION_A bash "$START_STORY" "$STORY" >/dev/null 2>&1)
 assert_eq "after story start" "$STORY
 workflow $WF" "$(gate_of "$P" $SESSION_A)"
 assert_not_contains "allowed after story start" "deny" "$(hook_decision "$P" $SESSION_A)"
+assert_contains "another session denied after story start" "deny" "$(hook_decision "$P" $SESSION_B)"
 (cd "$P" && as $SESSION_A bash "$COMPLETE_STORY" "$STORY" >/dev/null 2>&1)
 set -e
 assert_eq "after story end exactly the workflow line" "workflow $WF" "$(gate_of "$P" $SESSION_A)"
 assert_not_contains "allowed after story end" "deny" "$(hook_decision "$P" $SESSION_A)"
+assert_contains "another session denied after story end" "deny" "$(hook_decision "$P" $SESSION_B)"
 rm -rf "$P"; echo ""
 
 begin_test "complete-workflow-session removes only this session's gate naming that folder"

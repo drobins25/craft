@@ -145,7 +145,7 @@ printf 'adhoc %s/.craft/fixes/fix-x.md\n' "$TEST_DIR" > "$TEST_DIR/.craft/.gate/
 
 hook_allows() {
   local json out
-  json="{\"session_id\":\"craft-test-session\",\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"$TEST_DIR/src/app.ts\"},\"cwd\":\"$TEST_DIR\"}"
+  json="{\"session_id\":\"${1:-craft-test-session}\",\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"$TEST_DIR/src/app.ts\"},\"cwd\":\"$TEST_DIR\"}"
   out=$(cd "$TEST_DIR" && unset CRAFT_PROJECT_ROOT && python3 "$SCRIPTS_DIR/check-write-permission.py" <<< "$json" 2>/dev/null || true)
   case "$out" in *deny*) echo denied ;; *) echo allowed ;; esac
 }
@@ -156,12 +156,14 @@ set -e
 assert_eq "line 1 is the story" "$TEST_DIR/.craft/cycles/1-test-cycle/stories/1-signup.md" "$(sed -n 1p "$TEST_DIR/.craft/.gate/craft-test-session")"
 assert_eq "line 2 keeps the fix" "adhoc $TEST_DIR/.craft/fixes/fix-x.md" "$(sed -n 2p "$TEST_DIR/.craft/.gate/craft-test-session")"
 assert_eq "write allowed while the story builds" "allowed" "$(hook_allows)"
+assert_eq "another session is denied while the story builds" "denied" "$(hook_allows craft-other-session)"
 
 set +e
 (cd "$TEST_DIR" && bash "$SCRIPTS_DIR/complete-story.sh" "$STORY_FILE" >/dev/null 2>&1)
 set -e
 assert_eq "the fix holds the gate again" "adhoc $TEST_DIR/.craft/fixes/fix-x.md" "$(cat "$TEST_DIR/.craft/.gate/craft-test-session")"
 assert_eq "write allowed after the story ends" "allowed" "$(hook_allows)"
+assert_eq "another session is denied after the story ends" "denied" "$(hook_allows craft-other-session)"
 
 cleanup_test_dir
 echo ""
