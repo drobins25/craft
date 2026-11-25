@@ -53,6 +53,17 @@ LAST_ACTIVITY=""
 EOF
 fi
 
+# TEMPORARY - REMOVE ON 2027-01-01 (delete this whole block, and delete
+# tests/test-legacy-write-gate-cleanup.sh with it; nothing else depends on either).
+# Craft 2.20.3 and earlier kept the write gate as a CRAFT_WRITE_ENABLED line in
+# .global-state. Nothing reads it now, so drop that one line from an older
+# project the next time any state key is set.
+if grep -q '^CRAFT_WRITE_ENABLED=' "$STATE_FILE"; then
+  sed -i.bak '/^CRAFT_WRITE_ENABLED=/d' "$STATE_FILE"
+  rm -f "$STATE_FILE.bak"
+fi
+# END TEMPORARY legacy write gate cleanup
+
 # Resolve NOW keyword to current UTC timestamp
 if [ "$VALUE" = "NOW" ]; then
   VALUE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
