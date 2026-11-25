@@ -88,6 +88,30 @@ assert_eq "gate names the canonical folder" "workflow $P/.craft/workflows/wf/ses
 assert_not_contains "the hook allows the session's write" "deny" "$(hook_decision "$P" $SESSION_A)"
 rm -rf "$P"; echo ""
 
+begin_test "start and complete run from a folder outside the project still write that project's state and gate"
+P=$(fresh_project); make_wf_session "$P" ready
+OUTSIDE=$(mktemp -d)
+set +e; OUT=$(cd "$OUTSIDE" && as $SESSION_A bash "$START_WF" "$P/.craft/workflows/wf/sessions/s1" 2>&1); RC=$?; set -e
+assert_eq "start exits 0" "0" "$RC"
+assert_contains "state names the session" "CURRENT_WORKFLOW_SESSION=\"$P/.craft/workflows/wf/sessions/s1\"" "$(cat "$P/.craft/.global-state")"
+assert_eq "gate written" "workflow $P/.craft/workflows/wf/sessions/s1" "$(gate_of "$P" $SESSION_A)"
+set +e; OUT=$(cd "$OUTSIDE" && as $SESSION_A bash "$COMPLETE_WF" "$P/.craft/workflows/wf/sessions/s1" 2>&1); RC=$?; set -e
+assert_eq "complete exits 0" "0" "$RC"
+assert_contains "report printed" "Status: complete" "$OUT"
+assert_contains "state cleared" 'CURRENT_WORKFLOW_SESSION=""' "$(cat "$P/.craft/.global-state")"
+assert_eq "gate released" "<none>" "$(gate_of "$P" $SESSION_A)"
+rm -rf "$P" "$OUTSIDE"; echo ""
+
+begin_test "start run from a monorepo top level writes the sub-project's state, not the top project's"
+TOP=$(fresh_project); SUB="$TOP/sub"; mkdir -p "$SUB"
+mkdir -p "$SUB/.craft"; printf 'ACTIVE_CYCLE=""\nCURRENT_WORKFLOW_SESSION=""\n' > "$SUB/.craft/.global-state"
+make_wf_session "$SUB" ready
+set +e; (cd "$TOP" && as $SESSION_A bash "$START_WF" "$SUB/.craft/workflows/wf/sessions/s1" >/dev/null 2>&1); RC=$?; set -e
+assert_eq "start exits 0" "0" "$RC"
+assert_contains "sub-project state names the session" "CURRENT_WORKFLOW_SESSION=\"$SUB/.craft/workflows/wf/sessions/s1\"" "$(cat "$SUB/.craft/.global-state")"
+assert_contains "top state untouched" 'CURRENT_WORKFLOW_SESSION=""' "$(cat "$TOP/.craft/.global-state")"
+rm -rf "$TOP"; echo ""
+
 begin_test "start-workflow-session with no session id exits 1, leaves session.md byte-identical, writes no gate"
 P=$(fresh_project); make_wf_session "$P" ready
 BEFORE=$(cat "$P/.craft/workflows/wf/sessions/s1/session.md")

@@ -58,8 +58,12 @@ fi
 # gate cannot use stops the start here, before session.md changes.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GATE_ROOT_ARGS=()
+STATE_ROOT="."
 case "$SESSION_DIR" in
-  */.craft/*) GATE_ROOT_ARGS=(--root "${SESSION_DIR%/.craft/*}") ;;
+  */.craft/*)
+    STATE_ROOT="${SESSION_DIR%/.craft/*}"
+    GATE_ROOT_ARGS=(--root "$STATE_ROOT")
+    ;;
 esac
 "$SCRIPT_DIR/write-gate.sh" "${GATE_ROOT_ARGS[@]}" preflight >/dev/null
 
@@ -88,7 +92,7 @@ sed -i.bak -E "s/(## Stage 1:.*)\[pending\]/\1[active]/" "$SESSION_FILE"
 rm -f "$SESSION_FILE.bak"
 
 # Set CURRENT_WORKFLOW_SESSION in .global-state for compaction recovery
-"$SCRIPT_DIR/update-global-state.sh" CURRENT_WORKFLOW_SESSION "$SESSION_DIR"
+"$SCRIPT_DIR/update-global-state.sh" CURRENT_WORKFLOW_SESSION "$SESSION_DIR" "$STATE_ROOT"
 
 # Last state change: any earlier failure exits under set -e before this, so a
 # failed start writes no gate file and leaves a gate the session already held as it was.
