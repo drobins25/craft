@@ -7,6 +7,7 @@ Notable, user-facing changes per version. Internal changes (tests, refactors, co
 - Changed the write gate so each Claude Code session holds its own. A story, fix or approval in one window no longer opens writes in another, and closing one in a window never closes another's. A session that ends takes its gate with it.
 - Added writes to `/craft:docs`, which could not write before. Reflect, the rule pass, become and the expert step in research open the gate only while they write and close it as soon as the write returns, so it is never open while a question waits for you.
 - Changed continuing a story or workflow: if another window holds its gate, Craft now asks before taking it over instead of doing it silently.
+- Fixed starting or finishing a workflow from a folder outside its project, such as the top level of a monorepo. The workflow is now tracked in the project that holds it, where before it could stall as active or be recorded in the wrong project.
 
 ## 2.20.3 - 2026-11-24
 
