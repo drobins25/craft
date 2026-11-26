@@ -507,15 +507,31 @@ run_as sess-b --root "$R" open docs --take-over
 assert_exit_code "take-over on a named holder exits 1" "1" "$RC"
 echo ""
 
-begin_test "open workflow --take-over while this session's story blocks recording it prints held and leaves the other session's file alone"
+begin_test "open workflow --take-over while this session builds a story records the workflow on line 2 and takes it from the other session"
 newproj
 S=$(mkstory s1); W=$(mkwf w1)
 run_as sess-b --root "$R" open story "$S"
 printf 'workflow %s\n' "$W" > "$(gf sess-a)"
 run_as sess-b --root "$R" open workflow "$W" --take-over
 assert_eq "B is held by its story" "held $S" "$OUT"
-assert_eq "A's file still reads the workflow" "workflow $W" "$(lines sess-a)"
-assert_eq "B's file is unchanged" "$S" "$(lines sess-b)"
+assert_file_not_exists "A's file is gone" "$(gf sess-a)"
+assert_eq "B's file holds the story then the workflow" "$S / workflow $W" "$(lines sess-b)"
+run_as sess-a --root "$R" check workflow "$W"
+assert_eq "A sees the workflow as other" "other" "$OUT"
+run_as sess-b --root "$R" close story "$S"
+assert_eq "closing the story hands the workflow back" "restored workflow $W" "$OUT"
+echo ""
+
+begin_test "claim workflow while this session builds a story records it; a second session then sees other; docs under a story leave the file alone"
+newproj
+S=$(mkstory s1); W=$(mkwf w1)
+run_as sess-b --root "$R" open story "$S"
+run_as sess-b --root "$R" claim workflow "$W"
+run_as sess-a --root "$R" claim workflow "$W"
+assert_eq "A sees other" "other" "$OUT"
+printf '%s\n' "$S" > "$(gf sess-b)"
+run_as sess-b --root "$R" open docs
+assert_eq "docs under a story leaves the file alone" "$S" "$(lines sess-b)"
 echo ""
 
 begin_test "check story prints mine, other or free for the same cases and writes nothing; .gitignore and dot-prefixed temp files are ignored"

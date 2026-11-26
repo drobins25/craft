@@ -16,7 +16,8 @@
 #
 # The gate is the file <root>/.craft/.gate/<CLAUDE_CODE_SESSION_ID>. Line 1 names
 # the holder; line 2 exists only under a story and keeps the holder the story
-# replaced, so that holder holds the gate again the moment the story closes.
+# replaced, or a workflow opened while the story held the gate, so that holder
+# holds the gate again the moment the story closes.
 #
 # Pure bash with a short tool list (dirname basename mkdir printf rm mv cat grep
 # sed head tr mktemp): it runs under start-story.sh's stripped PATH, with no
@@ -386,7 +387,9 @@ do_open() {
   fi
 
   if [ "$k1" = "story" ]; then
-    if [ -n "$G2" ] && ! is_blank "$G2" && same_kind "$G2" "$new" && [ "$G2" != "$new" ]; then
+    if is_blank "$G2"; then
+      [ "$H_KIND" = "workflow" ] && write_gate "$G1" "$new"
+    elif same_kind "$G2" "$new" && [ "$G2" != "$new" ]; then
       write_gate "$G1" "$new"
     fi
     echo "held $G1"
