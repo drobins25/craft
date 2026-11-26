@@ -129,6 +129,21 @@ if [ -n "$RESUME_HOLD" ] && [ "$RESUME_HOLD" -gt "$E1E" ] && [ "$RESUME_HOLD" -l
 has_text "the takeover line for the end report" "$WFRUN" "Another session's gate named {session name}; this run took it over."
 echo ""
 
+begin_test "every takeover call in the prompts carries --take-over"
+# every_line_has_flag <desc> <file> <anchor>: the anchor appears, and each line holding it also holds --take-over.
+every_line_has_flag() {
+  local total with
+  total=$(grep -cF -- "$3" "$2" || true)
+  with=$(grep -F -- "$3" "$2" | grep -cF -- '--take-over' || true)
+  if [ "$total" -ge 1 ] && [ "$total" = "$with" ]; then echo "  PASS: $1"; PASS=$((PASS + 1))
+  else echo "  FAIL: $1"; echo "    $with of $total lines with '$3' in $2 carry --take-over"; FAIL=$((FAIL + 1)); fi
+}
+every_line_has_flag "story-implement's Take it over line" "$IMPL" 'write-gate.sh open story'
+every_line_has_flag "story-implement-auto's Take it over line" "$REPO/commands/craft-story-implement-auto.md" 'write-gate.sh open story'
+every_line_has_flag "workflow-run's Take it over line" "$WFRUN" 'write-gate.sh open workflow "<session folder>"'
+every_line_has_flag "workflow-run's unanswered-question line" "$WFRUN" 'run the same `open workflow'
+echo ""
+
 begin_test "the SessionEnd hook is wired and the script is the only thing it runs"
 assert_eq "SessionEnd runs session-end.sh" "1" "$(jq '[.hooks.SessionEnd[].hooks[] | select(.command | endswith("/hooks/scripts/session-end.sh"))] | length' "$REPO/hooks/hooks.json")"
 lacks_text "session-end never runs discover-projects or the dashboard" "$REPO/hooks/scripts/session-end.sh" 'discover-projects.sh"'

@@ -214,7 +214,7 @@ No-prompt shortcut: finds the next runnable session, activates it, runs to compl
 
 Chains through all runnable sessions in sequence. Only stops when no sessions remain or the user interrupts.
 
-1. If an active session exists for this workflow, resume it first (same as `continue`). Before it runs any stage, run "Hold This Session's Gate" in Step 1g with that session's folder. This is a run-all, so an unanswered takeover question takes over (Step 1g says how), and the final summary carries the takeover line.
+1. If an active session exists for this workflow, resume it first (same as `continue`). Before it runs any stage, run "Hold This Session's Gate" in Step 1g with that session's folder. This is a run-all, so an unanswered takeover question can take over (Step 1g says when), and the final summary carries the takeover line.
 2. Use Step 1c to count all runnable sessions. Add 1 if resuming an active session.
 3. If none (no active, no runnable): "No sessions to run for {workflow-name}." Stop.
 4. Show: "Running {N} sessions for {workflow-name} in sequence."
@@ -327,11 +327,9 @@ ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh claim workflow "<session folde
 ```
 
 - It prints `opened …`, `mine`, `held …` or `skipped`: go on and ask nothing.
-- It prints `other`: another session's gate names this workflow session. Ask "Another session's gate names [workflow session]. It may be running now. Take it over, or stop?". "Take it over" runs `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh open workflow "<session folder>"` and goes on. "Stop" runs no stage and ends the command, a run-all included.
-- If the session's `mode:` is `auto`, or you are inside a run-all (Step 1e), the question can come back without an answer: the may-be-away note after a timeout, a denial, an error, no choice returned, or the question tool not being offered. Every one of those takes over: run the same `open workflow` call and go on, and remember it for the closing report (Step 5, or the run-all summary in Step 1e).
+- It prints `other`: another session's gate names this workflow session. Ask "Another session's gate names [workflow session]. It may be running now. Take it over, or stop?". "Take it over" runs `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh open workflow "<session folder>" --take-over` and goes on. "Stop" runs no stage and ends the command, a run-all included.
+- If the session's `mode:` is `auto`, or you are inside a run-all (Step 1e), the question can come back without an answer: the may-be-away note after a timeout, a denial, an error, no choice returned, or the question tool not being offered. Every one of those takes over: run the same `open workflow ... --take-over` call and go on, and remember it for the closing report (Step 5, or the run-all summary in Step 1e). That holds only until this conversation starts a stage of this workflow session. After that, `other` means another session took it over, so an unanswered question runs no stage and ends the command, a run-all included, with `Another session took over {session name}; this run stopped.`
 - It, or the takeover's `open workflow` call, exits non-zero: run no stage, and show the gate script's message.
-
-The call opens only this session's own gate and never touches another session's. Nothing reopens the gate between stages: a story run inside a stage hands the gate back to the workflow when it ends.
 
 ---
 

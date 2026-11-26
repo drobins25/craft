@@ -1076,10 +1076,10 @@ ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh claim story "<story file>"
 ```
 
 - It prints `opened …`, `mine`, `held …` or `skipped`: go on and ask nothing.
-- It prints `other`: another session's gate names this story. Ask "Another session's gate names [story]. It may be building now. Take it over, or stop?", where [story] is the story's `title:`. "Take it over" runs `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh open story "<story file>"` and goes on. "Stop" builds nothing and ends here.
+- It prints `other`: another session's gate names this story. Ask "Another session's gate names [story]. It may be building now. Take it over, or stop?", where [story] is the story's `title:`. "Take it over" runs `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh open story "<story file>" --take-over` and goes on. "Stop" builds nothing and ends here.
 - It, or the takeover's `open story` call, exits non-zero: stop before building and show the gate script's message.
 
-The step is safe to repeat. After a takeover this session's own gate names the story, so a later run prints `mine` and asks nothing. Step 4 runs it again before each chunk's implementer.
+The step is safe to repeat. After a takeover this session's own gate names the story, so a later run prints `mine` and asks nothing, unless another session has taken the story over since; then it prints `other` again. Step 4 runs it again before each chunk's implementer.
 
 ### Show Progress
 

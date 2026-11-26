@@ -46,7 +46,9 @@ if [ -f "${PROJECT_ROOT}.craft/.global-state" ]; then
 fi
 
 # Session start never touches a session's gate file: a crashed session's file is
-# harmless, and resuming that session gets its gate back. SessionEnd cleans up.
+# harmless, and resuming that session gets its gate back, unless another session
+# took over its story or workflow since: that takeover removes the line from the
+# file (and the file, when nothing else is on it). SessionEnd cleans up.
 if [ -f "${PROJECT_ROOT}.craft/.global-state" ]; then
   CS=$(grep "^CURRENT_STORY=" "${PROJECT_ROOT}.craft/.global-state" 2>/dev/null | sed 's/CURRENT_STORY="\(.*\)"/\1/')
   # Autonomous mode left by an unattended run that ended or was killed: clear it

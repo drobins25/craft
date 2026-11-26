@@ -480,6 +480,44 @@ g claim story "$S"
 assert_eq "mine via line 2" "mine" "$OUT"
 echo ""
 
+begin_test "open story --take-over removes the story from the other session's file; a plain open leaves it"
+newproj
+S=$(mkstory s1); W=$(mkwf w1)
+run_as sess-a --root "$R" open story "$S"
+run_as sess-b --root "$R" open story "$S"
+assert_eq "plain open leaves A's file" "$S" "$(lines sess-a)"
+run_as sess-b --root "$R" open story "$S" --take-over
+assert_eq "takeover prints opened" "opened $S" "$OUT"
+assert_file_not_exists "A's file is gone" "$(gf sess-a)"
+assert_eq "B holds it" "$S" "$(lines sess-b)"
+run_as sess-a --root "$R" claim story "$S"
+assert_eq "A's next claim prints other" "other" "$OUT"
+printf '%s\nworkflow %s\n' "$S" "$W" > "$(gf sess-a)"
+run_as sess-c --root "$R" open story "$S" --take-over
+assert_eq "A keeps the holder the story replaced" "workflow $W" "$(lines sess-a)"
+assert_file_not_exists "B's file is gone too" "$(gf sess-b)"
+printf 'workflow %s\n' "$W" > "$(gf sess-a)"
+run_as sess-b --root "$R" open workflow "$W" --take-over
+assert_file_not_exists "workflow takeover clears A" "$(gf sess-a)"
+assert_eq "C's file is untouched by B's workflow takeover" "$S" "$(lines sess-c)"
+printf '%s\nworkflow %s\n' "$S" "$W" > "$(gf sess-a)"
+run_as sess-b --root "$R" open workflow "$W" --take-over
+assert_eq "a workflow takeover leaves the story A holds inside a stage" "$S" "$(lines sess-a)"
+run_as sess-b --root "$R" open docs --take-over
+assert_exit_code "take-over on a named holder exits 1" "1" "$RC"
+echo ""
+
+begin_test "open workflow --take-over while this session's story blocks recording it prints held and leaves the other session's file alone"
+newproj
+S=$(mkstory s1); W=$(mkwf w1)
+run_as sess-b --root "$R" open story "$S"
+printf 'workflow %s\n' "$W" > "$(gf sess-a)"
+run_as sess-b --root "$R" open workflow "$W" --take-over
+assert_eq "B is held by its story" "held $S" "$OUT"
+assert_eq "A's file still reads the workflow" "workflow $W" "$(lines sess-a)"
+assert_eq "B's file is unchanged" "$S" "$(lines sess-b)"
+echo ""
+
 begin_test "check story prints mine, other or free for the same cases and writes nothing; .gitignore and dot-prefixed temp files are ignored"
 newproj
 S=$(mkstory s1)

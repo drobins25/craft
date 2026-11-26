@@ -3,6 +3,9 @@
 #
 # Usage: write-gate.sh [--root <dir>] <verb> [args]
 #   open <holder>              take or keep the gate for a holder
+#   open story|workflow <p> --take-over
+#                              the same, then remove that holder from every other
+#                              session's file (a takeover)
 #   close <holder>             give up that holder (a replaced holder gets the gate back)
 #   claim story|workflow <p>   mine / other, or open it when no session names it
 #   check story|workflow <p>   mine / other / free, writes nothing
@@ -93,8 +96,21 @@ parse_holder() { # <allow-adhoc-record yes|no> <args...>
   esac
 }
 
+# A trailing --take-over on open story|workflow is a takeover:
+# once this session names the holder, other sessions' lines naming it are removed.
+TAKE=""
+if [ "$VERB" = "open" ] && [ $# -ge 1 ] && [ "${!#}" = "--take-over" ]; then
+  TAKE=1
+  set -- "${@:1:$(($# - 1))}"
+fi
+
 case "$VERB" in
-  open) parse_holder yes "$@" ;;
+  open)
+    parse_holder yes "$@"
+    if [ -n "$TAKE" ] && [ "$H_KIND" != "story" ] && [ "$H_KIND" != "workflow" ]; then
+      fail "--take-over goes with story or workflow"
+    fi
+    ;;
   close) parse_holder no "$@" ;;
   claim|check)
     case "${1:-}" in
@@ -312,6 +328,37 @@ other_names() { # <line>
   return 1
 }
 
+# drop_from_others <line>: the takeover. Removes the line from every other
+# session's gate file; a file left with one line keeps it, a file left with none
+# is deleted. This is the only place one session edits another's file.
+drop_from_others() {
+  local f name l1 l2 keep tmp
+  for f in "$GATE_DIR"/*; do
+    [ -f "$f" ] && [ -r "$f" ] || continue
+    name="${f##*/}"
+    valid_id "$name" || continue
+    [ "$name" = "$SID" ] && continue
+    l1=""; l2=""
+    { IFS= read -r l1; IFS= read -r l2; } < "$f"
+    if [ "$l1" = "$1" ]; then
+      keep="$l2"
+    elif [ "$l2" = "$1" ]; then
+      keep="$l1"
+    else
+      continue
+    fi
+    if is_blank "$keep"; then
+      rm -f "$f"
+    else
+      tmp="$(mktemp "$GATE_DIR/.tmp.XXXXXX" 2>/dev/null)" || fail "cannot write in $GATE_DIR"
+      if ! printf '%s\n' "$keep" > "$tmp" || ! mv -f "$tmp" "$f" 2>/dev/null; then
+        rm -f "$tmp"
+        fail "cannot write $f"
+      fi
+    fi
+  done
+}
+
 # --- Verbs -----------------------------------------------------------------
 
 do_open() {
@@ -413,6 +460,12 @@ case "$VERB" in
   open)
     build_line
     do_open
+    if [ -n "$TAKE" ]; then
+      read_gate "$GATE_FILE"
+      if [ "$G1" = "$H_LINE" ] || [ "$G2" = "$H_LINE" ]; then
+        drop_from_others "$H_LINE"
+      fi
+    fi
     ;;
   close)
     build_line
