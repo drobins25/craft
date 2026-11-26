@@ -28,7 +28,7 @@ Parse the `**Type:**` field from each error in the `**Errors:**` section of the 
 
 ## Step 2: Invoke Fix Skill
 
-**Before invoking ANY fix skill**, write a continuation breadcrumb so the stop hook catches premature stops:
+**Before invoking ANY fix skill**, run "Hold This Session's Gate" from `craft:story-implement`'s Resume Support with `[STORY_FILE]`, so the fix never writes into a blocked gate. Then write a continuation breadcrumb so the stop hook catches premature stops:
 
 ```bash
 cat > "${CRAFT_PROJECT_ROOT:-.}/.craft/.continuation" << CRUMB

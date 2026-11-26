@@ -582,7 +582,7 @@ assert_eq "the push gate entry keeps its command and 10-second timeout" "1" \
   "$(jq '[.hooks.PreToolUse[] | select(.matcher == "Bash") | .hooks[] | select(.command == "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/push-gate.sh" and .timeout == 10)] | length' "$HOOKS_JSON")"
 assert_eq "the context injector entry keeps its command and 10-second timeout" "1" \
   "$(jq '[.hooks.UserPromptSubmit[] | .hooks[] | select(.command == "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/inject-craft-context.sh" and .timeout == 10)] | length' "$HOOKS_JSON")"
-assert_eq "no event was added" "7" "$(jq '.hooks | length' "$HOOKS_JSON")"
+assert_eq "no event beyond the eight was added" "8" "$(jq '.hooks | length' "$HOOKS_JSON")"
 assert_file_contains "the gate is documented in DESIGN.md" "annotate-external-gate.sh" "$PLUGIN_ROOT/DESIGN.md"
 
 finish_tests "test-annotate-external-gate"

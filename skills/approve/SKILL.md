@@ -65,7 +65,7 @@ These lines are the record of what was approved.
 
 Run via Bash:
 ```bash
-${CLAUDE_PLUGIN_ROOT}/hooks/scripts/update-global-state.sh CRAFT_WRITE_ENABLED true
+${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh open approve
 ```
 
 The write gate is now open. The agent can write files.
@@ -82,7 +82,7 @@ When the approved work is done, the caller MUST close the gate:
 
 1. Close the write gate:
 ```bash
-${CLAUDE_PLUGIN_ROOT}/hooks/scripts/update-global-state.sh CRAFT_WRITE_ENABLED ""
+${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh close approve
 ```
 
 2. Print "Write gate closed." to the user.
@@ -91,9 +91,9 @@ ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/update-global-state.sh CRAFT_WRITE_ENABLED "
 
 1. **AskUserQuestion is mandatory.** Every invocation. No exceptions. If the skill is called 5 times in a session, the user is asked 5 times.
 2. **Scope is enforced by visibility.** The user sees exactly what was approved in the approval question and the approval line printed in Step 3. If the agent writes files outside that scope, the difference is visible against that line.
-3. **Gate closes explicitly.** The gate does not auto-close on a timer. The caller must close it. If the session ends with the gate open, `session-start.sh` will detect CRAFT_WRITE_ENABLED=true with no active story/workflow and reset it.
+3. **Gate closes explicitly.** The gate does not auto-close on a timer. The caller must close it. If the session ends with the gate open, the SessionEnd hook removes this session's gate file.
 4. **No nesting.** If the gate is already open (from a story or another approval), this skill is not needed. Check first:
 ```bash
-grep "CRAFT_WRITE_ENABLED" "${CRAFT_PROJECT_ROOT:-.}/.craft/.global-state"
+${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh holder
 ```
-If already `true`, skip this skill.
+If it prints a holder (a line not starting `write-gate:`), this session already holds a gate: skip this skill.

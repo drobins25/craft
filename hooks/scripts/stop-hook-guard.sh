@@ -92,24 +92,77 @@ crafting_prefix() {
   fi
 }
 
-# Write gate: read the live value every stop - the same variable every gate
-# open/close writes through update-global-state.sh (sourced above).
-gate_open() { [ "${CRAFT_WRITE_ENABLED:-}" = "true" ]; }
+# Write gate: this session's own file, .craft/.gate/<session id>. The id comes
+# from the stdin JSON through a parser - the input can quote hook text, so a
+# pattern match on the raw text could pick up a quoted id.
+CC_SESSION_ID=$(printf '%s' "$INPUT" | python3 -c '
+import json, re, sys
+try:
+    sid = json.load(sys.stdin).get("session_id")
+except Exception:
+    sid = None
+if isinstance(sid, str) and re.fullmatch(r"[A-Za-z0-9_-]{1,128}", sid):
+    sys.stdout.write(sid)
+' 2>/dev/null) || CC_SESSION_ID=""
 
-# Set-down lines carry the forgotten-gate warning only while the gate is open
+# The gate file lives under the root the opener resolved, which may differ from
+# this hook's root in a monorepo: try this root, the git top level, then each
+# sub-project the top level registers.
+GATE_FILE=""
+if [ -n "$CC_SESSION_ID" ]; then
+  _gate_roots=("${PROJECT_ROOT%/}")
+  _top=$(git rev-parse --show-toplevel 2>/dev/null) || _top=""
+  if [ -n "$_top" ]; then
+    _gate_roots+=("$_top")
+    for _reg in "$_top"/.craft/projects/*.md; do
+      [ -f "$_reg" ] || continue
+      _sub=$(sed -n '/^---$/,/^---$/{s/^path:[[:space:]]*//p;}' "$_reg" | head -1 | tr -d "\"'\r")
+      [ -n "$_sub" ] && _gate_roots+=("$_top/$_sub")
+    done
+  fi
+  for _r in "${_gate_roots[@]}"; do
+    if [ -f "$_r/.craft/.gate/$CC_SESSION_ID" ]; then
+      GATE_FILE="$_r/.craft/.gate/$CC_SESSION_ID"
+      break
+    fi
+  done
+fi
+gate_open() { [ -n "$GATE_FILE" ]; }
+
+# Set-down lines carry the forgotten-gate warning only while this session holds
+# the gate
 GATE_SUFFIX=""
 gate_open && GATE_SUFFIX=" · ⚠ write gate open"
 
-# Adhoc flavor: which records folder got a file since the gate opened -
-# the word only, never a record name. Ambiguous or none: plain Adhoc.
-gate_flavor() {
-  local marker="${PROJECT_ROOT}.craft/.active-fix" f t
-  [ -f "$marker" ] || { printf 'Adhoc'; return; }
-  f=$(find "${PROJECT_ROOT}.craft/fixes" -name '*.md' -newer "$marker" 2>/dev/null | head -1)
-  t=$(find "${PROJECT_ROOT}.craft/tweaks" -name '*.md' -newer "$marker" 2>/dev/null | head -1)
-  if [ -n "$t" ] && [ -z "$f" ]; then printf 'Tweak'
-  elif [ -n "$f" ] && [ -z "$t" ]; then printf 'Fix'
-  else printf 'Adhoc'; fi
+# What holds the gate, from line 1 of the file only (at most 4096 bytes). Prints
+# the rail line, or nothing for a blank, unreadable or unrecognized file.
+gate_rail() {
+  local line label name
+  line=$(head -c 4096 "$GATE_FILE" 2>/dev/null | head -n 1 | tr -d '\r') || line=""
+  case "$line" in
+    /*)
+      name=$(basename "$line" .md | json_text)
+      printf '◔ %s in flight · ⚠ write gate open' "$name"
+      return
+      ;;
+    adhoc) label="Adhoc" ;;
+    "adhoc "*)
+      case "$line" in
+        */.craft/fixes/*) label="Fix" ;;
+        */.craft/tweaks/*) label="Tweak" ;;
+        *) label="Adhoc" ;;
+      esac
+      ;;
+    "workflow "*) label="Workflow" ;;
+    reflect) label="Reflect" ;;
+    rule-pass) label="Rule pass" ;;
+    become) label="Become" ;;
+    research) label="Research" ;;
+    docs) label="Docs" ;;
+    approve) label="Approval" ;;
+    *) return ;;
+  esac
+  printf '◔ %s in flight · ⚠ write gate open' "$label"
 }
 
 # --- Layer 0: Breadcrumb continuation ---
@@ -134,6 +187,21 @@ if [ -f "$BREADCRUMB" ]; then
     # Stale breadcrumb (>30min) — clean up and fall through
     rm -f "$BREADCRUMB"
   fi
+fi
+
+# Gate rail: a gate this session holds for anything but a story stamps every
+# stop, bypassing the warn-once marker - the rail must never be suppressed, and
+# another session's current story must not hide it. A gate that names a story
+# falls through to the story lines below.
+gate_names_story() { head -c 4096 "$GATE_FILE" 2>/dev/null | head -n 1 | grep -q '^/'; }
+if [ -f "${PROJECT_ROOT}.craft/.global-state" ]; then
+  source "${PROJECT_ROOT}.craft/.global-state"
+fi
+if gate_open && { [ -z "$CURRENT_STORY" ] || ! gate_names_story; }; then
+  RAIL=$(gate_rail)
+  [ -n "$RAIL" ] || RAIL="⚠ write gate open · unclaimed"
+  echo "{\"systemMessage\": \"$RAIL\"}"
+  exit 0
 fi
 
 # --- Layer 1: Chunk-aware continuation guard ---
@@ -175,17 +243,6 @@ fi
 
 # --- Layer 2: Active story persistence warning ---
 # No chunks in progress, but story is active — warn user
-
-# Adhoc rail: an open gate with no active story stamps every stop,
-# bypassing the warn-once marker - the rail must never be suppressed.
-if gate_open && [ -z "$CURRENT_STORY" ]; then
-  if [ -f "${PROJECT_ROOT}.craft/.active-fix" ]; then
-    echo "{\"systemMessage\": \"◔ $(gate_flavor) in flight · ⚠ write gate open\"}"
-  else
-    echo "{\"systemMessage\": \"⚠ write gate open · unclaimed\"}"
-  fi
-  exit 0
-fi
 
 MARKER_FILE="/tmp/craft-stop-suggested-${SESSION_ID}"
 

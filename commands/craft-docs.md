@@ -331,6 +331,14 @@ options:
 
 Read the approved brief from `$PROJECT/.craft/docs/brief.md`.
 
+Before the doc-writer is sent, open this session's write gate (the brief's approval came in Step 2e):
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh open docs
+```
+
+If the open exits non-zero, stop this write step and show the gate script's message. Then end here, without Step 4, so no report claims docs that were not written and the brief keeps its approved status.
+
 Dispatch the **doc-writer agent** via the Agent tool with `subagent_type: "craft:doc-writer"`:
 
 ```
@@ -361,7 +369,15 @@ Rules:
 
 ### Step 4: Report
 
-After the agent completes, present the results:
+Once the doc-writer has returned, whatever it reports, close the gate first, before the results, any question or anything else:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh close docs
+```
+
+A second dispatch goes back through Step 3, which opens the gate again.
+
+Then present the results:
 
 ```
 DOCUMENTATION

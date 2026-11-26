@@ -65,11 +65,25 @@ This is one organic conversation reply - never a chain of per-proposal AskUserQu
 
 ## Step 4: Write Approved Rules
 
+Start this step only when every proposal has a clear yes or no from Step 3, including any you asked about there, so nothing in this step waits on the user. Before the first write, open this session's write gate:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh open rule-pass
+```
+
+If the open exits non-zero, stop this write step and show the gate script's message. Then end the pass here, with no receipt and no watermark, so the offer returns next time.
+
 Write each approved rule to the current project's `.claude/rules/`. Updates edit the existing rule file; new rules create a new file with the agent's spec-verified content.
 
 That is the entire write surface. No commit, no gitignore check, no tracking caveat - committing is the user's normal git life.
 
 ## Step 5: Receipt, Then Watermark
+
+First, before the receipt line or anything else, close the gate:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh close rule-pass
+```
 
 Print one unambiguous closing statement:
 

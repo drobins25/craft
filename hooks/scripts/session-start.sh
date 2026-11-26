@@ -25,9 +25,8 @@ if [ -z "$PROJECT_ROOT" ] || [ ! -d "${PROJECT_ROOT}.craft" ]; then
   exit 0
 fi
 
-# Clean up stale breadcrumbs and orphaned fix markers from crashed sessions
+# Clean up stale breadcrumbs from crashed sessions
 rm -f "${PROJECT_ROOT}.craft/.continuation"
-rm -f "${PROJECT_ROOT}.craft/.active-fix"
 rm -f "${PROJECT_ROOT}.craft/.commit-manifest"
 # Reap annotation listeners whose owning session has ended
 "$SCRIPT_DIR/annotate-run.sh" sweep 2>/dev/null || true
@@ -46,19 +45,12 @@ if [ -f "${PROJECT_ROOT}.craft/.global-state" ]; then
   fi
 fi
 
-# Reset a write gate left open by a crashed session: clear CRAFT_WRITE_ENABLED
-# when neither a story in progress nor a live workflow session still holds it.
-# Contract for future gate-openers: a new flow that sets CRAFT_WRITE_ENABLED
-# must either track a holder this block checks, delete its own marker before
-# this block runs (the adhoc .active-fix pattern above), or accept that its
-# gate can be cleared by a session start in another pane.
+# Session start never touches a session's gate file: a crashed session's file is
+# harmless, and resuming that session gets its gate back, unless another session
+# took over its story or workflow since: that takeover removes the line from the
+# file (and the file, when nothing else is on it). SessionEnd cleans up.
 if [ -f "${PROJECT_ROOT}.craft/.global-state" ]; then
-  GATE=$(grep "^CRAFT_WRITE_ENABLED=" "${PROJECT_ROOT}.craft/.global-state" 2>/dev/null | sed 's/CRAFT_WRITE_ENABLED="\(.*\)"/\1/')
   CS=$(grep "^CURRENT_STORY=" "${PROJECT_ROOT}.craft/.global-state" 2>/dev/null | sed 's/CURRENT_STORY="\(.*\)"/\1/')
-  WF_NOW=$(grep "^CURRENT_WORKFLOW_SESSION=" "${PROJECT_ROOT}.craft/.global-state" 2>/dev/null | sed 's/CURRENT_WORKFLOW_SESSION="\(.*\)"/\1/')
-  if [ "$GATE" = "true" ] && [ -z "$CS" ] && [ -z "$WF_NOW" ]; then
-    "$SCRIPT_DIR/update-global-state.sh" CRAFT_WRITE_ENABLED "" "${PROJECT_ROOT%/}"
-  fi
   # Autonomous mode left by an unattended run that ended or was killed: clear it
   # when no story holds it AND craft has been idle for two hours. A live run has
   # gaps with no story (between stories, mid-cycle planning, cycle-complete), but

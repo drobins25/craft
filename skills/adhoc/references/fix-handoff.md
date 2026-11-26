@@ -1,10 +1,10 @@
 # Fix Hand-off (reference - read by the craft:adhoc shell at Step 4 for a fix)
 
-For the orchestrator holding a fix. The smith agent runs the fix flow in `references/fix.md`, because a fix proposed from the lines you were pointed at tends to change once the callers are read, and an agent whose whole job is that reading does it where the orchestrator does not. You keep everything around the fix: the guards, the sort, the write gate and safety marker, every decision Smith passes up, the todo match, the lesson question, the commit and the done message. Every card is rendered as `${CLAUDE_PLUGIN_ROOT}/commands/references/question-card.md` says; read it once before the first card.
+For the orchestrator holding a fix. The smith agent runs the fix flow in `references/fix.md`, because a fix proposed from the lines you were pointed at tends to change once the callers are read, and an agent whose whole job is that reading does it where the orchestrator does not. You keep everything around the fix: the guards, the sort, the write gate, every decision Smith passes up, the todo match, the lesson question, the commit and the done message. Every card is rendered as `${CLAUDE_PLUGIN_ROOT}/commands/references/question-card.md` says; read it once before the first card.
 
 ## H-1 Launch
 
-Steps 1 to 3 of the shell have run, so the gate is open and the marker is written. First snapshot the working tree and keep the id it prints for H-4, because the tree may already hold the user's own uncommitted work and H-4 must tell it apart from Smith's:
+Steps 1 to 3 of the shell have run, so the gate is open. First snapshot the working tree and keep the id it prints for H-4, because the tree may already hold the user's own uncommitted work and H-4 must tell it apart from Smith's:
 
 ```bash
 bash "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/fix-checks.sh" snapshot "<PROJECT_ROOT>"
@@ -24,11 +24,11 @@ Then **INVOKE the smith agent using the Task tool** in the foreground with `suba
 - `REVIEW:` only when a review handed the fix over: the review record's name, the finding's number, and the earlier source story when the defect predates the reviewed change.
 - `BUG:` only when the request pointed at a bug record in `.craft/bugs/` (its file, its slug or its line in the open pile): that record's dated file name without `.md`, the end of the `FILE=` path `bash "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/bugs-list.sh" --status=open` prints for it, for the fix record's `bug:` line. A bug that only looks like this defect is not named.
 
-Note the agent ID if the launch result shows one. If the agent cannot start at all, run `references/fix.md` yourself and say so in one line; a missing or malformed report is not that case (H-2).
+Note the agent ID if the launch result shows one. If the agent cannot start at all, say so in one line and run `references/fix.md` yourself; once its Step 1 has written the record, put the record's path on the gate with `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh open adhoc "<record path>"`. A missing or malformed report is not that case (H-2).
 
 ## H-2 What came back
 
-Act on the first heading of Smith's reply. You decide what Smith passes up and what the H-4 checks find, working from the record and the report, because you hold the conversation and Smith's evidence, and a card puts a judgment in front of a user who may not be able to make it. Of those, only two reach the user as a question: a taste choice (H-3) and the story question under `## ESCALATION`. Every call made without asking, yours and the report's Settled lines, reaches the user as a report: listed before a card when one comes first (under `question-card.md`'s "Settled without asking - say which to reopen"), otherwise in the done message, each with what was chosen and why.
+Before acting on any reply that names a `.craft/fixes/` record, put that record's path on this session's gate: `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh open adhoc "<record path>"`. Act on the first heading of Smith's reply. You decide what Smith passes up and what the H-4 checks find, working from the record and the report, because you hold the conversation and Smith's evidence, and a card puts a judgment in front of a user who may not be able to make it. Of those, only two reach the user as a question: a taste choice (H-3) and the story question under `## ESCALATION`. Every call made without asking, yours and the report's Settled lines, reaches the user as a report: listed before a card when one comes first (under `question-card.md`'s "Settled without asking - say which to reopen"), otherwise in the done message, each with what was chosen and why.
 
 - **`## FIX REPORT`:** H-4, then H-5.
 - **`## PRODUCT DECISION`:** H-3.
@@ -40,7 +40,7 @@ Act on the first heading of Smith's reply. You decide what Smith passes up and w
 
 For every message after a card or a report (an answer, a send-back, a launch with `RECORD:`):
 
-1. Run the gate call and the marker write from the Bash block in Step 3 of the shell again. They are idempotent, and every session start clears the gate and `.craft/.active-fix`, so either may be gone while a card was open; the edit that follows has to land under an open gate.
+1. Run `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/write-gate.sh open adhoc "<record path>"` again, or the shell's Step 3 call (`open adhoc`, no path) when no record exists yet. It is idempotent, and a session that ended (exit, `/clear`, `/resume` to another) and was resumed while a card was open has lost its gate; the edit that follows has to land under an open gate.
 2. Send it: SendMessage to the agent ID if the launch result showed one, otherwise launch H-1 again with `RECORD:` and `ANSWER:`. Never guess an address. SendMessage resumes Smith in the background, so wait for its reply and act on it under H-2. Until then do not run H-4, do not treat silence as no reply, and do not close the gate.
 
 Make no code write yourself while a card is open or Smith is running. If the user drops the fix, run Step 6 of the shell.

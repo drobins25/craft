@@ -145,6 +145,33 @@ assert_contains "mentions backlog" "backlog" "$RESULT"
 cleanup_test_dir
 echo ""
 
+# Workflow line: "writes allowed" shows only in the session whose gate names the workflow
+begin_test "Active workflow session - writes allowed only in the holding session"
+
+TEST_DIR=$(create_minimal_craft)
+WF="$(cd "$TEST_DIR" && pwd -P)/.craft/workflows/wf/sessions/s1"
+mkdir -p "$WF" "$TEST_DIR/.craft/.gate"
+printf -- '---\nname: One\nworkflow: wf\nstatus: active\ncurrent_stage: 1\n---\n| 1 | A | active |\n| 2 | B | pending |\n' > "$WF/session.md"
+printf 'ACTIVE_CYCLE=""\nCURRENT_STORY=""\nPLANNING_CYCLE=""\nCURRENT_WORKFLOW_SESSION="%s"\n' "$WF" > "$TEST_DIR/.craft/.global-state"
+printf 'workflow %s\n' "$WF" > "$TEST_DIR/.craft/.gate/holder-session"
+
+set +e
+HOLDER=$(cd "$TEST_DIR" && printf '{"session_id":"holder-session"}' | env -u CRAFT_PROJECT_ROOT CLAUDE_CODE_SESSION_ID=other-session bash "$INJECT_CONTEXT_SCRIPT" 2>/dev/null)
+OTHER=$(cd "$TEST_DIR" && printf '{"session_id":"other-session"}' | env -u CRAFT_PROJECT_ROOT CLAUDE_CODE_SESSION_ID=holder-session bash "$INJECT_CONTEXT_SCRIPT" 2>/dev/null)
+NOSTDIN=$(cd "$TEST_DIR" && env -u CRAFT_PROJECT_ROOT CLAUDE_CODE_SESSION_ID=holder-session bash "$INJECT_CONTEXT_SCRIPT" 2>/dev/null </dev/null)
+NOSTDIN_RC=$?
+set -e
+
+assert_contains "holder sees writes allowed" "stage 1/2 - writes allowed (active session)]" "$HOLDER"
+assert_contains "another session sees the stage line" "stage 1/2]" "$OTHER"
+assert_not_contains "another session has no writes-allowed phrase" "writes allowed" "$OTHER"
+assert_eq "no stdin exits 0" "0" "$NOSTDIN_RC"
+assert_not_contains "no stdin never borrows the environment's id" "writes allowed" "$NOSTDIN"
+
+cleanup_test_dir
+rm -rf "$TEST_DIR"
+echo ""
+
 # Test 6: Always exits 0
 begin_test "Always exits 0"
 

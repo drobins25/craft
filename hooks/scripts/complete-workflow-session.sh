@@ -152,9 +152,24 @@ sed -i.bak "s/^status:.*/status: complete/" "$SESSION_FILE"
 sed -i.bak "s/^completed:.*/completed: $TODAY/" "$SESSION_FILE"
 rm -f "$SESSION_FILE.bak"
 
-# Clear CURRENT_WORKFLOW_SESSION in .global-state
+# The project that holds this session folder owns both its state file and its gate.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-"$SCRIPT_DIR/update-global-state.sh" CURRENT_WORKFLOW_SESSION ""
+GATE_ROOT_ARGS=()
+STATE_ROOT="."
+case "$SESSION_DIR" in
+  */.craft/*)
+    STATE_ROOT="${SESSION_DIR%/.craft/*}"
+    GATE_ROOT_ARGS=(--root "$STATE_ROOT")
+    ;;
+esac
+
+# Clear CURRENT_WORKFLOW_SESSION in .global-state
+"$SCRIPT_DIR/update-global-state.sh" CURRENT_WORKFLOW_SESSION "" "$STATE_ROOT"
+
+# Give up this session's hold on the workflow (and a workflow line waiting under a
+# story). Completing must never fail on the gate, and another session's gate is
+# never touched: the script removes only the file named by this session's id.
+"$SCRIPT_DIR/write-gate.sh" "${GATE_ROOT_ARGS[@]}" close workflow "$SESSION_DIR" >/dev/null 2>&1 || true
 
 # Print report to stdout
 echo ""

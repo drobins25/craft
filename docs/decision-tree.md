@@ -929,9 +929,9 @@ See `docs/agent-catalog.md` for full descriptions, model assignments, and usage 
 
 | File | Purpose | Key Fields |
 |------|---------|------------|
-| `.craft/.global-state` | Global state | ACTIVE_CYCLE, PLANNING_CYCLE, CURRENT_STORY, RUN_MODE, CRAFT_WRITE_ENABLED |
+| `.craft/.global-state` | Global state | ACTIVE_CYCLE, PLANNING_CYCLE, CURRENT_STORY, RUN_MODE |
 | `.craft/.continuation` | Breadcrumb for a nested skill invocation (30-min TTL, one-shot) | caller path |
-| `.craft/.active-fix` | Safety marker for in-progress adhoc work (session-start clears orphans) | timestamp |
+| `.craft/.gate/<session id>` | One session's write gate, written only by `write-gate.sh` and removed by the SessionEnd hook | line 1 the holder; line 2 only under a story, the holder it replaced |
 | `.craft/settings.yaml` | User preferences | rule_pass_threshold, taste_pass_enabled, taste_pass_threshold, map (enabled, token_budget), dev_mode (true lets writes past the write gate) |
 | `.craft/requests/*.md` | Pending requests surfaced at the `/craft` entry (Step 2.5) | request files |
 | `.craft/cycles/[N]-[name]/.state` | Cycle runtime state | CURRENT_STORY, CURRENT_CHUNK, TOTAL_CHUNKS |

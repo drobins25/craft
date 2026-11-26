@@ -68,4 +68,3 @@ Story frontmatter:status|planning→ready→active→complete
 .craft/design/tokens.yaml|design tokens(enforced by style-analyzer)
 .craft/fixes/*.md|adhoc fix records(category,root cause,validation)
 .craft/tweaks/tweak-*.md|tweak records(surface,kind,attempts,verbatim reactions;open until user accepts)
-.craft/.active-fix|safety marker for in-progress adhoc work(session-start clears)

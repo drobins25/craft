@@ -25,18 +25,19 @@ if [ -z "$KEY" ]; then
   exit 1
 fi
 
+# The write gate is a per-session file now; a copied old call must fail loudly
+# rather than set a key nothing reads.
+if [ "$KEY" = "CRAFT_WRITE_ENABLED" ]; then
+  echo "Error: CRAFT_WRITE_ENABLED is no longer a state key - open or close this session's write gate with write-gate.sh"
+  exit 1
+fi
+
 # Ensure .craft exists
 if [ ! -d "${PROJECT_ROOT}/.craft" ]; then
   echo "Error: .craft directory not found. Run /craft:init first."
   exit 1
 fi
 
-# The write gate guards only a project with .global-state or project.md
-# (check-write-permission.py). On a never-inited project there is no gate to
-# open or close, and creating the state file here would arm it.
-if [ "$KEY" = "CRAFT_WRITE_ENABLED" ] && [ ! -f "$STATE_FILE" ] && [ ! -f "${PROJECT_ROOT}/.craft/project.md" ]; then
-  exit 0
-fi
 
 # Create state file if missing
 if [ ! -f "$STATE_FILE" ]; then
@@ -51,6 +52,17 @@ BACKLOG_COUNT=0
 LAST_ACTIVITY=""
 EOF
 fi
+
+# TEMPORARY - REMOVE ON 2027-01-01 (delete this whole block, and delete
+# tests/test-legacy-write-gate-cleanup.sh with it; nothing else depends on either).
+# Craft 2.20.3 and earlier kept the write gate as a CRAFT_WRITE_ENABLED line in
+# .global-state. Nothing reads it now, so drop that one line from an older
+# project the next time any state key is set.
+if grep -q '^CRAFT_WRITE_ENABLED=' "$STATE_FILE"; then
+  sed -i.bak '/^CRAFT_WRITE_ENABLED=/d' "$STATE_FILE"
+  rm -f "$STATE_FILE.bak"
+fi
+# END TEMPORARY legacy write gate cleanup
 
 # Resolve NOW keyword to current UTC timestamp
 if [ "$VALUE" = "NOW" ]; then

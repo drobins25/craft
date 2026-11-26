@@ -54,7 +54,6 @@ if [ -f "${PROJECT_ROOT}.craft/.global-state" ]; then
   if [ -n "$CURRENT_STORY" ] && [[ "$story_name" == *"$CURRENT_STORY"* ]]; then
     # Clear global state
     "$SCRIPT_DIR/update-global-state.sh" CURRENT_STORY "" "$PROJECT_ROOT"
-    "$SCRIPT_DIR/update-global-state.sh" CRAFT_WRITE_ENABLED "" "$PROJECT_ROOT"
     "$SCRIPT_DIR/update-global-state.sh" LAST_ACTIVITY "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$PROJECT_ROOT"
 
     # Clear cycle state if story was in a cycle
@@ -69,6 +68,10 @@ if [ -f "${PROJECT_ROOT}.craft/.global-state" ]; then
     fi
   fi
 fi
+
+# Give up this session's hold on the story before its file goes, whether or not
+# it was the current story; a holder the story replaced gets the gate back.
+"$SCRIPT_DIR/write-gate.sh" --root "${PROJECT_ROOT:-.}" close story "$STORY_FILE" >/dev/null || true
 
 # Delete the file
 rm "$STORY_FILE"

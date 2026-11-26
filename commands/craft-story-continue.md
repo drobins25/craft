@@ -40,6 +40,9 @@ options:
 **If user provides custom text:** Ask a clarifying AskUserQuestion to confirm which story.
 
 **If story found:**
+
+Before Step 2, Read the "Hold This Session's Gate" subsection of `${CLAUDE_PLUGIN_ROOT}/commands/craft-story-implement.md` and run it inline with the story file `$PROJECT/.craft/cycles/$ACTIVE_CYCLE/stories/$CURRENT_STORY.md`, so a takeover question comes before Verify State can offer a rollback. Read the file rather than invoking `craft:story-implement`, which would start the build here. The step asks only when another session's gate names the story; "Stop" ends here.
+
 > Proceed to resume
 
 ### Step 2: Show Context

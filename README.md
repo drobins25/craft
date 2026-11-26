@@ -43,7 +43,7 @@ Then start Claude Code and run `/craft` - [full install notes](#install).
 
 | **Write Gate** | **Decision memory** |
 |---|---|
-| Write and Edit stay blocked on every project file until you open a story, an adhoc fix or tweak, the approve skill, or a workflow. Shell isn't gated - a workflow gate, not a sandbox. | Name the rulings a story carries in `/craft:decisions`; the planner reads them first. Waiving a locked decision always asks. |
+| Write and Edit stay blocked on every project file until your own session opens a story, an adhoc fix or tweak, the approve skill, or a workflow. Each window holds its own gate, so another window's story never opens writes in yours. Shell isn't gated - a workflow gate, not a sandbox. | Name the rulings a story carries in `/craft:decisions`; the planner reads them first. Waiving a locked decision always asks. |
 | **Taste engine** | **QA that files its own bugs** |
 | `/craft:adhoc` tweaks stamp loved or routine; three loved and craft offers to spread the look. Accepted mockups can become tokens - tokens and locks guide every mockup after. | `/craft:analyze qa` drives a real browser - clicks, forms, console. Confirmed and likely findings file into `/craft:bugs`; repeats add sightings. |
 
@@ -731,15 +731,16 @@ After initialization, your project will have:
 
 ## Hooks
 
-Craft uses 7 hook events to manage state, enforce permissions, and track progress:
+Craft uses 8 hook events to manage state, enforce permissions, and track progress:
 
 - **SessionStart** - Load context, set status line
-- **PreToolUse** - Gate writes by the write gate (`CRAFT_WRITE_ENABLED`; `.craft/`, `.claude/`, `dev_mode`, and active workflows pass), check vocabulary on writes, run the push gate on Bash, and hold tool calls outside a short allowlist while an annotate session is on a page outside the project
+- **PreToolUse** - Gate writes by the session's own write gate (`.craft/.gate/<session id>`; `.craft/`, `.claude/` and `dev_mode` pass), check vocabulary on writes, run the push gate on Bash, and hold tool calls outside a short allowlist while an annotate session is on a page outside the project
 - **PostToolUse** - Track file changes, update progress
 - **PostToolUseFailure** - Log and recover from failures
 - **PreCompact** - Export progress before context compaction
 - **UserPromptSubmit** - Inject active cycle/story context, and lift the annotate outside-page hold for one turn when you type a message
 - **Stop** - Guard against unclean stops
+- **SessionEnd** - Remove the ending session's write gate
 
 ## Quality Gates
 
