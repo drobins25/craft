@@ -286,6 +286,37 @@ assert_eq "parses and names the file" "◔ ${NASTY} in flight · ⚠ write gate 
 rm -rf "$TEST_DIR"
 echo ""
 
+# Test 7d: another session's story is current - a non-story holder keeps its own rail
+begin_test "Another session's story is current - B's adhoc rail shows, A's story gate keeps the story line"
+
+TEST_DIR=$(create_craft_with_story "test-cycle" "test-story" "Test Story" "3" "active")
+cat > "$TEST_DIR/.craft/.global-state" << 'EOF'
+ACTIVE_CYCLE="1-test-cycle"
+CURRENT_STORY="test-story"
+EOF
+hold_gate "$TEST_DIR" "$SESS_A" "$TEST_DIR/.craft/cycles/1-test-cycle/stories/test-story.md"
+hold_gate "$TEST_DIR" "$SESS_B" "adhoc"
+SESSION_ID=$(session_id_for_dir "$TEST_DIR")
+RAIL_B="{\"systemMessage\": \"◔ Adhoc in flight · ⚠ write gate open\"}"
+
+for CHUNK in 0 2; do
+  sed -i.bak "s/^CURRENT_CHUNK=.*/CURRENT_CHUNK=\"$CHUNK\"/" "$TEST_DIR/.craft/cycles/1-test-cycle/.state"
+  rm -f "$TEST_DIR/.craft/cycles/1-test-cycle/.state.bak"
+  rm -f "/tmp/craft-stop-suggested-${SESSION_ID}" "/tmp/craft-chunk-continue-${SESSION_ID}"
+  RESULT=$(run_stop "$TEST_DIR" "$(stop_json $SESS_B)")
+  assert_eq "chunk $CHUNK: B's first stop shows the adhoc rail" "$RAIL_B" "$RESULT"
+  RESULT=$(run_stop "$TEST_DIR" "$(stop_json $SESS_B)")
+  assert_eq "chunk $CHUNK: B's second stop shows it too" "$RAIL_B" "$RESULT"
+  rm -f "/tmp/craft-stop-suggested-${SESSION_ID}" "/tmp/craft-chunk-continue-${SESSION_ID}"
+  RESULT=$(run_stop "$TEST_DIR" "$(stop_json $SESS_A)")
+  assert_contains "chunk $CHUNK: A's story gate still shows the story" "test-story" "$RESULT"
+  assert_not_contains "chunk $CHUNK: A's line is not the adhoc rail" "Adhoc in flight" "$RESULT"
+done
+
+rm -f "/tmp/craft-stop-suggested-${SESSION_ID}" "/tmp/craft-chunk-continue-${SESSION_ID}"
+cleanup_test_dir
+echo ""
+
 # Test 8: Idle story - only the session holding a gate gets the warning
 begin_test "Idle story - A (holding a gate) warns, B does not"
 

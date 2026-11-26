@@ -189,6 +189,21 @@ if [ -f "$BREADCRUMB" ]; then
   fi
 fi
 
+# Gate rail: a gate this session holds for anything but a story stamps every
+# stop, bypassing the warn-once marker - the rail must never be suppressed, and
+# another session's current story must not hide it. A gate that names a story
+# falls through to the story lines below.
+gate_names_story() { head -c 4096 "$GATE_FILE" 2>/dev/null | head -n 1 | grep -q '^/'; }
+if [ -f "${PROJECT_ROOT}.craft/.global-state" ]; then
+  source "${PROJECT_ROOT}.craft/.global-state"
+fi
+if gate_open && { [ -z "$CURRENT_STORY" ] || ! gate_names_story; }; then
+  RAIL=$(gate_rail)
+  [ -n "$RAIL" ] || RAIL="⚠ write gate open · unclaimed"
+  echo "{\"systemMessage\": \"$RAIL\"}"
+  exit 0
+fi
+
 # --- Layer 1: Chunk-aware continuation guard ---
 # If we're mid-implementation (chunks remaining), block premature stops
 # with a continuation instruction. Allow on second attempt within 2 minutes.
@@ -228,15 +243,6 @@ fi
 
 # --- Layer 2: Active story persistence warning ---
 # No chunks in progress, but story is active — warn user
-
-# Adhoc rail: an open gate with no active story stamps every stop,
-# bypassing the warn-once marker - the rail must never be suppressed.
-if gate_open && [ -z "$CURRENT_STORY" ]; then
-  RAIL=$(gate_rail)
-  [ -n "$RAIL" ] || RAIL="⚠ write gate open · unclaimed"
-  echo "{\"systemMessage\": \"$RAIL\"}"
-  exit 0
-fi
 
 MARKER_FILE="/tmp/craft-stop-suggested-${SESSION_ID}"
 
